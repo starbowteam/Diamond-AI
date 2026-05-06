@@ -1,6 +1,7 @@
-const CACHE_NAME = 'diamond-ai-v2';
+const CACHE_NAME = 'diamond-ai-v3';
 const urlsToCache = [
   '.',
+  'index.html',
   'style.css',
   'app.js',
   'manifest.json',
@@ -17,16 +18,14 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
-  // Для index.html всегда пытаемся сеть, иначе кеш
+  // Для главной страницы — всегда сеть, иначе кеш
   if (event.request.url.endsWith('/') || event.request.url.endsWith('index.html')) {
     event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          const cloned = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, cloned));
-          return response;
-        })
-        .catch(() => caches.match(event.request))
+      fetch(event.request).then(response => {
+        const cloned = response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request, cloned));
+        return response;
+      }).catch(() => caches.match(event.request))
     );
   } else {
     event.respondWith(
