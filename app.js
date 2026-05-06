@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI — ПОЛНАЯ СИНХРОНИЗАЦИЯ + ПАПКИ + ЗАКРЕПЫ ====================
+// ==================== DIAMOND AI — PWA FIX + СЕССИИ + ПАПКИ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -564,7 +564,6 @@
         modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
-    // ========== МОДАЛКА ДОБАВЛЕНИЯ ЧАТА В ПАПКУ ==========
     function showAddChatToFolderModal(folderId) {
         const folder = folders.find(f => f.id === folderId);
         if (!folder) return;
@@ -718,35 +717,25 @@
         modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
-    // ========== ИСТОРИЯ С ГРУППИРОВКОЙ ==========
+    // ========== ИСТОРИЯ ==========
     function renderHistory() {
         const list = document.getElementById('history-list');
         if (!list) return;
         const searchTerm = document.getElementById('history-search')?.value.toLowerCase() || '';
-
-        // Фильтр по поиску
         let filtered = chats.filter(c => c.title.toLowerCase().includes(searchTerm));
-
-        // Разделяем на закрепленные, папочные и обычные
         const pinnedChats = filtered.filter(c => c.pinned);
         const pinnedIds = new Set(pinnedChats.map(c => c.id));
-
         const folderMap = new Map();
         const orphanChats = [];
-
         filtered.forEach(c => {
-            if (pinnedIds.has(c.id)) return; // закрепленные отдельно
+            if (pinnedIds.has(c.id)) return;
             if (c.folder_id) {
                 if (!folderMap.has(c.folder_id)) folderMap.set(c.folder_id, []);
                 folderMap.get(c.folder_id).push(c);
-            } else {
-                orphanChats.push(c);
-            }
+            } else orphanChats.push(c);
         });
 
         let html = '';
-
-        // Группа "Закрепленные"
         if (pinnedChats.length > 0) {
             html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-thumbtack"></i> Закрепленные</div>`;
             pinnedChats.forEach(c => {
@@ -755,8 +744,6 @@
             });
             html += '</div>';
         }
-
-        // Группы по папкам
         const sortedFolders = Array.from(folderMap.keys()).map(fid => folders.find(f => f.id === fid)).filter(Boolean);
         sortedFolders.sort((a, b) => a.name.localeCompare(b.name));
         sortedFolders.forEach(folder => {
@@ -766,8 +753,6 @@
             chatsInFolder.forEach(c => html += buildHistoryItem(c, folder));
             html += '</div>';
         });
-
-        // Остальные (без папки и не закрепленные) — по временным группам
         if (orphanChats.length > 0) {
             const groups = { 'Сегодня': [], 'Вчера': [], 'Более 2-х дней назад': [] };
             orphanChats.forEach(c => groups[getDateGroup(c.last_activity || c.created_at)].push(c));
@@ -778,11 +763,9 @@
                 html += '</div>';
             }
         }
-
         if (!html) html = '<div style="text-align:center; padding:20px;">Нет чатов</div>';
         list.innerHTML = html;
 
-        // Навешиваем события
         document.querySelectorAll('.history-item').forEach(el => {
             el.addEventListener('click', (e) => {
                 if (!e.target.closest('.chat-actions-hover')) switchChat(el.dataset.id);
@@ -808,7 +791,6 @@
         const folderIcon = folder ? folder.icon : '';
         const folderStyle = folder ? `style="border-left: 3px solid ${folderColor}; padding-left: 9px;"` : '';
         const iconHtml = folder ? `<i class="fas ${folderIcon}" style="color:${folderColor}; margin-right:6px; font-size:12px;"></i>` : '';
-        
         return `
             <div class="history-item ${isActive ? 'active' : ''}" data-id="${chat.id}" ${folderStyle}>
                 ${iconHtml}<span class="chat-title">${escapeHtml(chat.title)}</span>
@@ -842,7 +824,6 @@
         const container = document.getElementById('messages-container');
         container.innerHTML = '';
         let lastDate = null;
-        
         chat.messages.forEach((msg, idx) => {
             const date = new Date(msg.timestamp || chat.created_at).toDateString();
             if (date !== lastDate) {
@@ -869,7 +850,6 @@
             }
             container.appendChild(messageDiv);
         });
-        
         container.querySelectorAll('.copy-msg-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const idx = parseInt(btn.dataset.msgIdx);
@@ -887,7 +867,6 @@
                 if (msg && msg.role === 'assistant') regenerateResponse(msg);
             });
         });
-        
         setTimeout(() => {
             renderMathInElementWithMhchem(container);
             enhanceCodeBlocks(container);
@@ -936,7 +915,6 @@
             showToast('Ошибка', 'API-ключ не загружен', 'error');
             return;
         }
-        
         let chat = chats.find(c => c.id === currentChatId);
         if (!chat || chat.messages.length === 0) {
             const now = Date.now();
@@ -955,30 +933,25 @@
             renderHistory();
             document.getElementById('inputArea').style.display = 'flex';
         }
-        
         await addMessageToDOM('user', text, true);
         document.getElementById('user-input').value = '';
         const emptyInput = document.getElementById('empty-input');
         if (emptyInput) emptyInput.value = '';
         updateSendButtonState();
-        
         isWaitingForResponse = true;
         updateSendButtonState();
-        
         const typingId = Date.now().toString();
         const typingMsg = { id: typingId, role: 'assistant', content: '', isTyping: true, timestamp: Date.now() };
         chat.messages.push(typingMsg);
         renderChat();
         scrollToBottom();
         startThinkingAnimation();
-        
         const contextMessages = chat.messages.filter(m => !m.isTyping).slice(-15).map(m => ({ role: m.role, content: m.content }));
         const messages = [SYSTEM_PROMPT, ...contextMessages];
         const controller = new AbortController();
         currentAbortController = controller;
         let success = false;
         let assistantMessage = '';
-        
         try {
             const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
                 method: 'POST',
@@ -1000,17 +973,14 @@
                 console.warn('Mistral error:', e);
             }
         }
-        
         stopThinkingAnimation();
         const msgIndex = chat.messages.findIndex(m => m.id === typingId);
         if (msgIndex !== -1) chat.messages.splice(msgIndex, 1);
-        
         if (success && assistantMessage) {
             await addMessageToDOM('assistant', assistantMessage, true);
         } else {
             await addMessageToDOM('assistant', '❌ Не удалось получить ответ. Попробуйте позже.', true);
         }
-        
         isWaitingForResponse = false;
         currentAbortController = null;
         updateSendButtonState();
@@ -1042,7 +1012,6 @@
         }
     }
 
-    // ========== АВАТАРЫ ==========
     function getBotAvatarHTML() {
         return `<img src="bots.png" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
     }
@@ -1066,15 +1035,10 @@
         }
     }
 
-    // ========== ОБНОВЛЕНИЕ ПРОФИЛЯ ИЗ DIAMKEY ==========
     async function refreshUserProfile() {
         if (!currentUser) return;
         try {
-            const { data, error } = await supabaseClient
-                .from('users')
-                .select('name, avatar, description, fa_icon')
-                .eq('login', currentUser.login)
-                .maybeSingle();
+            const { data, error } = await supabaseClient.from('users').select('name, avatar, description, fa_icon').eq('login', currentUser.login).maybeSingle();
             if (error) throw error;
             if (data) {
                 let changed = false;
@@ -1093,7 +1057,6 @@
         }
     }
 
-    // ========== DIAMKEY AUTH ==========
     async function exchangeTicket(ticket) {
         const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` };
         try {
@@ -1178,25 +1141,21 @@
     function setupDiamkeyButton() {
         const btn = document.getElementById('diamkeyLoginBtn');
         if (!btn) return;
-
         const newBtn = btn.cloneNode(true);
         btn.parentNode.replaceChild(newBtn, btn);
         const freshBtn = document.getElementById('diamkeyLoginBtn');
         if (!freshBtn) return;
-
         freshBtn.onclick = (e) => {
             e.preventDefault();
             if (freshBtn.disabled) return;
             freshBtn.disabled = true;
             freshBtn.style.opacity = '0.6';
             freshBtn.style.cursor = 'wait';
-
             const redirect = encodeURIComponent(window.location.origin + window.location.pathname);
             const appName = encodeURIComponent('Diamond AI');
             const oauthUrl = `https://diamkey.ru/oauth.html?redirect=${redirect}&app=${appName}`;
-
-            window.location.href = oauthUrl;
-
+            // Открываем в новой вкладке, чтобы не терять состояние PWA
+            window.open(oauthUrl, '_blank');
             setTimeout(() => {
                 freshBtn.disabled = false;
                 freshBtn.style.opacity = '';
@@ -1205,7 +1164,6 @@
         };
     }
 
-    // ========== ВСПОМОГАТЕЛЬНЫЕ UI ==========
     function updateSendButtonState() {
         const btn = document.getElementById('send-btn');
         const input = document.getElementById('user-input');
@@ -1254,7 +1212,7 @@
         }
     });
 
-    window.addEventListener('resize', () => {
+window.addEventListener('resize', () => {
         const sidebar = document.getElementById('sidebar');
         const titleBar = document.getElementById('titleBar');
         const collapsedActions = document.getElementById('collapsedActions');
@@ -1387,6 +1345,9 @@
     // ========== ИНИЦИАЛИЗАЦИЯ ==========
     (async function() {
         log('Загрузка...');
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
         await fetchMistralKey();
         const savedUser = localStorage.getItem('diamond_user');
         if (savedUser) {
