@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI — ПОЛНАЯ СИНХРОНИЗАЦИЯ + ПРОФИЛЬ (без ГенХаба) ====================
+// ==================== DIAMOND AI — ПОЛНАЯ СИНХРОНИЗАЦИЯ + ПАПКИ + ЗАКРЕПЫ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -564,6 +564,47 @@
         modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
+    // ========== МОДАЛКА ДОБАВЛЕНИЯ ЧАТА В ПАПКУ ==========
+    function showAddChatToFolderModal(folderId) {
+        const folder = folders.find(f => f.id === folderId);
+        if (!folder) return;
+        const availableChats = chats.filter(c => c.folder_id !== folderId);
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-container" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h3><i class="fas ${folder.icon}" style="color:${folder.color}"></i> Добавить чат в «${escapeHtml(folder.name)}»</h3>
+                    <button class="close-modal"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                    ${availableChats.length === 0 ? '<p style="text-align:center; padding:20px;">Нет доступных чатов для добавления</p>' : 
+                    availableChats.map(c => `
+                        <div class="add-chat-item" data-chat-id="${c.id}" style="padding:12px; background:var(--bg-tertiary); border-radius:16px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:10px;">
+                            <i class="fas fa-comment"></i>
+                            <span style="flex:1;">${escapeHtml(c.title)}</span>
+                            <i class="fas fa-plus"></i>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary close-modal">Закрыть</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const close = () => modal.remove();
+        modal.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', close));
+        modal.querySelectorAll('.add-chat-item').forEach(item => {
+            item.addEventListener('click', async () => {
+                const chatId = item.dataset.chatId;
+                await moveChatToFolder(chatId, folderId);
+                close();
+            });
+        });
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    }
+
     function renderFoldersPage() {
         const container = document.getElementById('foldersPage');
         if (!container) return;
@@ -600,6 +641,7 @@
                     <div class="folder-stats">${chats.filter(c => c.folder_id === f.id).length} чатов</div>
                 </div>
                 <div class="folder-actions">
+                    <button class="add-chat-to-folder" data-id="${f.id}" title="Добавить чат"><i class="fas fa-plus"></i></button>
                     <button class="view-folder-chats" data-id="${f.id}" title="Чаты"><i class="fas fa-comments"></i></button>
                     <button class="edit-folder" data-id="${f.id}" title="Редактировать"><i class="fas fa-edit"></i></button>
                     <button class="delete-folder" data-id="${f.id}" title="Удалить"><i class="fas fa-trash"></i></button>
@@ -607,6 +649,12 @@
             </div>
         `).join('');
         
+        document.querySelectorAll('.add-chat-to-folder').forEach(btn => {
+            btn.onclick = (e) => {
+                e.stopPropagation();
+                showAddChatToFolderModal(btn.dataset.id);
+            };
+        });
         document.querySelectorAll('.view-folder-chats').forEach(btn => {
             btn.onclick = (e) => {
                 e.stopPropagation();
@@ -670,45 +718,71 @@
         modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
-    // ========== ИСТОРИЯ ==========
-    function getDateGroup(ts) {
-        const d = new Date(ts).setHours(0, 0, 0, 0);
-        const t = new Date().setHours(0, 0, 0, 0);
-        if (d === t) return 'Сегодня';
-        if (d === t - 86400000) return 'Вчера';
-        return 'Более 2-х дней назад';
-    }
-
+    // ========== ИСТОРИЯ С ГРУППИРОВКОЙ ==========
     function renderHistory() {
         const list = document.getElementById('history-list');
         if (!list) return;
         const searchTerm = document.getElementById('history-search')?.value.toLowerCase() || '';
+
+        // Фильтр по поиску
         let filtered = chats.filter(c => c.title.toLowerCase().includes(searchTerm));
-        const groups = { 'Сегодня': [], 'Вчера': [], 'Более 2-х дней назад': [] };
-        filtered.forEach(c => groups[getDateGroup(c.last_activity || c.created_at)].push(c));
-        for (const g in groups) {
-            groups[g].sort((a, b) => (a.pinned === b.pinned ? 0 : a.pinned ? -1 : 1) || (b.last_activity - a.last_activity));
-        }
-        
+
+        // Разделяем на закрепленные, папочные и обычные
+        const pinnedChats = filtered.filter(c => c.pinned);
+        const pinnedIds = new Set(pinnedChats.map(c => c.id));
+
+        const folderMap = new Map();
+        const orphanChats = [];
+
+        filtered.forEach(c => {
+            if (pinnedIds.has(c.id)) return; // закрепленные отдельно
+            if (c.folder_id) {
+                if (!folderMap.has(c.folder_id)) folderMap.set(c.folder_id, []);
+                folderMap.get(c.folder_id).push(c);
+            } else {
+                orphanChats.push(c);
+            }
+        });
+
         let html = '';
-        for (const g of ['Сегодня', 'Вчера', 'Более 2-х дней назад']) {
-            if (!groups[g].length) continue;
-            html += `<div class="history-group"><div class="history-group-title">${g}</div>`;
-            groups[g].forEach(c => html += `
-                <div class="history-item ${c.id === currentChatId ? 'active' : ''}" data-id="${c.id}">
-                    <span class="chat-title">${escapeHtml(c.title)}</span>
-                    <div class="chat-actions-hover">
-                        <button class="chat-action-btn rename-chat-hover" data-id="${c.id}" title="Переименовать"><i class="fas fa-pencil-alt"></i></button>
-                        <button class="chat-action-btn pin-chat-hover" data-id="${c.id}" title="${c.pinned ? 'Открепить' : 'Закрепить'}"><i class="fas fa-thumbtack ${c.pinned ? 'pinned' : ''}"></i></button>
-                        <button class="chat-action-btn move-to-folder-hover" data-id="${c.id}" title="Переместить в папку"><i class="fas fa-folder-open"></i></button>
-                        <button class="chat-action-btn delete-chat-hover" data-id="${c.id}" title="Удалить"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>
-            `);
+
+        // Группа "Закрепленные"
+        if (pinnedChats.length > 0) {
+            html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-thumbtack"></i> Закрепленные</div>`;
+            pinnedChats.forEach(c => {
+                const folder = (c.folder_id ? folders.find(f => f.id === c.folder_id) : null);
+                html += buildHistoryItem(c, folder);
+            });
             html += '</div>';
         }
-        list.innerHTML = html || '<div style="text-align:center; padding:20px;">Нет чатов</div>';
-        
+
+        // Группы по папкам
+        const sortedFolders = Array.from(folderMap.keys()).map(fid => folders.find(f => f.id === fid)).filter(Boolean);
+        sortedFolders.sort((a, b) => a.name.localeCompare(b.name));
+        sortedFolders.forEach(folder => {
+            const chatsInFolder = folderMap.get(folder.id);
+            if (!chatsInFolder || chatsInFolder.length === 0) return;
+            html += `<div class="history-group"><div class="history-group-title" style="display:flex; align-items:center; gap:8px;"><i class="fas ${folder.icon}" style="color:${folder.color}"></i> ${escapeHtml(folder.name)}</div>`;
+            chatsInFolder.forEach(c => html += buildHistoryItem(c, folder));
+            html += '</div>';
+        });
+
+        // Остальные (без папки и не закрепленные) — по временным группам
+        if (orphanChats.length > 0) {
+            const groups = { 'Сегодня': [], 'Вчера': [], 'Более 2-х дней назад': [] };
+            orphanChats.forEach(c => groups[getDateGroup(c.last_activity || c.created_at)].push(c));
+            for (const g of ['Сегодня', 'Вчера', 'Более 2-х дней назад']) {
+                if (!groups[g].length) continue;
+                html += `<div class="history-group"><div class="history-group-title">${g}</div>`;
+                groups[g].forEach(c => html += buildHistoryItem(c, null));
+                html += '</div>';
+            }
+        }
+
+        if (!html) html = '<div style="text-align:center; padding:20px;">Нет чатов</div>';
+        list.innerHTML = html;
+
+        // Навешиваем события
         document.querySelectorAll('.history-item').forEach(el => {
             el.addEventListener('click', (e) => {
                 if (!e.target.closest('.chat-actions-hover')) switchChat(el.dataset.id);
@@ -726,6 +800,34 @@
         document.querySelectorAll('.move-to-folder-hover').forEach(btn => {
             btn.onclick = (e) => { e.stopPropagation(); showFolderSelectModal(btn.dataset.id); };
         });
+    }
+
+    function buildHistoryItem(chat, folder) {
+        const isActive = chat.id === currentChatId;
+        const folderColor = folder ? folder.color : 'transparent';
+        const folderIcon = folder ? folder.icon : '';
+        const folderStyle = folder ? `style="border-left: 3px solid ${folderColor}; padding-left: 9px;"` : '';
+        const iconHtml = folder ? `<i class="fas ${folderIcon}" style="color:${folderColor}; margin-right:6px; font-size:12px;"></i>` : '';
+        
+        return `
+            <div class="history-item ${isActive ? 'active' : ''}" data-id="${chat.id}" ${folderStyle}>
+                ${iconHtml}<span class="chat-title">${escapeHtml(chat.title)}</span>
+                <div class="chat-actions-hover">
+                    <button class="chat-action-btn rename-chat-hover" data-id="${chat.id}" title="Переименовать"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="chat-action-btn pin-chat-hover" data-id="${chat.id}" title="${chat.pinned ? 'Открепить' : 'Закрепить'}"><i class="fas fa-thumbtack ${chat.pinned ? 'pinned' : ''}"></i></button>
+                    <button class="chat-action-btn move-to-folder-hover" data-id="${chat.id}" title="Переместить в папку"><i class="fas fa-folder-open"></i></button>
+                    <button class="chat-action-btn delete-chat-hover" data-id="${chat.id}" title="Удалить"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `;
+    }
+
+    function getDateGroup(ts) {
+        const d = new Date(ts).setHours(0, 0, 0, 0);
+        const t = new Date().setHours(0, 0, 0, 0);
+        if (d === t) return 'Сегодня';
+        if (d === t - 86400000) return 'Вчера';
+        return 'Более 2-х дней назад';
     }
 
     // ========== РЕНДЕР ЧАТА ==========
@@ -1235,7 +1337,7 @@
     async function showLoadingScreen() {
         const ws = document.getElementById('welcomeScreen');
         ws.style.display = 'flex';
-        await new Promise(r => setTimeout(r, 400)); // Быстрый экран
+        await new Promise(r => setTimeout(r, 400));
         ws.classList.add('fade-out');
         await new Promise(r => setTimeout(r, 300));
         ws.style.display = 'none';
@@ -1246,7 +1348,6 @@
         document.getElementById('sidebarToggleBtn')?.addEventListener('click', toggleSidebar);
         document.getElementById('new-chat-btn')?.addEventListener('click', createNewChat);
         document.getElementById('folders-page-btn')?.addEventListener('click', switchToFoldersView);
-        // Удалены обработчики genhab-page-btn и collapsedGenhab
         document.getElementById('collapsedNewChat')?.addEventListener('click', createNewChat);
         document.getElementById('collapsedFolders')?.addEventListener('click', switchToFoldersView);
         
