@@ -238,11 +238,11 @@ body {
 .collapsed-actions {
     display: flex;
     align-items: center;
-    gap: 2px;                       /* было 4px */
+    gap: 2px;
     background: var(--bg-tertiary);
-    border-radius: 24px;            /* чуть меньше, под уменьшенные кнопки */
+    border-radius: 24px;
     border: 1px solid var(--border-color);
-    padding: 2px 6px;               /* было 4px 8px */
+    padding: 2px 6px;
     transition: opacity 0.3s ease, visibility 0.3s ease;
     opacity: 0;
     visibility: hidden;
@@ -250,6 +250,7 @@ body {
     position: absolute;
     left: var(--collapsed-left-offset, 85px);
     white-space: nowrap;
+    z-index: 5;
 }
 
 .collapsed-actions.show {
@@ -258,9 +259,20 @@ body {
     pointer-events: auto;
 }
 
-/* Кнопки в свёрнутой панели — меньше */
+/* Скрытие текста логотипа при свёрнутом сайдбаре */
+.title-bar.collapsed .logo-text {
+    opacity: 0;
+    transform: translateX(-10px);
+    pointer-events: none;
+}
+
+.title-bar.collapsed .collapsed-actions {
+    opacity: 1;
+    visibility: visible;
+}
+
 .action-btn-icon {
-    width: 28px;                    /* было 32px */
+    width: 28px;
     height: 28px;
     background: transparent;
     border: none;
@@ -269,7 +281,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;                /* чуть меньше, было 15px */
+    font-size: 14px;
     transition: var(--transition);
     border-radius: 50%;
 }
