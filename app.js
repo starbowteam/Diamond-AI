@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI — PWA FIX + СЕССИИ + ПАПКИ ====================
+// ==================== DIAMOND AI — БЫСТРЫЙ PWA + ПАПКИ + ЗАКРЕПЫ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -717,7 +717,7 @@
         modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
-    // ========== ИСТОРИЯ ==========
+    // ========== ИСТОРИЯ С ГРУППИРОВКОЙ ==========
     function renderHistory() {
         const list = document.getElementById('history-list');
         if (!list) return;
@@ -734,7 +734,6 @@
                 folderMap.get(c.folder_id).push(c);
             } else orphanChats.push(c);
         });
-
         let html = '';
         if (pinnedChats.length > 0) {
             html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-thumbtack"></i> Закрепленные</div>`;
@@ -765,7 +764,6 @@
         }
         if (!html) html = '<div style="text-align:center; padding:20px;">Нет чатов</div>';
         list.innerHTML = html;
-
         document.querySelectorAll('.history-item').forEach(el => {
             el.addEventListener('click', (e) => {
                 if (!e.target.closest('.chat-actions-hover')) switchChat(el.dataset.id);
@@ -1154,8 +1152,8 @@
             const redirect = encodeURIComponent(window.location.origin + window.location.pathname);
             const appName = encodeURIComponent('Diamond AI');
             const oauthUrl = `https://diamkey.ru/oauth.html?redirect=${redirect}&app=${appName}`;
-            // Открываем в новой вкладке, чтобы не терять состояние PWA
-            window.open(oauthUrl, '_blank');
+            // В PWA лучше открывать в текущем окне, а не в новом
+            window.location.href = oauthUrl;
             setTimeout(() => {
                 freshBtn.disabled = false;
                 freshBtn.style.opacity = '';
@@ -1212,7 +1210,7 @@
         }
     });
 
-window.addEventListener('resize', () => {
+    window.addEventListener('resize', () => {
         const sidebar = document.getElementById('sidebar');
         const titleBar = document.getElementById('titleBar');
         const collapsedActions = document.getElementById('collapsedActions');
@@ -1295,7 +1293,7 @@ window.addEventListener('resize', () => {
     async function showLoadingScreen() {
         const ws = document.getElementById('welcomeScreen');
         ws.style.display = 'flex';
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 400));  // почти мгновенно
         ws.classList.add('fade-out');
         await new Promise(r => setTimeout(r, 300));
         ws.style.display = 'none';
@@ -1308,7 +1306,6 @@ window.addEventListener('resize', () => {
         document.getElementById('folders-page-btn')?.addEventListener('click', switchToFoldersView);
         document.getElementById('collapsedNewChat')?.addEventListener('click', createNewChat);
         document.getElementById('collapsedFolders')?.addEventListener('click', switchToFoldersView);
-        
         document.getElementById('user-input')?.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 120) + 'px';
@@ -1322,7 +1319,6 @@ window.addEventListener('resize', () => {
         });
         document.getElementById('send-btn')?.addEventListener('click', sendMessage);
         document.getElementById('history-search')?.addEventListener('input', renderHistory);
-        
         document.getElementById('dropdown-discord')?.addEventListener('click', () => {
             window.open('https://discord.gg/diamondshop', '_blank');
         });
@@ -1330,7 +1326,6 @@ window.addEventListener('resize', () => {
             window.open('https://diamkey.ru', '_blank');
         });
         document.getElementById('dropdown-logout')?.addEventListener('click', logout);
-        
         document.getElementById('userMenuBtn')?.addEventListener('click', (e) => {
             e.stopPropagation();
             document.getElementById('userDropdown').classList.toggle('show');
