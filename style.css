@@ -442,6 +442,12 @@ body {
     position: relative;
 }
 
+/* Поддержка цветной рамки у чатов в папках */
+.history-item[style*="border-left"] {
+    border-radius: 0 20px 20px 0;
+    background: var(--bg-tertiary);
+}
+
 .history-item:hover {
     background: var(--bg-hover);
     border-color: var(--border-color);
@@ -501,7 +507,6 @@ body {
     background: var(--bg-hover);
     color: var(--text-primary);
 }
-
 /* Панель пользователя */
 .user-panel {
     margin-top: auto;
