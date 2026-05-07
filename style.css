@@ -1260,13 +1260,13 @@ textarea::placeholder {
     background: linear-gradient(135deg, #1e1e28 0%, #252530 100%);
     border: 1px solid var(--border-color);
     border-radius: 24px;
-    padding: 32px;
+    padding: 36px;
     margin-bottom: 32px;
     display: flex;
     align-items: center;
-    gap: 28px;
+    gap: 32px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-    min-height: 160px;
+    min-height: 200px;
 }
 
 .workshop-banner-text {
@@ -1274,29 +1274,23 @@ textarea::placeholder {
 }
 
 .workshop-banner-text h1 {
-    font-size: 28px;
+    font-size: 40px;
     font-weight: 800;
     color: var(--text-primary);
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.workshop-banner-text h1 i {
-    color: var(--workshop-accent);
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
 }
 
 .workshop-banner-text p {
-    font-size: 15px;
+    font-size: 16px;
     color: var(--text-secondary);
     line-height: 1.6;
     max-width: 600px;
 }
 
 .workshop-banner-img {
-    width: 156px;
-    height: 156px;
+    width: 170px;
+    height: 170px;
     border-radius: 24px;
     object-fit: cover;
     flex-shrink: 0;
@@ -1435,20 +1429,6 @@ textarea::placeholder {
     transform: translateX(26px);
 }
 
-.workshop-tool-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(108, 92, 231, 0.1);
-    border: 1px solid rgba(108, 92, 231, 0.25);
-    border-radius: 20px;
-    padding: 6px 14px;
-    font-size: 12px;
-    color: var(--workshop-accent);
-    font-weight: 600;
-    align-self: flex-start;
-}
-
 /* Адаптив для мастерской */
 @media (max-width: 768px) {
     .workshop-banner {
@@ -1457,11 +1437,11 @@ textarea::placeholder {
         padding: 24px;
     }
     .workshop-banner-text h1 {
-        justify-content: center;
+        font-size: 28px;
     }
     .workshop-banner-img {
-        width: 120px;
-        height: 120px;
+        width: 130px;
+        height: 130px;
     }
     .workshop-tools-grid {
         grid-template-columns: 1fr;
