@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI — МАСТЕРСКАЯ + ПАПКИ + ЗАКРЕПЫ (v26) ====================
+// ==================== DIAMOND AI — МАСТЕРСКАЯ + ПАПКИ + ЗАКРЕПЫ (v26 fix) ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -305,6 +305,7 @@
 
     async function createNewChat() {
         currentChatId = null;
+        switchToChatView();   // <-- исправлено
         renderEmptyState();
     }
 
@@ -327,6 +328,7 @@
 
     async function switchChat(id) {
         currentChatId = id;
+        switchToChatView();   // <-- исправлено
         renderChat();
         renderHistory();
     }
@@ -1083,7 +1085,6 @@
                 if (!chat.messages) chat.messages = [];
                 chat.messages.push({ id: messageId, role, content, timestamp, isTyping: false });
                 chat.last_activity = timestamp;
-                // Никогда не меняем название инструментального чата
                 if (!(chat.id && chat.id.startsWith('tool_'))) {
                     if (role === 'user' && chat.messages.filter(m => m.role === 'user').length === 1) {
                         chat.title = generateChatTitle(content);
@@ -1575,7 +1576,6 @@
             currentUser = JSON.parse(savedUser);
             await loadChatsAndFolders();
             await refreshUserProfile();
-            // Восстановление инструментальных чатов
             if (workshopTools.ai_detect) {
                 await createToolChatWithGreeting('ai_detect');
             }
