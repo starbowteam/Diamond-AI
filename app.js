@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI — МАСТЕРСКАЯ + ПАПКИ + ЗАКРЕПЫ ====================
+// ==================== DIAMOND AI — МАСТЕРСКАЯ + ПАПКИ + ЗАКРЕПЫ (v25) ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -18,7 +18,7 @@
     let placeholderInterval = null;
     let thinkingTimer = null;
     let thinkingDots = 0;
-    let workshopTools = {}; // состояние тумблеров: { ai_detect: true/false }
+    let workshopTools = {};
 
     const placeholderTexts = [
         "Что расскажешь о себе?",
@@ -304,9 +304,8 @@
     }
 
     async function createNewChat() {
-        renderEmptyState();
         currentChatId = null;
-        showToast('Новый диалог', 'Напишите сообщение', 'info');
+        renderEmptyState();
     }
 
     async function deleteChat(id) {
@@ -740,35 +739,46 @@
         localStorage.setItem('diamond_workshop_tools', JSON.stringify(workshopTools));
     }
 
+    async function createToolChatWithGreeting(toolId) {
+        const toolChatId = 'tool_' + toolId;
+        if (chats.find(c => c.id === toolChatId)) return;
+        const toolInfo = getToolInfo(toolId);
+        const toolChat = {
+            id: toolChatId,
+            title: toolInfo.title,
+            messages: [{
+                id: Date.now().toString(),
+                role: 'assistant',
+                content: 'Готов распознавать ваши тексты!',
+                timestamp: Date.now(),
+                isTyping: false
+            }],
+            created_at: Date.now(),
+            last_activity: Date.now(),
+            pinned: false,
+            folder_id: null,
+            isTool: true,
+            toolId: toolId
+        };
+        chats.unshift(toolChat);
+        await saveChatToSupabase(toolChat);
+    }
+
     async function toggleWorkshopTool(toolId) {
-        if (toolId !== 'ai_detect') return; // пока только один рабочий
+        if (toolId !== 'ai_detect') return;
         workshopTools[toolId] = !workshopTools[toolId];
         saveWorkshopToolsState();
 
         const toolChatId = 'tool_' + toolId;
         if (workshopTools[toolId]) {
-            // Создать чат, если его нет
-            if (!chats.find(c => c.id === toolChatId)) {
-                const toolChat = {
-                    id: toolChatId,
-                    title: 'Распознать ИИ',
-                    messages: [],
-                    created_at: Date.now(),
-                    last_activity: Date.now(),
-                    pinned: false,
-                    folder_id: null,
-                    isTool: true,
-                    toolId: toolId
-                };
-                chats.unshift(toolChat);
-                await saveChatToSupabase(toolChat);
-            }
-            // Переключиться на него
+            // Создаём чат, если его нет, и добавляем приветственное сообщение
+            await createToolChatWithGreeting(toolId);
+            // Переключаемся на него
             switchChat(toolChatId);
             switchToChatView();
             showToast('Инструмент включён', 'Чат «Распознать ИИ» активен', 'success');
         } else {
-            // Выключение не удаляет чат, просто убираем фокус
+            // При выключении не удаляем чат, просто убираем фокус
             if (currentChatId === toolChatId) {
                 currentChatId = null;
                 renderChat();
@@ -811,7 +821,6 @@
                     </div>
                     ${aiDetectActive ? '<div class="workshop-tool-badge"><i class="fas fa-comment"></i> Чат активен</div>' : ''}
                 </div>
-                <!-- Остальные неактивные инструменты -->
                 <div class="workshop-tool-card disabled">
                     <div class="workshop-tool-header">
                         <div class="workshop-tool-icon"><i class="fas fa-paint-brush"></i></div>
@@ -891,7 +900,6 @@
 
         let html = '';
 
-        // Инструментальные чаты (отдельно)
         if (toolChats.length > 0) {
             html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-wrench"></i> Мастерская</div>`;
             toolChats.forEach(c => {
@@ -973,9 +981,9 @@
     function buildToolHistoryItem(chat, toolInfo) {
         const isActive = chat.id === currentChatId;
         return `
-            <div class="history-item ${isActive ? 'active' : ''}" data-id="${chat.id}" style="border-left: 3px solid var(--workshop-accent); padding-left: 9px; background: #25252a;">
+            <div class="history-item tool-chat ${isActive ? 'active' : ''}" data-id="${chat.id}" style="border-left: 3px solid var(--workshop-accent); padding-left: 9px;">
                 <i class="fas ${toolInfo.icon}" style="color: var(--workshop-accent); margin-right: 8px; font-size: 14px;"></i>
-                <span class="chat-title">${escapeHtml(chat.title)}</span>
+                <span class="chat-title" style="z-index:1;">${escapeHtml(chat.title)}</span>
                 <div class="chat-actions-hover">
                     <button class="chat-action-btn delete-chat-hover" data-id="${chat.id}" title="Удалить"><i class="fas fa-trash"></i></button>
                 </div>
@@ -1115,7 +1123,7 @@
                 folder_id: null,
                 isTool: isTool
             };
-            charts.unshift(chat);
+            chats.unshift(chat);
             if (!isTool) currentChatId = chat.id;
             await saveChatToSupabase(chat);
             renderHistory();
@@ -1135,7 +1143,6 @@
         scrollToBottom();
         startThinkingAnimation();
 
-        // Определяем системный промпт в зависимости от чата
         let systemPrompt;
         if (chat.id && chat.id.startsWith('tool_')) {
             const toolId = chat.id.replace('tool_', '');
@@ -1565,24 +1572,9 @@
             currentUser = JSON.parse(savedUser);
             await loadChatsAndFolders();
             await refreshUserProfile();
-            // Восстановление инструментальных чатов, если активны
+            // Восстановление инструментальных чатов
             if (workshopTools.ai_detect) {
-                const toolChatId = 'tool_ai_detect';
-                if (!chats.find(c => c.id === toolChatId)) {
-                    const toolChat = {
-                        id: toolChatId,
-                        title: 'Распознать ИИ',
-                        messages: [],
-                        created_at: Date.now(),
-                        last_activity: Date.now(),
-                        pinned: false,
-                        folder_id: null,
-                        isTool: true,
-                        toolId: 'ai_detect'
-                    };
-                    chats.unshift(toolChat);
-                    await saveChatToSupabase(toolChat);
-                }
+                await createToolChatWithGreeting('ai_detect');
             }
         }
         await showLoadingScreen();
