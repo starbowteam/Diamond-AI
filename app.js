@@ -845,22 +845,6 @@
                 </div>
                 <div class="workshop-tool-card disabled">
                     <div class="workshop-tool-header">
-                        <div class="workshop-tool-icon"><i class="fas fa-paint-brush"></i></div>
-                        <div class="workshop-tool-info">
-                            <h3>Арт-генератор</h3>
-                            <p>Создание изображений по описанию (скоро)</p>
-                        </div>
-                    </div>
-                    <div class="workshop-tool-toggle">
-                        <span>Скоро появится</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" disabled>
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
-                <div class="workshop-tool-card disabled">
-                    <div class="workshop-tool-header">
                         <div class="workshop-tool-icon"><i class="fas fa-code"></i></div>
                         <div class="workshop-tool-info">
                             <h3>Code Review</h3>
