@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI — МАСТЕРСКАЯ + ПАПКИ + ЗАКРЕПЫ (v26 fix) ====================
+// ==================== DIAMOND AI — МАСТЕРСКАЯ + ПАПКИ + ЗАКРЕПЫ (v26 final) ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -35,7 +35,7 @@
     const currentDateStr = now.toLocaleDateString('ru-RU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const SYSTEM_PROMPT = {
         role: 'system',
-        content: `Ты — Diamond AI, умный и многофункциональный помощник. Отвечай строго по делу, используй KaTeX для математики и выделяй код тройными кавычками (```). Сегодня: ${currentDateStr}.`
+        content: `Ты — Diamond AI, умный и многофункциональный помощник. Отвечай строго по делу, используй KaTeX для математики и выделяй код. Сегодня: ${currentDateStr}.`
     };
 
     const TOOL_SYSTEM_PROMPTS = {
@@ -228,11 +228,15 @@
             ]);
             if (chatsRes.error) throw chatsRes.error;
             if (foldersRes.error) throw foldersRes.error;
-            chats = chatsRes.data.map(c => ({
-                ...c,
-                messages: c.messages || [],
-                pinned: c.pinned || false
-            }));
+            chats = chatsRes.data.map(c => {
+                const chat = { ...c, messages: c.messages || [], pinned: c.pinned || false };
+                if (chat.id && chat.id.startsWith('tool_')) {
+                    const toolId = chat.id.replace('tool_', '');
+                    const toolInfo = getToolInfo(toolId);
+                    if (toolInfo) chat.title = toolInfo.title;
+                }
+                return chat;
+            });
             folders = foldersRes.data;
             chats.sort((a, b) => b.last_activity - a.last_activity);
             currentChatId = chats.length ? chats[0].id : null;
@@ -247,10 +251,16 @@
     async function saveChatToSupabase(chat) {
         if (!currentUser) return;
         const { id, title, created_at, last_activity, pinned, folder_id, messages } = chat;
+        let finalTitle = title;
+        if (id && id.startsWith('tool_')) {
+            const toolId = id.replace('tool_', '');
+            const toolInfo = getToolInfo(toolId);
+            if (toolInfo) finalTitle = toolInfo.title;
+        }
         const { error } = await supabaseClient.from('diamond_chats').upsert({
             id,
             user_login: currentUser.login,
-            title,
+            title: finalTitle,
             created_at,
             last_activity,
             pinned,
@@ -305,7 +315,7 @@
 
     async function createNewChat() {
         currentChatId = null;
-        switchToChatView();   // <-- исправлено
+        switchToChatView();
         renderEmptyState();
     }
 
@@ -328,7 +338,7 @@
 
     async function switchChat(id) {
         currentChatId = id;
-        switchToChatView();   // <-- исправлено
+        switchToChatView();
         renderChat();
         renderHistory();
     }
