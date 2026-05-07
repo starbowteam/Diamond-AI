@@ -11,8 +11,8 @@
     --radius-xl: 28px;
     --transition: all 0.25s ease;
     --collapsed-left-offset: 85px;
-    --workshop-accent: #e2b04a;
-    --workshop-glow: rgba(226, 176, 74, 0.15);
+    --workshop-accent: #6c5ce7;
+    --workshop-glow: rgba(108, 92, 231, 0.12);
 }
 
 * {
@@ -459,12 +459,39 @@ body {
     border-color: #5a5a5a;
 }
 
+/* Чат из мастерской (инструмент) — фиолетовый маркер + фон матрицы */
+.history-item.tool-chat {
+    position: relative;
+    overflow: hidden;
+}
+
+.history-item.tool-chat::before {
+    content: "01 10 00 11 01 00 10 11 00 01 10 11 01 00 10 00 11 01 00 10";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    font-size: 8px;
+    font-family: monospace;
+    color: rgba(108, 92, 231, 0.08);
+    letter-spacing: 2px;
+    pointer-events: none;
+    z-index: 0;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    padding-left: 12px;
+}
+
 .chat-title {
     flex: 1;
     min-width: 0;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    position: relative;
+    z-index: 1;
 }
 
 .chat-actions-hover {
@@ -1231,15 +1258,16 @@ textarea::placeholder {
 }
 
 .workshop-banner {
-    background: linear-gradient(135deg, #2a2a35 0%, #1e1e28 100%);
-    border: 1px solid var(--workshop-accent);
+    background: linear-gradient(135deg, #1e1e28 0%, #252530 100%);
+    border: 1px solid var(--border-color);
     border-radius: 24px;
-    padding: 28px;
+    padding: 32px;
     margin-bottom: 32px;
     display: flex;
     align-items: center;
-    gap: 24px;
-    box-shadow: 0 8px 24px var(--workshop-glow);
+    gap: 28px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    min-height: 160px;
 }
 
 .workshop-banner-text {
@@ -1247,34 +1275,39 @@ textarea::placeholder {
 }
 
 .workshop-banner-text h1 {
-    font-size: 26px;
+    font-size: 28px;
     font-weight: 800;
-    color: var(--workshop-accent);
-    margin-bottom: 8px;
+    color: var(--text-primary);
+    margin-bottom: 10px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+}
+
+.workshop-banner-text h1 i {
+    color: var(--workshop-accent);
 }
 
 .workshop-banner-text p {
-    font-size: 14px;
+    font-size: 15px;
     color: var(--text-secondary);
     line-height: 1.6;
+    max-width: 600px;
 }
 
 .workshop-banner-img {
-    width: 100px;
-    height: 100px;
-    border-radius: 20px;
+    width: 130px;
+    height: 130px;
+    border-radius: 24px;
     object-fit: cover;
     flex-shrink: 0;
-    border: 2px solid var(--workshop-accent);
-    box-shadow: 0 4px 16px var(--workshop-glow);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .workshop-tools-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 20px;
 }
 
@@ -1286,37 +1319,42 @@ textarea::placeholder {
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 18px;
 }
 
 .workshop-tool-card.active {
     border-color: var(--workshop-accent);
-    box-shadow: 0 0 20px var(--workshop-glow);
+    box-shadow: 0 0 24px var(--workshop-glow);
     background: #25252f;
 }
 
 .workshop-tool-card.disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     pointer-events: none;
 }
 
 .workshop-tool-header {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 16px;
 }
 
 .workshop-tool-icon {
-    width: 48px;
-    height: 48px;
+    width: 52px;
+    height: 52px;
     border-radius: 16px;
     background: var(--bg-tertiary);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 22px;
-    color: var(--workshop-accent);
+    font-size: 24px;
+    color: var(--text-secondary);
     flex-shrink: 0;
+}
+
+.workshop-tool-card.active .workshop-tool-icon {
+    color: var(--workshop-accent);
+    background: rgba(108, 92, 231, 0.1);
 }
 
 .workshop-tool-info {
@@ -1324,16 +1362,16 @@ textarea::placeholder {
 }
 
 .workshop-tool-info h3 {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 600;
     color: var(--text-primary);
-    margin-bottom: 4px;
+    margin-bottom: 6px;
 }
 
 .workshop-tool-info p {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-secondary);
-    line-height: 1.4;
+    line-height: 1.5;
 }
 
 .workshop-tool-toggle {
@@ -1342,19 +1380,20 @@ textarea::placeholder {
     justify-content: space-between;
     background: var(--bg-tertiary);
     border-radius: 16px;
-    padding: 10px 14px;
+    padding: 12px 16px;
 }
 
 .workshop-tool-toggle span {
-    font-size: 13px;
+    font-size: 14px;
     color: var(--text-secondary);
+    font-weight: 500;
 }
 
 /* Кастомный тумблер */
 .toggle-switch {
     position: relative;
-    width: 52px;
-    height: 28px;
+    width: 56px;
+    height: 30px;
     flex-shrink: 0;
 }
 
@@ -1372,7 +1411,7 @@ textarea::placeholder {
     right: 0;
     bottom: 0;
     background: #3a3a3a;
-    border-radius: 28px;
+    border-radius: 30px;
     transition: 0.3s;
     border: 1px solid var(--border-color);
 }
@@ -1380,8 +1419,8 @@ textarea::placeholder {
 .toggle-slider:before {
     position: absolute;
     content: "";
-    height: 22px;
-    width: 22px;
+    height: 24px;
+    width: 24px;
     left: 2px;
     bottom: 2px;
     background: #fff;
@@ -1395,20 +1434,21 @@ textarea::placeholder {
 }
 
 .toggle-switch input:checked + .toggle-slider:before {
-    transform: translateX(24px);
+    transform: translateX(26px);
 }
 
 .workshop-tool-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: rgba(226, 176, 74, 0.1);
-    border: 1px solid rgba(226, 176, 74, 0.3);
+    background: rgba(108, 92, 231, 0.1);
+    border: 1px solid rgba(108, 92, 231, 0.25);
     border-radius: 20px;
-    padding: 6px 12px;
-    font-size: 11px;
+    padding: 6px 14px;
+    font-size: 12px;
     color: var(--workshop-accent);
     font-weight: 600;
+    align-self: flex-start;
 }
 
 /* Адаптив для мастерской */
@@ -1416,14 +1456,14 @@ textarea::placeholder {
     .workshop-banner {
         flex-direction: column;
         text-align: center;
-        padding: 20px;
+        padding: 24px;
     }
     .workshop-banner-text h1 {
         justify-content: center;
     }
     .workshop-banner-img {
-        width: 80px;
-        height: 80px;
+        width: 100px;
+        height: 100px;
     }
     .workshop-tools-grid {
         grid-template-columns: 1fr;
