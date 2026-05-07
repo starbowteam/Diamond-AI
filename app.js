@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI — МАСТЕРСКАЯ + ПАПКИ + ЗАКРЕПЫ (v26 final) ====================
+// ==================== DIAMOND AI — МАСТЕРСКАЯ + ПАПКИ + ЗАКРЕПЫ (v27) ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -41,7 +41,7 @@
     const TOOL_SYSTEM_PROMPTS = {
         ai_detect: {
             role: 'system',
-            content: `Ты — эксперт по определению авторства текста. Твоя задача: проанализировать присланный текст и определить, написан он человеком или сгенерирован ИИ (GPT-4, Claude, Mistral, и т.д.). Отвечай строго по существу: если видишь признаки генерации — укажи модель и причину. Если не уверен — так и скажи. Не отвечай на другие вопросы — только определение оригинальности.`
+            content: `Ты — эксперт по определению авторства текста. Твоя задача: проанализировать присланный текст и определить, написан он человеком или сгенерирован ИИ (GPT-4, Claude, Mistral, Gemini и т.д.). Признаки генерации: неестественная гладкость, отсутствие личного опыта, чрезмерная структурированность, водянистость, типовые шаблоны вроде "в заключение", "следует отметить", идеальная грамматика без ошибок. Отвечай кратко: "Похоже на сгенерированный ИИ, вероятная модель: ..." или "Похоже на текст человека, потому что ...". Если не уверен, объясни почему. Не отвечай на другие вопросы — только анализ оригинальности.`
         }
     };
 
@@ -781,20 +781,36 @@
         await saveChatToSupabase(toolChat);
     }
 
+    async function removeToolChat(toolId) {
+        const toolChatId = 'tool_' + toolId;
+        const idx = chats.findIndex(c => c.id === toolChatId);
+        if (idx !== -1) {
+            if (currentChatId === toolChatId) {
+                currentChatId = null;
+            }
+            await deleteChatFromSupabase(toolChatId);
+            chats.splice(idx, 1);
+        }
+    }
+
     async function toggleWorkshopTool(toolId) {
         if (toolId !== 'ai_detect') return;
         workshopTools[toolId] = !workshopTools[toolId];
         saveWorkshopToolsState();
 
-        const toolChatId = 'tool_' + toolId;
         if (workshopTools[toolId]) {
             await createToolChatWithGreeting(toolId);
             showToast('Инструмент включён', 'Чат «Распознать ИИ» активен', 'success');
         } else {
+            await removeToolChat(toolId);
             showToast('Инструмент выключен', 'Чат «Распознать ИИ» скрыт', 'info');
+            if (currentChatId === 'tool_' + toolId) {
+                renderEmptyState();
+            }
         }
         renderWorkshopPage();
         renderHistory();
+        renderChat();
     }
 
     function renderWorkshopPage() {
@@ -805,7 +821,7 @@
         container.innerHTML = `
             <div class="workshop-banner">
                 <div class="workshop-banner-text">
-                    <h1><i class="fas fa-wrench"></i> Мастерская Diamond AI</h1>
+                    <h1>МАСТЕРСКАЯ DIAMOND AI</h1>
                     <p>Специальные инструменты для расширенной работы с искусственным интеллектом. Включайте нужные тумблеры, чтобы активировать тематические чаты со строгими правилами.</p>
                 </div>
                 <img src="master.png" alt="Мастерская" class="workshop-banner-img">
@@ -826,7 +842,6 @@
                             <span class="toggle-slider"></span>
                         </label>
                     </div>
-                    ${aiDetectActive ? '<div class="workshop-tool-badge"><i class="fas fa-comment"></i> Чат активен</div>' : ''}
                 </div>
                 <div class="workshop-tool-card disabled">
                     <div class="workshop-tool-header">
@@ -907,7 +922,8 @@
 
         let html = '';
 
-        if (toolChats.length > 0) {
+        // Показываем инструментальные чаты только если соответствующий тумблер включен
+        if (toolChats.length > 0 && workshopTools.ai_detect) {
             html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-wrench"></i> Мастерская</div>`;
             toolChats.forEach(c => {
                 const toolId = c.id.replace('tool_', '');
