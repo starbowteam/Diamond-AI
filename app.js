@@ -366,11 +366,189 @@
         if (chat) { chat.folder_id = folderId || null; await saveChatToSupabase(chat); renderHistory(); renderFoldersPage(); showToast('Чат перемещён', folderId ? 'В папку' : 'Из папки', 'success'); }
     }
 
-    function showFolderEditModal(folder = null) { /* ... без изменений ... */ }
-    function showFolderSelectModal(chatId) { /* ... без изменений ... */ }
-    function showAddChatToFolderModal(folderId) { /* ... без изменений ... */ }
-    function renderFoldersPage() { /* ... без изменений ... */ }
-    function showFolderChatsModal(folder) { /* ... без изменений ... */ }
+    function showFolderEditModal(folder = null) {
+        const isEdit = folder !== null;
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-container" style="max-width: 500px;">
+                <div class="modal-header"><h3>${isEdit ? 'Редактировать папку' : 'Создать папку'}</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-body">
+                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px;">Название</label><input type="text" id="folder-name" placeholder="Название папки" value="${isEdit ? escapeHtml(folder.name) : ''}" style="width:100%; padding:12px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:16px; color:white;"></div>
+                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px;">Описание</label><textarea id="folder-description" rows="2" placeholder="Описание папки" style="width:100%; padding:12px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:16px; color:white;">${isEdit ? escapeHtml(folder.description || '') : ''}</textarea></div>
+                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px;">Иконка</label><div class="icon-selector" id="icon-selector" style="display:grid; grid-template-columns:repeat(6,1fr); gap:8px; background:var(--bg-tertiary); padding:12px; border-radius:16px;"></div></div>
+                    <div class="form-group"><label style="display:block; margin-bottom:6px;">Цвет</label><div class="color-selector" id="color-selector" style="display:flex; gap:12px; flex-wrap:wrap;">
+                        <div class="color-option" data-color="#e74c3c" style="background:#e74c3c; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
+                        <div class="color-option" data-color="#f39c12" style="background:#f39c12; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
+                        <div class="color-option" data-color="#2ecc71" style="background:#2ecc71; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
+                        <div class="color-option" data-color="#3498db" style="background:#3498db; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
+                        <div class="color-option" data-color="#9b59b6" style="background:#9b59b6; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
+                        <div class="color-option" data-color="#1abc9c" style="background:#1abc9c; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
+                        <div class="color-option" data-color="#e67e22" style="background:#e67e22; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
+                        <div class="color-option" data-color="#95a5a6" style="background:#95a5a6; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
+                    </div></div>
+                </div>
+                <div class="modal-footer"><button id="save-folder-btn" class="btn btn-primary">Сохранить</button><button class="btn btn-secondary close-modal">Отмена</button></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const icons = ['fa-folder', 'fa-folder-open', 'fa-book', 'fa-graduation-cap', 'fa-code', 'fa-music', 'fa-image', 'fa-video', 'fa-gamepad', 'fa-heart', 'fa-star', 'fa-rocket', 'fa-brain', 'fa-chart-line', 'fa-users', 'fa-calendar'];
+        const iconSelector = modal.querySelector('#icon-selector');
+        iconSelector.innerHTML = icons.map(icon => `<div class="icon-option" data-icon="${icon}" style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:12px; cursor:pointer; background:var(--bg-secondary);"><i class="fas ${icon}"></i></div>`).join('');
+        let selectedIcon = isEdit ? folder.icon : 'fa-folder';
+        let selectedColor = isEdit ? folder.color : '#95a5a6';
+        iconSelector.querySelectorAll('.icon-option').forEach(opt => {
+            if (opt.dataset.icon === selectedIcon) opt.style.background = 'var(--bg-hover)';
+            opt.onclick = () => {
+                iconSelector.querySelectorAll('.icon-option').forEach(o => o.style.background = 'var(--bg-secondary)');
+                opt.style.background = 'var(--bg-hover)';
+                selectedIcon = opt.dataset.icon;
+            };
+        });
+        modal.querySelectorAll('.color-option').forEach(opt => {
+            if (opt.dataset.color === selectedColor) opt.style.border = '2px solid white';
+            opt.onclick = () => {
+                modal.querySelectorAll('.color-option').forEach(o => o.style.border = 'none');
+                opt.style.border = '2px solid white';
+                selectedColor = opt.dataset.color;
+            };
+        });
+        const close = () => modal.remove();
+        modal.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', close));
+        modal.querySelector('#save-folder-btn').onclick = async () => {
+            const name = modal.querySelector('#folder-name').value.trim();
+            if (!name) { showToast('Ошибка', 'Введите название', 'warning'); return; }
+            const desc = modal.querySelector('#folder-description').value;
+            if (isEdit) await updateFolder(folder.id, name, desc, selectedIcon, selectedColor);
+            else await createFolder(name, desc, selectedIcon, selectedColor);
+            close();
+        };
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    }
+
+    function showFolderSelectModal(chatId) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-container" style="max-width: 400px;">
+                <div class="modal-header"><h3><i class="fas fa-folder"></i> Выбрать папку</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-body">
+                    <div class="folder-chats-list" id="folder-options-list">
+                        <div class="folder-chat-item" data-id="" style="padding:12px; background:var(--bg-tertiary); border-radius:16px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:10px;">
+                            <i class="fas fa-times-circle"></i><span>Без папки</span>
+                        </div>
+                        ${folders.map(f => `
+                            <div class="folder-chat-item" data-id="${f.id}" style="padding:12px; background:var(--bg-tertiary); border-radius:16px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:10px;">
+                                <i class="fas ${f.icon}" style="color:${f.color}"></i><span>${escapeHtml(f.name)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-secondary close-modal">Отмена</button></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const close = () => modal.remove();
+        modal.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', close));
+        modal.querySelectorAll('.folder-chat-item').forEach(item => {
+            item.onclick = () => { moveChatToFolder(chatId, item.dataset.id || null); close(); };
+        });
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    }
+
+    function showAddChatToFolderModal(folderId) {
+        const folder = folders.find(f => f.id === folderId);
+        if (!folder) return;
+        const availableChats = chats.filter(c => c.folder_id !== folderId && !(c.id && c.id.startsWith('tool_')));
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-container" style="max-width: 500px;">
+                <div class="modal-header"><h3><i class="fas ${folder.icon}" style="color:${folder.color}"></i> Добавить чат в «${escapeHtml(folder.name)}»</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
+                    ${availableChats.length === 0 ? '<p style="text-align:center; padding:20px;">Нет доступных чатов для добавления</p>' : 
+                    availableChats.map(c => `
+                        <div class="add-chat-item" data-chat-id="${c.id}" style="padding:12px; background:var(--bg-tertiary); border-radius:16px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:10px;">
+                            <i class="fas fa-comment"></i><span style="flex:1;">${escapeHtml(c.title)}</span><i class="fas fa-plus"></i>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="modal-footer"><button class="btn btn-secondary close-modal">Закрыть</button></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const close = () => modal.remove();
+        modal.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', close));
+        modal.querySelectorAll('.add-chat-item').forEach(item => {
+            item.addEventListener('click', async () => { const chatId = item.dataset.chatId; await moveChatToFolder(chatId, folderId); close(); });
+        });
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    }
+
+    function renderFoldersPage() {
+        const container = document.getElementById('foldersPage');
+        if (!container) return;
+        container.innerHTML = `
+            <div class="folders-page-header"><h1><i class="fas fa-folder"></i> Папки</h1><p>Организуйте чаты по папкам</p></div>
+            <div class="folders-list-container" id="foldersListContainer"></div>
+            <div class="folders-page-footer">
+                <button id="create-folder-page-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Создать папку</button>
+                <button id="back-to-chat-from-folders" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Назад к чату</button>
+            </div>
+        `;
+        document.getElementById('create-folder-page-btn').addEventListener('click', () => { currentEditingFolderId = null; showFolderEditModal(null); });
+        document.getElementById('back-to-chat-from-folders').addEventListener('click', switchToChatView);
+        const listContainer = document.getElementById('foldersListContainer');
+        if (folders.length === 0) { listContainer.innerHTML = '<div class="folder-empty">У вас пока нет папок. Создайте первую!</div>'; return; }
+        listContainer.innerHTML = folders.map(f => `
+            <div class="folder-card" data-id="${f.id}">
+                <div class="folder-icon" style="background:${f.color}20; color:${f.color}"><i class="fas ${f.icon}"></i></div>
+                <div class="folder-info">
+                    <div class="folder-name"><span style="color:${f.color}">${escapeHtml(f.name)}</span></div>
+                    <div class="folder-description">${escapeHtml(f.description) || 'Нет описания'}</div>
+                    <div class="folder-stats">${chats.filter(c => c.folder_id === f.id).length} чатов</div>
+                </div>
+                <div class="folder-actions">
+                    <button class="add-chat-to-folder" data-id="${f.id}" title="Добавить чат"><i class="fas fa-plus"></i></button>
+                    <button class="view-folder-chats" data-id="${f.id}" title="Чаты"><i class="fas fa-comments"></i></button>
+                    <button class="edit-folder" data-id="${f.id}" title="Редактировать"><i class="fas fa-edit"></i></button>
+                    <button class="delete-folder" data-id="${f.id}" title="Удалить"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `).join('');
+        document.querySelectorAll('.add-chat-to-folder').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); showAddChatToFolderModal(btn.dataset.id); }; });
+        document.querySelectorAll('.view-folder-chats').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); const folderId = btn.dataset.id; const folder = folders.find(f => f.id === folderId); if (folder) showFolderChatsModal(folder); }; });
+        document.querySelectorAll('.edit-folder').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); currentEditingFolderId = btn.dataset.id; const f = folders.find(f => f.id === currentEditingFolderId); showFolderEditModal(f); }; });
+        document.querySelectorAll('.delete-folder').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); deleteFolder(btn.dataset.id); }; });
+    }
+
+    function showFolderChatsModal(folder) {
+        const chatsInFolder = chats.filter(c => c.folder_id === folder.id);
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-container" style="max-width: 500px;">
+                <div class="modal-header"><h3><i class="fas ${folder.icon}" style="color:${folder.color}"></i> Чаты в папке «${escapeHtml(folder.name)}»</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-body">
+                    <div class="folder-chats-list">
+                        ${chatsInFolder.length ? chatsInFolder.map(c => `
+                            <div class="folder-chat-item" data-chat-id="${c.id}" style="padding:12px; background:var(--bg-tertiary); border-radius:16px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:10px;">
+                                <i class="fas fa-comment"></i><span style="flex:1;">${escapeHtml(c.title)}</span><i class="fas fa-arrow-right"></i>
+                            </div>
+                        `).join('') : '<div style="text-align:center; padding:20px; color:var(--text-secondary);">Нет чатов в этой папке</div>'}
+                    </div>
+                </div>
+                <div class="modal-footer"><button class="btn btn-secondary close-modal">Закрыть</button></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+        const close = () => modal.remove();
+        modal.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', close));
+        modal.querySelectorAll('.folder-chat-item').forEach(item => {
+            item.onclick = () => { switchChat(item.dataset.chatId); switchToChatView(); close(); };
+        });
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    }
 
     // ========== МАСТЕРСКАЯ + ФОРУМ ==========
     function loadWorkshopToolsState() {
@@ -408,7 +586,6 @@
         renderWorkshopPage(); renderHistory(); renderChat();
     }
 
-    // Подписка на Realtime форума
     async function subscribeForum() {
         if (forumSubscription) supabaseClient.removeChannel(forumSubscription);
         forumMessages = [];
@@ -505,11 +682,120 @@
     }
 
     // ========== ИСТОРИЯ ==========
-    function renderHistory() { /* ... с учётом tool-чатов и фильтра по поиску ... */ }
-    function buildHistoryItem(chat, folder) { /* ... */ }
-    function buildToolHistoryItem(chat, toolInfo) { /* ... */ }
-    function getToolInfo(toolId) { const tools = { ai_detect: { icon: 'fa-search', title: 'Распознать ИИ' } }; return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент' }; }
-    function getDateGroup(ts) { const d=new Date(ts).setHours(0,0,0,0), t=new Date().setHours(0,0,0,0); if(d===t) return 'Сегодня'; if(d===t-86400000) return 'Вчера'; return 'Более 2-х дней назад'; }
+    function renderHistory() {
+        const list = document.getElementById('history-list');
+        if (!list) return;
+        const searchTerm = document.getElementById('history-search')?.value.toLowerCase() || '';
+        let filtered = chats.filter(c => c.title.toLowerCase().includes(searchTerm));
+        const toolChats = filtered.filter(c => c.id && c.id.startsWith('tool_'));
+        const normalChats = filtered.filter(c => !toolChats.includes(c));
+
+        const pinnedChats = normalChats.filter(c => c.pinned);
+        const pinnedIds = new Set(pinnedChats.map(c => c.id));
+        const folderMap = new Map();
+        const orphanChats = [];
+        normalChats.forEach(c => {
+            if (pinnedIds.has(c.id)) return;
+            if (c.folder_id) {
+                if (!folderMap.has(c.folder_id)) folderMap.set(c.folder_id, []);
+                folderMap.get(c.folder_id).push(c);
+            } else orphanChats.push(c);
+        });
+
+        let html = '';
+
+        if (toolChats.length > 0 && workshopTools.ai_detect) {
+            html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-wrench"></i> Мастерская</div>`;
+            toolChats.forEach(c => {
+                const toolId = c.id.replace('tool_', '');
+                const toolInfo = getToolInfo(toolId);
+                html += buildToolHistoryItem(c, toolInfo);
+            });
+            html += '</div>';
+        }
+
+        if (pinnedChats.length > 0) {
+            html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-thumbtack"></i> Закрепленные</div>`;
+            pinnedChats.forEach(c => {
+                const folder = (c.folder_id ? folders.find(f => f.id === c.folder_id) : null);
+                html += buildHistoryItem(c, folder);
+            });
+            html += '</div>';
+        }
+        const sortedFolders = Array.from(folderMap.keys()).map(fid => folders.find(f => f.id === fid)).filter(Boolean);
+        sortedFolders.sort((a, b) => a.name.localeCompare(b.name));
+        sortedFolders.forEach(folder => {
+            const chatsInFolder = folderMap.get(folder.id);
+            if (!chatsInFolder || chatsInFolder.length === 0) return;
+            html += `<div class="history-group"><div class="history-group-title" style="display:flex; align-items:center; gap:8px;"><i class="fas ${folder.icon}" style="color:${folder.color}"></i> ${escapeHtml(folder.name)}</div>`;
+            chatsInFolder.forEach(c => html += buildHistoryItem(c, folder));
+            html += '</div>';
+        });
+        if (orphanChats.length > 0) {
+            const groups = { 'Сегодня': [], 'Вчера': [], 'Более 2-х дней назад': [] };
+            orphanChats.forEach(c => groups[getDateGroup(c.last_activity || c.created_at)].push(c));
+            for (const g of ['Сегодня', 'Вчера', 'Более 2-х дней назад']) {
+                if (!groups[g].length) continue;
+                html += `<div class="history-group"><div class="history-group-title">${g}</div>`;
+                groups[g].forEach(c => html += buildHistoryItem(c, null));
+                html += '</div>';
+            }
+        }
+        if (!html) html = '<div style="text-align:center; padding:20px;">Нет чатов</div>';
+        list.innerHTML = html;
+
+        document.querySelectorAll('.history-item').forEach(el => {
+            el.addEventListener('click', (e) => {
+                if (!e.target.closest('.chat-actions-hover')) switchChat(el.dataset.id);
+            });
+        });
+        document.querySelectorAll('.rename-chat-hover').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); showRenameModal(btn.dataset.id); }; });
+        document.querySelectorAll('.pin-chat-hover').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); togglePin(btn.dataset.id); }; });
+        document.querySelectorAll('.delete-chat-hover').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); deleteChat(btn.dataset.id); }; });
+        document.querySelectorAll('.move-to-folder-hover').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); showFolderSelectModal(btn.dataset.id); }; });
+    }
+
+    function buildHistoryItem(chat, folder) {
+        const isActive = chat.id === currentChatId;
+        const folderColor = folder ? folder.color : 'transparent';
+        const folderIcon = folder ? folder.icon : '';
+        const folderStyle = folder ? `style="border-left: 3px solid ${folderColor}; padding-left: 9px;"` : '';
+        const iconHtml = folder ? `<i class="fas ${folderIcon}" style="color:${folderColor}; margin-right:6px; font-size:12px;"></i>` : '';
+        return `
+            <div class="history-item ${isActive ? 'active' : ''}" data-id="${chat.id}" ${folderStyle}>
+                ${iconHtml}<span class="chat-title">${escapeHtml(chat.title)}</span>
+                <div class="chat-actions-hover">
+                    <button class="chat-action-btn rename-chat-hover" data-id="${chat.id}" title="Переименовать"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="chat-action-btn pin-chat-hover" data-id="${chat.id}" title="${chat.pinned ? 'Открепить' : 'Закрепить'}"><i class="fas fa-thumbtack ${chat.pinned ? 'pinned' : ''}"></i></button>
+                    <button class="chat-action-btn move-to-folder-hover" data-id="${chat.id}" title="Переместить в папку"><i class="fas fa-folder-open"></i></button>
+                    <button class="chat-action-btn delete-chat-hover" data-id="${chat.id}" title="Удалить"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+        `;
+    }
+
+    function buildToolHistoryItem(chat, toolInfo) {
+        const isActive = chat.id === currentChatId;
+        return `
+            <div class="history-item tool-chat ${isActive ? 'active' : ''}" data-id="${chat.id}" style="border-left: 3px solid var(--workshop-accent); padding-left: 9px;">
+                <i class="fas ${toolInfo.icon}" style="color: var(--workshop-accent); margin-right: 8px; font-size: 14px;"></i>
+                <span class="chat-title" style="z-index:1;">${escapeHtml(chat.title)}</span>
+            </div>
+        `;
+    }
+
+    function getToolInfo(toolId) {
+        const tools = { ai_detect: { icon: 'fa-search', title: 'Распознать ИИ' } };
+        return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент' };
+    }
+
+    function getDateGroup(ts) {
+        const d = new Date(ts).setHours(0,0,0,0);
+        const t = new Date().setHours(0,0,0,0);
+        if (d === t) return 'Сегодня';
+        if (d === t - 86400000) return 'Вчера';
+        return 'Более 2-х дней назад';
+    }
 
     // ========== РЕНДЕР ЧАТА ==========
     function renderChat() {
@@ -542,12 +828,34 @@
             }
             container.appendChild(messageDiv);
         });
-        container.querySelectorAll('.copy-msg-btn').forEach(btn => { /* копирование */ });
-        container.querySelectorAll('.regen-msg-btn').forEach(btn => { /* регенерация */ });
+        container.querySelectorAll('.copy-msg-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.dataset.msgIdx);
+                const msg = chat.messages[idx];
+                if (msg && msg.content) { navigator.clipboard.writeText(msg.content); showToast('Скопировано', '', 'success', 1500); }
+            });
+        });
+        container.querySelectorAll('.regen-msg-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const idx = parseInt(btn.dataset.msgIdx);
+                const msg = chat.messages[idx];
+                if (msg && msg.role === 'assistant') regenerateResponse(msg);
+            });
+        });
         setTimeout(() => { renderMathInElementWithMhchem(container); enhanceCodeBlocks(container); }, 10);
         scrollToBottom();
     }
-    function formatDateHeader(ts) { const d=new Date(ts), t=new Date(), y=new Date(t); y.setDate(y.getDate()-1); if(d.toDateString()===t.toDateString()) return 'Сегодня'; if(d.toDateString()===y.toDateString()) return 'Вчера'; return d.toLocaleDateString('ru-RU'); }
+
+    function formatDateHeader(ts) {
+        const d = new Date(ts);
+        const t = new Date();
+        const y = new Date(t);
+        y.setDate(y.getDate() - 1);
+        if (d.toDateString() === t.toDateString()) return 'Сегодня';
+        if (d.toDateString() === y.toDateString()) return 'Вчера';
+        return d.toLocaleDateString('ru-RU');
+    }
+
     function formatTime(ts) { return new Date(ts).toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' }); }
 
     async function addMessageToDOM(role, content, save = true) {
@@ -777,7 +1085,6 @@
         document.getElementById('userMenuBtn')?.addEventListener('click', (e)=>{ e.stopPropagation(); document.getElementById('userDropdown').classList.toggle('show'); });
         document.addEventListener('click', (e)=>{ if(!document.getElementById('userPanel')?.contains(e.target)) document.getElementById('userDropdown')?.classList.remove('show'); });
 
-        // Встроенный DiamKey
         document.getElementById('tabLogin')?.addEventListener('click', ()=>{ document.getElementById('tabLogin').classList.add('active'); document.getElementById('tabRegister').classList.remove('active'); document.getElementById('loginForm').style.display='block'; document.getElementById('registerForm').style.display='none'; });
         document.getElementById('tabRegister')?.addEventListener('click', ()=>{ document.getElementById('tabRegister').classList.add('active'); document.getElementById('tabLogin').classList.remove('active'); document.getElementById('registerForm').style.display='block'; document.getElementById('loginForm').style.display='none'; });
         document.getElementById('doLoginBtn')?.addEventListener('click', login);
