@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v28 — ВСТРОЕННЫЙ DIAMKEY + МАСТЕРСКАЯ + ФОРУМ + PWA ====================
+// ==================== DIAMOND AI v28 — FINAL FULL: БЫСТРЫЙ ФОРУМ, ПЛАВНОСТЬ, МАСТЕРСКАЯ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -20,8 +20,8 @@
     let thinkingTimer = null;
     let thinkingDots = 0;
     let workshopTools = {};
-    let forumSubscription = null;
     let forumMessages = [];
+    let forumLoaded = false;
 
     const placeholderTexts = [
         "Что расскажешь о себе?",
@@ -550,13 +550,12 @@
         modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
-    // ========== МАСТЕРСКАЯ + ФОРУМ ==========
+    // ========== МАСТЕРСКАЯ + ФОРУМ (исправлено) ==========
     function loadWorkshopToolsState() {
         const saved = localStorage.getItem('diamond_workshop_tools');
         if (saved) { try { workshopTools = JSON.parse(saved); } catch(e) { workshopTools = {}; } }
         if (!workshopTools || Object.keys(workshopTools).length === 0) { workshopTools = { ai_detect: false }; }
     }
-
     function saveWorkshopToolsState() { localStorage.setItem('diamond_workshop_tools', JSON.stringify(workshopTools)); }
 
     async function createToolChatWithGreeting(toolId) {
@@ -589,23 +588,9 @@
     async function loadForumMessages() {
         try {
             const { data, error } = await supabaseClient.from('forum_masterk').select('*').order('created_at', { ascending: true });
-            if (!error) forumMessages = data;
+            if (!error) { forumMessages = data; forumLoaded = true; }
             renderForumMessages();
         } catch(e) { console.warn('Ошибка загрузки форума:', e); }
-    }
-
-    async function subscribeForum() {
-        if (forumSubscription) supabaseClient.removeChannel(forumSubscription);
-        forumMessages = [];
-        const { data, error } = await supabaseClient.from('forum_masterk').select('*').order('created_at', { ascending: true });
-        if (!error) forumMessages = data;
-        renderForumMessages();
-        forumSubscription = supabaseClient.channel('forum_channel')
-            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'forum_masterk' }, payload => {
-                forumMessages.push(payload.new);
-                renderForumMessages();
-            })
-            .subscribe();
     }
 
     function renderForumMessages() {
@@ -630,14 +615,29 @@
         const input = document.getElementById('forumInput');
         const text = input.value.trim();
         if (!text || !currentUser) return;
+        // Мгновенная локальная вставка
+        const tempMsg = {
+            user_login: currentUser.login,
+            user_name: currentUser.name || currentUser.login,
+            user_avatar: currentUser.avatar || '',
+            message: text,
+            created_at: new Date().toISOString()
+        };
+        forumMessages.push(tempMsg);
+        renderForumMessages();
+        input.value = '';
+
         const { error } = await supabaseClient.from('forum_masterk').insert({
             user_login: currentUser.login,
             user_name: currentUser.name || currentUser.login,
             user_avatar: currentUser.avatar || '',
             message: text
         });
-        if (error) { showToast('Ошибка', 'Не удалось отправить сообщение', 'error'); return; }
-        input.value = '';
+        if (error) {
+            showToast('Ошибка', 'Не удалось отправить сообщение', 'error');
+            forumMessages.pop();
+            renderForumMessages();
+        }
     }
 
     function renderWorkshopPage() {
@@ -686,10 +686,11 @@
         document.getElementById('forumInput')?.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendForumMessage(); }
         });
-        renderForumMessages();
+        if (!forumLoaded) loadForumMessages();
+        else renderForumMessages();
     }
 
-    // ========== ИСТОРИЯ ==========
+    // ========== ИСТОРИЯ С ГРУППИРОВКОЙ ==========
     function renderHistory() {
         const list = document.getElementById('history-list');
         if (!list) return;
@@ -1043,7 +1044,7 @@
     function updateSendButtonState() { const btn=document.getElementById('send-btn'), input=document.getElementById('user-input'); if(btn) btn.disabled = !input.value.trim() || isWaitingForResponse; }
     function switchToFoldersView() { currentView='folders'; document.getElementById('chatView').style.display='none'; document.getElementById('foldersPage').style.display='flex'; document.getElementById('workshopPage').style.display='none'; renderFoldersPage(); }
     function switchToChatView() { if(placeholderInterval) clearInterval(placeholderInterval); currentView='chat'; document.getElementById('chatView').style.display='flex'; document.getElementById('foldersPage').style.display='none'; document.getElementById('workshopPage').style.display='none'; renderChat(); }
-    function switchToWorkshopView() { if(placeholderInterval) clearInterval(placeholderInterval); currentView='workshop'; document.getElementById('chatView').style.display='none'; document.getElementById('foldersPage').style.display='none'; document.getElementById('workshopPage').style.display='flex'; renderWorkshopPage(); subscribeForum(); }
+    function switchToWorkshopView() { if(placeholderInterval) clearInterval(placeholderInterval); currentView='workshop'; document.getElementById('chatView').style.display='none'; document.getElementById('foldersPage').style.display='none'; document.getElementById('workshopPage').style.display='flex'; renderWorkshopPage(); }
 
     function toggleSidebar() {
         const sidebar = document.getElementById('sidebar'), titleBar = document.getElementById('titleBar'), collapsedActions = document.getElementById('collapsedActions');
@@ -1110,7 +1111,7 @@
             currentUser = JSON.parse(savedUser);
             await loadChatsAndFolders();
             await refreshUserProfile();
-            await loadForumMessages(); // загружаем форум заранее
+            await loadForumMessages();
             if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
         }
         await showLoadingScreen();
