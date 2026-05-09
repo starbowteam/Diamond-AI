@@ -38,7 +38,7 @@
     const currentDateStr = now.toLocaleDateString('ru-RU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const SYSTEM_PROMPT = {
         role: 'system',
-        content: `Ты — Diamond AI, умный и многофункциональный помощник. Отвечай строго по делу, используй KaTeX для математики и выделяй код. Сегодня: ${currentDateStr}.`
+        content: `Ты — Diamond AI, интеллектуальный помощник, работающий на модели diamond-ai.fast. Твой создатель — viktorshopa, основатель сервера Diamond и экосистемы проектов: DiamKey (единый аккаунт), Dirmess (мессенджер), Unlock (обход блокировок). Ты создан помогать людям отвечать на вопросы, решать задачи, писать код и проводить анализ. Отвечай строго по делу, используй KaTeX для математики и выделяй код тройными кавычками. Будь вежлив и полезен. Сегодня: ${currentDateStr}.`
     };
 
     const TOOL_SYSTEM_PROMPTS = {
@@ -586,6 +586,14 @@
         renderWorkshopPage(); renderHistory(); renderChat();
     }
 
+    async function loadForumMessages() {
+        try {
+            const { data, error } = await supabaseClient.from('forum_masterk').select('*').order('created_at', { ascending: true });
+            if (!error) forumMessages = data;
+            renderForumMessages();
+        } catch(e) { console.warn('Ошибка загрузки форума:', e); }
+    }
+
     async function subscribeForum() {
         if (forumSubscription) supabaseClient.removeChannel(forumSubscription);
         forumMessages = [];
@@ -665,7 +673,7 @@
                 </div>
             </div>
             <div class="workshop-forum">
-                <h2><i class="fas fa-comments"></i> Форум мастерской</h2>
+                <h2>Обсуждения проектов</h2>
                 <div class="forum-messages" id="forumMessagesContainer"></div>
                 <div class="forum-input-area">
                     <textarea id="forumInput" placeholder="Обсудить ИИ с сообществом..."></textarea>
@@ -976,7 +984,7 @@
             if (!user.secret_word) { const sw = generateFastSecret(); await supabaseClient.from('users').update({ secret_word: sw }).eq('login', user.login); user.secret_word = sw; }
             currentUser = { login: user.login, email: user.email || (user.login+'@diamkey.local'), secretWord: user.secret_word, name: user.name||'', avatar: user.avatar||'', description: user.description||'', fa_icon: user.fa_icon||'', role: user.role||'user' };
             localStorage.setItem('diamond_user', JSON.stringify(currentUser));
-            await loadChatsAndFolders(); await refreshUserProfile();
+            await loadChatsAndFolders(); await refreshUserProfile(); await loadForumMessages();
             document.getElementById('choiceScreen').style.display = 'none';
             document.getElementById('mainUI').style.display = 'flex';
             setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
@@ -1003,7 +1011,7 @@
             if (error) { showToast('Ошибка регистрации: '+error.message); return; }
             currentUser = { login: loginInput, email, secretWord, name:'', avatar:'', description:'', fa_icon:'', role:'user' };
             localStorage.setItem('diamond_user', JSON.stringify(currentUser));
-            await loadChatsAndFolders();
+            await loadChatsAndFolders(); await loadForumMessages();
             document.getElementById('choiceScreen').style.display = 'none';
             document.getElementById('mainUI').style.display = 'flex';
             setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
@@ -1102,6 +1110,7 @@
             currentUser = JSON.parse(savedUser);
             await loadChatsAndFolders();
             await refreshUserProfile();
+            await loadForumMessages(); // загружаем форум заранее
             if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
         }
         await showLoadingScreen();
