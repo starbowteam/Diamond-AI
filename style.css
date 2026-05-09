@@ -75,7 +75,12 @@ body {
     align-items: center;
     justify-content: center;
     z-index: 900;
-    animation: fadeIn 0.3s ease;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.choice-screen.fade-out {
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
 }
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -90,6 +95,7 @@ body {
     border: 1px solid var(--border-color);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
     text-align: center;
+    animation: fadeIn 0.3s ease;
 }
 .logo {
     text-align: center;
@@ -153,13 +159,14 @@ body {
 }
 .auth-form input {
     width: 100%;
-    background: #1e1e2a;
+    background: #4e4e4e;               /* было #1e1e2a — заменён на мягкий серый */
     border: 1px solid var(--border-color);
-    color: var(--text-light);
+    color: var(--text-primary);
     padding: 12px 16px;
     border-radius: 12px;
     font-size: 1rem;
     outline: none;
+    transition: border-color 0.2s ease;
 }
 .auth-form input:focus {
     border-color: #5a5a5a;
@@ -201,6 +208,7 @@ body {
 .footer-note a {
     color: var(--text-secondary);
     text-decoration: none;
+    transition: color 0.2s;
 }
 .footer-note a:hover {
     color: #fff;
@@ -212,10 +220,17 @@ body {
     display: flex;
     flex-direction: column;
     opacity: 0;
-    transition: opacity 0.5s ease;
+    transition: opacity 0.4s ease, transform 0.3s ease;
+    transform: translateY(10px);
 }
 .main-ui.visible {
     opacity: 1;
+    transform: translateY(0);
+}
+.main-ui.fade-out {
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
 }
 
 .title-bar {
