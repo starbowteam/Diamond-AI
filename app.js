@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v29 — ОБУЧЕНИЕ + ПОЛНЫЙ ФУНКЦИОНАЛ ====================
+// ==================== DIAMOND AI v30 — ПОЛНЫЙ ФУНКЦИОНАЛ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -25,6 +25,193 @@
     let tutorialActive = false;
     let tutorialStep = 0;
     let tutorialTypingInterval = null;
+    let currentLanguage = 'ru';
+    let searchHighlightTerm = '';
+
+    const locales = {
+        ru: {
+            welcome: 'Добро пожаловать в Diamond AI!',
+            login: 'Вход',
+            register: 'Регистрация',
+            loginBtn: 'Войти',
+            regBtn: 'Создать Diamkey',
+            loginPlaceholder: 'Введите логин',
+            passPlaceholder: '········',
+            newChat: 'Новый чат',
+            folders: 'Папки',
+            workshop: 'Мастерская',
+            searchHistory: 'Поиск в истории...',
+            profile: 'Пользователь',
+            settings: 'Настройки',
+            discord: 'Discord-сервер',
+            diamkey: 'DiamKey',
+            tutorial: 'Обучение',
+            language: 'Язык',
+            logout: 'Выйти',
+            emptyChat: 'Чем могу помочь?',
+            inputPlaceholder: 'Введите свой запрос...',
+            thinking: 'Думает',
+            copy: 'Скопировано',
+            renameChat: 'Переименовать чат',
+            pinChat: 'Закрепить',
+            unpinChat: 'Открепить',
+            moveToFolder: 'Переместить в папку',
+            deleteChat: 'Удалить',
+            save: 'Сохранить',
+            cancel: 'Отмена',
+            errorNetwork: 'Ошибка сети',
+            errorLoadChats: 'Не удалось загрузить чаты',
+            errorSendMsg: 'Не удалось отправить сообщение',
+            errorLogin: 'Неверный логин или пароль',
+            errorRegister: 'Ошибка регистрации',
+            errorApiKey: 'API-ключ не загружен',
+            noChats: 'Нет чатов',
+            folderEmpty: 'У вас пока нет папок. Создайте первую!',
+            createFolder: 'Создать папку',
+            backToChat: 'Назад к чату',
+            today: 'Сегодня',
+            yesterday: 'Вчера',
+            older: 'Более 2-х дней назад',
+            pinned: 'Закрепленные',
+            master: 'Мастерская',
+            aiDetect: 'Распознать ИИ',
+            codeReview: 'Code Review',
+            translator: 'Переводчик',
+            soon: 'Скоро появится',
+            tutorialTitle: 'Обучение Diamond AI',
+            tutorialSkip: 'Пропустить',
+            tutorialNext: 'Далее',
+            tutorialPrev: 'Назад',
+            tutorialFinish: 'Завершить',
+            languageTitle: 'Выберите язык',
+            languageChanged: 'Язык изменён',
+            searchNotFound: 'Ничего не найдено',
+            folderChats: 'Чаты в папке',
+            noFolderChats: 'Нет чатов в этой папке'
+        },
+        en: {
+            welcome: 'Welcome to Diamond AI!',
+            login: 'Login',
+            register: 'Register',
+            loginBtn: 'Sign In',
+            regBtn: 'Create Diamkey',
+            loginPlaceholder: 'Enter login',
+            passPlaceholder: '········',
+            newChat: 'New Chat',
+            folders: 'Folders',
+            workshop: 'Workshop',
+            searchHistory: 'Search history...',
+            profile: 'User',
+            settings: 'Settings',
+            discord: 'Discord Server',
+            diamkey: 'DiamKey',
+            tutorial: 'Tutorial',
+            language: 'Language',
+            logout: 'Logout',
+            emptyChat: 'How can I help?',
+            inputPlaceholder: 'Type your message...',
+            thinking: 'Thinking',
+            copy: 'Copied',
+            renameChat: 'Rename Chat',
+            pinChat: 'Pin',
+            unpinChat: 'Unpin',
+            moveToFolder: 'Move to folder',
+            deleteChat: 'Delete',
+            save: 'Save',
+            cancel: 'Cancel',
+            errorNetwork: 'Network error',
+            errorLoadChats: 'Failed to load chats',
+            errorSendMsg: 'Failed to send message',
+            errorLogin: 'Invalid login or password',
+            errorRegister: 'Registration error',
+            errorApiKey: 'API key not loaded',
+            noChats: 'No chats',
+            folderEmpty: 'No folders yet. Create one!',
+            createFolder: 'Create Folder',
+            backToChat: 'Back to Chat',
+            today: 'Today',
+            yesterday: 'Yesterday',
+            older: 'Older',
+            pinned: 'Pinned',
+            master: 'Workshop',
+            aiDetect: 'Detect AI',
+            codeReview: 'Code Review',
+            translator: 'Translator',
+            soon: 'Coming soon',
+            tutorialTitle: 'Diamond AI Tutorial',
+            tutorialSkip: 'Skip',
+            tutorialNext: 'Next',
+            tutorialPrev: 'Back',
+            tutorialFinish: 'Finish',
+            languageTitle: 'Select Language',
+            languageChanged: 'Language changed',
+            searchNotFound: 'Nothing found',
+            folderChats: 'Chats in folder',
+            noFolderChats: 'No chats in this folder'
+        }
+    };
+
+    function t(key) { return (locales[currentLanguage] && locales[currentLanguage][key]) || (locales['ru'][key]) || key; }
+
+    function updateUILanguage() {
+        const loginIdentity = document.getElementById('loginIdentity');
+        const loginPassword = document.getElementById('loginPassword');
+        const regLogin = document.getElementById('regLogin');
+        const regPassword = document.getElementById('regPassword');
+        const userInput = document.getElementById('user-input');
+        const historySearch = document.getElementById('history-search');
+        const tabLogin = document.getElementById('tabLogin');
+        const tabRegister = document.getElementById('tabRegister');
+        const doLoginBtn = document.getElementById('doLoginBtn');
+        const doRegisterBtn = document.getElementById('doRegisterBtn');
+        const newChatBtn = document.getElementById('new-chat-btn');
+        const foldersPageBtn = document.getElementById('folders-page-btn');
+        const workshopPageBtn = document.getElementById('workshop-page-btn');
+        const collapsedNewChat = document.getElementById('collapsedNewChat');
+        const collapsedFolders = document.getElementById('collapsedFolders');
+        const collapsedWorkshop = document.getElementById('collapsedWorkshop');
+        const setDiscord = document.getElementById('set-discord');
+        const setDiamkey = document.getElementById('set-diamkey');
+        const setTutorial = document.getElementById('set-tutorial');
+        const setLanguage = document.getElementById('set-language');
+        const setLogout = document.getElementById('set-logout');
+
+        if (loginIdentity) loginIdentity.placeholder = t('loginPlaceholder');
+        if (loginPassword) loginPassword.placeholder = t('passPlaceholder');
+        if (regLogin) regLogin.placeholder = t('loginPlaceholder');
+        if (regPassword) regPassword.placeholder = t('passPlaceholder');
+        if (userInput) userInput.placeholder = t('inputPlaceholder');
+        if (historySearch) historySearch.placeholder = t('searchHistory');
+        if (tabLogin) tabLogin.textContent = t('login');
+        if (tabRegister) tabRegister.textContent = t('register');
+        if (doLoginBtn) doLoginBtn.innerHTML = `<i class="fas fa-gem"></i> ${t('loginBtn')}`;
+        if (doRegisterBtn) doRegisterBtn.innerHTML = `<i class="fas fa-user-plus"></i> ${t('regBtn')}`;
+        if (newChatBtn) newChatBtn.title = t('newChat');
+        if (foldersPageBtn) foldersPageBtn.title = t('folders');
+        if (workshopPageBtn) workshopPageBtn.title = t('workshop');
+        if (collapsedNewChat) collapsedNewChat.title = t('newChat');
+        if (collapsedFolders) collapsedFolders.title = t('folders');
+        if (collapsedWorkshop) collapsedWorkshop.title = t('workshop');
+        if (setDiscord) setDiscord.innerHTML = `<i class="fab fa-discord"></i> ${t('discord')}`;
+        if (setDiamkey) setDiamkey.innerHTML = `<i class="fas fa-key"></i> ${t('diamkey')}`;
+        if (setTutorial) setTutorial.innerHTML = `<i class="fas fa-question-circle"></i> ${t('tutorial')}`;
+        if (setLanguage) setLanguage.innerHTML = `<i class="fas fa-globe"></i> ${t('language')}`;
+        if (setLogout) setLogout.innerHTML = `<i class="fas fa-sign-out-alt"></i> ${t('logout')}`;
+        renderEmptyState();
+        renderFoldersPage();
+        renderWorkshopPage();
+        renderHistory();
+        renderChat();
+    }
+
+    function setLanguage(lang) {
+        currentLanguage = lang;
+        localStorage.setItem('diamond_language', lang);
+        updateUILanguage();
+        const langModal = document.getElementById('languageModal');
+        if (langModal) langModal.classList.remove('active');
+        showToast(t('languageChanged'), '', 'success');
+    }
 
     const placeholderTexts = [
         "Что расскажешь о себе?",
@@ -44,6 +231,11 @@
         content: `Ты — Diamond AI, интеллектуальный помощник, работающий на модели diamond-ai.fast. Твой создатель — viktorshopa, основатель сервера Diamond и экосистемы проектов: DiamKey (единый аккаунт), Dirmess (мессенджер), Unlock (обход блокировок). Ты создан помогать людям отвечать на вопросы, решать задачи, писать код и проводить анализ. Отвечай строго по делу, используй KaTeX, Latex и тп для математики и других вещей и выделяй код тройными. Будь вежлив и полезен. Я Сегодня: ${currentDateStr}.`
     };
 
+    const TITLE_GENERATOR_PROMPT = {
+        role: 'system',
+        content: `Ты — генератор названий для чатов. На основе последнего сообщения пользователя придумай короткое название (до 5 слов), которое отражает суть. Напиши только название, без кавычек и пояснений.`
+    };
+
     const TOOL_SYSTEM_PROMPTS = {
         ai_detect: {
             role: 'system',
@@ -51,14 +243,8 @@
         }
     };
 
-    // ========== УТИЛИТЫ ==========
     function log(msg) { console.log(`[DIAMOND] ${msg}`); }
-
-    function escapeHtml(str) {
-        if (!str) return '';
-        return str.replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' })[m] || m);
-    }
-
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;' })[m] || m); }
     function showToast(title, message, type = 'info', duration = 3000) {
         const now = Date.now();
         if (now - lastNotificationTime < NOTIFICATION_DEBOUNCE) return;
@@ -67,42 +253,27 @@
         if (!container) return;
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
-        toast.innerHTML = `
-            <div class="toast-content">
-                <div class="toast-title">${escapeHtml(title)}</div>
-                <div class="toast-message">${escapeHtml(message)}</div>
-            </div>
-            <button class="toast-close"><i class="fas fa-times"></i></button>
-        `;
+        toast.innerHTML = `<div class="toast-content"><div class="toast-title">${escapeHtml(title)}</div><div class="toast-message">${escapeHtml(message)}</div></div><button class="toast-close"><i class="fas fa-times"></i></button>`;
         container.appendChild(toast);
         toast.querySelector('.toast-close').addEventListener('click', () => toast.remove());
         setTimeout(() => toast.remove(), duration);
     }
+    function scrollToBottom() { const c = document.getElementById('messages-container'); if (c) c.scrollTop = c.scrollHeight; }
 
-    function scrollToBottom() {
-        const container = document.getElementById('messages-container');
-        if (container) container.scrollTop = container.scrollHeight;
-    }
-
-    // ========== АНИМАЦИЯ "ДУМАЕТ" ==========
     function startThinkingAnimation() {
         if (thinkingTimer) clearInterval(thinkingTimer);
         thinkingDots = 1;
         const typingEl = document.querySelector('.message.assistant.typing .message-content');
         if (typingEl) {
-            typingEl.innerHTML = 'Думает';
+            typingEl.innerHTML = t('thinking');
             thinkingTimer = setInterval(() => {
                 thinkingDots = thinkingDots === 3 ? 1 : thinkingDots + 1;
-                if (typingEl) typingEl.innerHTML = 'Думает' + '.'.repeat(thinkingDots);
+                if (typingEl) typingEl.innerHTML = t('thinking') + '.'.repeat(thinkingDots);
             }, 500);
         }
     }
+    function stopThinkingAnimation() { if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; } }
 
-    function stopThinkingAnimation() {
-        if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; }
-    }
-
-    // ========== LaTeX РЕНДЕР ==========
     function renderMathInElementWithMhchem(element) {
         if (!element || typeof renderMathInElement === 'undefined') return;
         try {
@@ -112,13 +283,11 @@
                     {left: '\\(', right: '\\)', display: false},
                     {left: '\\[', right: '\\]', display: true}
                 ],
-                throwOnError: false,
-                macros: { "\\ce": "\\ce" }
+                throwOnError: false, macros: { "\\ce": "\\ce" }
             });
         } catch(e) { console.warn('Math render error:', e); }
     }
 
-    // ========== КНОПКА ЗАПУСКА КОДА ==========
     function showCodeRunnerModal(code, language) {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -159,7 +328,6 @@
         executeCode();
     }
 
-    // ========== ОБРАБОТКА БЛОКОВ КОДА ==========
     function enhanceCodeBlocks(container) {
         if (!container) return;
         const preBlocks = container.querySelectorAll('pre');
@@ -210,10 +378,8 @@
         });
     }
 
-    // ========== SUPABASE КЛИЕНТ ==========
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // ========== РАБОТА С ЧАТАМИ И ПАПКАМИ ==========
     async function loadChatsAndFolders() {
         if (!currentUser) return;
         try {
@@ -239,7 +405,7 @@
             renderChat();
         } catch (e) {
             console.error('Ошибка загрузки чатов/папок:', e);
-            showToast('Ошибка', 'Не удалось загрузить чаты', 'error');
+            showToast(t('errorLoadChats'), '', 'error');
         }
     }
 
@@ -256,7 +422,7 @@
             id, user_login: currentUser.login, title: finalTitle,
             created_at, last_activity, pinned, folder_id, messages
         });
-        if (error) { console.error('Ошибка сохранения чата:', error); showToast('Ошибка', 'Не удалось сохранить чат', 'error'); }
+        if (error) { console.error('Ошибка сохранения чата:', error); }
     }
 
     async function saveFolderToSupabase(folder) {
@@ -266,23 +432,41 @@
             description: folder.description, icon: folder.icon, color: folder.color,
             created_at: folder.createdAt || folder.created_at || Date.now()
         });
-        if (error) { console.error('Ошибка сохранения папки:', error); showToast('Ошибка', 'Не удалось сохранить папку', 'error'); }
+        if (error) { console.error('Ошибка сохранения папки:', error); }
     }
 
     async function deleteChatFromSupabase(chatId) {
         if (!currentUser) return;
         const { error } = await supabaseClient.from('diamond_chats').delete().eq('id', chatId).eq('user_login', currentUser.login);
-        if (error) { console.error('Ошибка удаления чата:', error); showToast('Ошибка', 'Не удалось удалить чат', 'error'); }
+        if (error) { console.error('Ошибка удаления чата:', error); }
     }
 
     async function deleteFolderFromSupabase(folderId) {
         if (!currentUser) return;
         const { error } = await supabaseClient.from('diamond_folders').delete().eq('id', folderId).eq('user_login', currentUser.login);
-        if (error) { console.error('Ошибка удаления папки:', error); showToast('Ошибка', 'Не удалось удалить папку', 'error'); }
+        if (error) { console.error('Ошибка удаления папки:', error); }
     }
 
-    // ========== ЧАТЫ ==========
     function generateChatTitle(msg) { return msg.length > 50 ? msg.slice(0, 47) + '...' : msg; }
+
+    async function generateChatTitleWithAI(text) {
+        try {
+            const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
+                body: JSON.stringify({
+                    model: AI_MODEL,
+                    messages: [TITLE_GENERATOR_PROMPT, { role: 'user', content: text }],
+                    temperature: 0.5, max_tokens: 20
+                })
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                return data.choices[0].message.content.trim();
+            }
+        } catch(e) {}
+        return generateChatTitle(text);
+    }
 
     async function createNewChat() {
         currentChatId = null;
@@ -312,7 +496,7 @@
 
     async function togglePin(id) {
         const chat = chats.find(c => c.id === id);
-        if (chat) { chat.pinned = !chat.pinned; await saveChatToSupabase(chat); renderHistory(); showToast(chat.pinned ? 'Закреплён' : 'Откреплён', '', 'success'); }
+        if (chat) { chat.pinned = !chat.pinned; await saveChatToSupabase(chat); renderHistory(); showToast(chat.pinned ? t('pinChat') : t('unpinChat'), '', 'success'); }
     }
 
     async function renameChat(id, newTitle) {
@@ -328,9 +512,9 @@
         modal.className = 'modal-overlay';
         modal.innerHTML = `
             <div class="modal-container" style="max-width: 400px;">
-                <div class="modal-header"><h3>Переименовать чат</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-header"><h3>${t('renameChat')}</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
                 <div class="modal-body"><input type="text" id="rename-input" value="${escapeHtml(chat.title)}" style="width:100%; padding:12px; background: var(--bg-tertiary); border:1px solid var(--border-color); border-radius: 20px; color: white;"></div>
-                <div class="modal-footer"><button id="rename-confirm" class="btn btn-primary">Сохранить</button><button class="btn btn-secondary close-modal">Отмена</button></div>
+                <div class="modal-footer"><button id="rename-confirm" class="btn btn-primary">${t('save')}</button><button class="btn btn-secondary close-modal">${t('cancel')}</button></div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -342,7 +526,6 @@
         modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
-    // ========== ПАПКИ ==========
     async function createFolder(name, desc, icon, color) {
         const id = Date.now().toString();
         const folder = { id, name: name.trim(), description: desc || '', icon: icon || 'fa-folder', color: color || '#95a5a6', createdAt: Date.now() };
@@ -391,7 +574,7 @@
                         <div class="color-option" data-color="#95a5a6" style="background:#95a5a6; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
                     </div></div>
                 </div>
-                <div class="modal-footer"><button id="save-folder-btn" class="btn btn-primary">Сохранить</button><button class="btn btn-secondary close-modal">Отмена</button></div>
+                <div class="modal-footer"><button id="save-folder-btn" class="btn btn-primary">${t('save')}</button><button class="btn btn-secondary close-modal">${t('cancel')}</button></div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -434,7 +617,7 @@
         modal.className = 'modal-overlay';
         modal.innerHTML = `
             <div class="modal-container" style="max-width: 400px;">
-                <div class="modal-header"><h3><i class="fas fa-folder"></i> Выбрать папку</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-header"><h3><i class="fas fa-folder"></i> ${t('moveToFolder')}</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
                 <div class="modal-body">
                     <div class="folder-chats-list" id="folder-options-list">
                         <div class="folder-chat-item" data-id="" style="padding:12px; background:var(--bg-tertiary); border-radius:16px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:10px;">
@@ -447,7 +630,7 @@
                         `).join('')}
                     </div>
                 </div>
-                <div class="modal-footer"><button class="btn btn-secondary close-modal">Отмена</button></div>
+                <div class="modal-footer"><button class="btn btn-secondary close-modal">${t('cancel')}</button></div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -476,7 +659,7 @@
                         </div>
                     `).join('')}
                 </div>
-                <div class="modal-footer"><button class="btn btn-secondary close-modal">Закрыть</button></div>
+                <div class="modal-footer"><button class="btn btn-secondary close-modal">${t('cancel')}</button></div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -492,17 +675,17 @@
         const container = document.getElementById('foldersPage');
         if (!container) return;
         container.innerHTML = `
-            <div class="folders-page-header"><h1><i class="fas fa-folder"></i> Папки</h1><p>Организуйте чаты по папкам</p></div>
+            <div class="folders-page-header"><h1><i class="fas fa-folder"></i> ${t('folders')}</h1><p>Организуйте чаты по папкам</p></div>
             <div class="folders-list-container" id="foldersListContainer"></div>
             <div class="folders-page-footer">
-                <button id="create-folder-page-btn" class="btn btn-primary"><i class="fas fa-plus"></i> Создать папку</button>
-                <button id="back-to-chat-from-folders" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> Назад к чату</button>
+                <button id="create-folder-page-btn" class="btn btn-primary"><i class="fas fa-plus"></i> ${t('createFolder')}</button>
+                <button id="back-to-chat-from-folders" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> ${t('backToChat')}</button>
             </div>
         `;
         document.getElementById('create-folder-page-btn').addEventListener('click', () => { currentEditingFolderId = null; showFolderEditModal(null); });
         document.getElementById('back-to-chat-from-folders').addEventListener('click', switchToChatView);
         const listContainer = document.getElementById('foldersListContainer');
-        if (folders.length === 0) { listContainer.innerHTML = '<div class="folder-empty">У вас пока нет папок. Создайте первую!</div>'; return; }
+        if (folders.length === 0) { listContainer.innerHTML = `<div class="folder-empty">${t('folderEmpty')}</div>`; return; }
         listContainer.innerHTML = folders.map(f => `
             <div class="folder-card" data-id="${f.id}">
                 <div class="folder-icon" style="background:${f.color}20; color:${f.color}"><i class="fas ${f.icon}"></i></div>
@@ -531,17 +714,17 @@
         modal.className = 'modal-overlay';
         modal.innerHTML = `
             <div class="modal-container" style="max-width: 500px;">
-                <div class="modal-header"><h3><i class="fas ${folder.icon}" style="color:${folder.color}"></i> Чаты в папке «${escapeHtml(folder.name)}»</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-header"><h3><i class="fas ${folder.icon}" style="color:${folder.color}"></i> ${t('folderChats')} «${escapeHtml(folder.name)}»</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
                 <div class="modal-body">
                     <div class="folder-chats-list">
                         ${chatsInFolder.length ? chatsInFolder.map(c => `
                             <div class="folder-chat-item" data-chat-id="${c.id}" style="padding:12px; background:var(--bg-tertiary); border-radius:16px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:10px;">
                                 <i class="fas fa-comment"></i><span style="flex:1;">${escapeHtml(c.title)}</span><i class="fas fa-arrow-right"></i>
                             </div>
-                        `).join('') : '<div style="text-align:center; padding:20px; color:var(--text-secondary);">Нет чатов в этой папке</div>'}
+                        `).join('') : `<div style="text-align:center; padding:20px; color:var(--text-secondary);">${t('noFolderChats')}</div>`}
                     </div>
                 </div>
-                <div class="modal-footer"><button class="btn btn-secondary close-modal">Закрыть</button></div>
+                <div class="modal-footer"><button class="btn btn-secondary close-modal">${t('cancel')}</button></div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -553,7 +736,6 @@
         modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
-    // ========== МАСТЕРСКАЯ + ФОРУМ (исправлено) ==========
     function loadWorkshopToolsState() {
         const saved = localStorage.getItem('diamond_workshop_tools');
         if (saved) { try { workshopTools = JSON.parse(saved); } catch(e) { workshopTools = {}; } }
@@ -588,6 +770,56 @@
         renderWorkshopPage(); renderHistory(); renderChat();
     }
 
+    function renderWorkshopPage() {
+        const container = document.getElementById('workshopPage');
+        if (!container) return;
+        const aiDetectActive = workshopTools.ai_detect || false;
+        container.innerHTML = `
+            <div class="workshop-banner">
+                <div class="workshop-banner-text">
+                    <h1>${t('master')}</h1>
+                    <p>Специальные инструменты для расширенной работы с искусственным интеллектом. Включайте нужные тумблеры, чтобы активировать тематические чаты со строгими правилами.</p>
+                </div>
+                <img src="master.png" alt="Мастерская" class="workshop-banner-img">
+            </div>
+            <div class="workshop-tools-grid">
+                <div class="workshop-tool-card ${aiDetectActive ? 'active' : ''}">
+                    <div class="workshop-tool-header">
+                        <div class="workshop-tool-icon"><i class="fas fa-search"></i></div>
+                        <div class="workshop-tool-info"><h3>${t('aiDetect')}</h3><p>Анализ текста на оригинальность. Определяет, написан ли текст человеком или сгенерирован ИИ (GPT, Mistral и др.)</p></div>
+                    </div>
+                    <div class="workshop-tool-toggle">
+                        <span>${aiDetectActive ? 'Активен' : 'Выключен'}</span>
+                        <label class="toggle-switch"><input type="checkbox" id="toggle-ai-detect" ${aiDetectActive ? 'checked' : ''}><span class="toggle-slider"></span></label>
+                    </div>
+                </div>
+                <div class="workshop-tool-card disabled">
+                    <div class="workshop-tool-header"><div class="workshop-tool-icon"><i class="fas fa-code"></i></div><div class="workshop-tool-info"><h3>${t('codeReview')}</h3><p>Автоматическое ревью кода (скоро)</p></div></div>
+                    <div class="workshop-tool-toggle"><span>${t('soon')}</span><label class="toggle-switch"><input type="checkbox" disabled><span class="toggle-slider"></span></label></div>
+                </div>
+                <div class="workshop-tool-card disabled">
+                    <div class="workshop-tool-header"><div class="workshop-tool-icon"><i class="fas fa-language"></i></div><div class="workshop-tool-info"><h3>${t('translator')}</h3><p>Мгновенный перевод на 100+ языков (скоро)</p></div></div>
+                    <div class="workshop-tool-toggle"><span>${t('soon')}</span><label class="toggle-switch"><input type="checkbox" disabled><span class="toggle-slider"></span></label></div>
+                </div>
+            </div>
+            <div class="workshop-forum">
+                <h2>Обсуждения проектов</h2>
+                <div class="forum-messages" id="forumMessagesContainer"></div>
+                <div class="forum-input-area">
+                    <textarea id="forumInput" placeholder="Обсудить ИИ с сообществом..."></textarea>
+                    <button class="forum-send-btn" id="forumSendBtn"><i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        `;
+        document.getElementById('toggle-ai-detect')?.addEventListener('change', (e) => toggleWorkshopTool('ai_detect'));
+        document.getElementById('forumSendBtn')?.addEventListener('click', sendForumMessage);
+        document.getElementById('forumInput')?.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendForumMessage(); }
+        });
+        if (!forumLoaded) loadForumMessages();
+        else renderForumMessages();
+    }
+
     async function loadForumMessages() {
         try {
             const { data, error } = await supabaseClient.from('forum_masterk').select('*').order('created_at', { ascending: true });
@@ -618,7 +850,6 @@
         const input = document.getElementById('forumInput');
         const text = input.value.trim();
         if (!text || !currentUser) return;
-        // Мгновенная локальная вставка
         const tempMsg = {
             user_login: currentUser.login,
             user_name: currentUser.name || currentUser.login,
@@ -629,7 +860,6 @@
         forumMessages.push(tempMsg);
         renderForumMessages();
         input.value = '';
-
         const { error } = await supabaseClient.from('forum_masterk').insert({
             user_login: currentUser.login,
             user_name: currentUser.name || currentUser.login,
@@ -643,65 +873,22 @@
         }
     }
 
-    function renderWorkshopPage() {
-        const container = document.getElementById('workshopPage');
-        if (!container) return;
-        const aiDetectActive = workshopTools.ai_detect || false;
-        container.innerHTML = `
-            <div class="workshop-banner">
-                <div class="workshop-banner-text">
-                    <h1>МАСТЕРСКАЯ DIAMOND AI</h1>
-                    <p>Специальные инструменты для расширенной работы с искусственным интеллектом. Включайте нужные тумблеры, чтобы активировать тематические чаты со строгими правилами.</p>
-                </div>
-                <img src="master.png" alt="Мастерская" class="workshop-banner-img">
-            </div>
-            <div class="workshop-tools-grid">
-                <div class="workshop-tool-card ${aiDetectActive ? 'active' : ''}">
-                    <div class="workshop-tool-header">
-                        <div class="workshop-tool-icon"><i class="fas fa-search"></i></div>
-                        <div class="workshop-tool-info"><h3>Распознать ИИ</h3><p>Анализ текста на оригинальность. Определяет, написан ли текст человеком или сгенерирован ИИ (GPT, Mistral и др.)</p></div>
-                    </div>
-                    <div class="workshop-tool-toggle">
-                        <span>${aiDetectActive ? 'Активен' : 'Выключен'}</span>
-                        <label class="toggle-switch"><input type="checkbox" id="toggle-ai-detect" ${aiDetectActive ? 'checked' : ''}><span class="toggle-slider"></span></label>
-                    </div>
-                </div>
-                <div class="workshop-tool-card disabled">
-                    <div class="workshop-tool-header"><div class="workshop-tool-icon"><i class="fas fa-code"></i></div><div class="workshop-tool-info"><h3>Code Review</h3><p>Автоматическое ревью кода (скоро)</p></div></div>
-                    <div class="workshop-tool-toggle"><span>Скоро появится</span><label class="toggle-switch"><input type="checkbox" disabled><span class="toggle-slider"></span></label></div>
-                </div>
-                <div class="workshop-tool-card disabled">
-                    <div class="workshop-tool-header"><div class="workshop-tool-icon"><i class="fas fa-language"></i></div><div class="workshop-tool-info"><h3>Переводчик</h3><p>Мгновенный перевод на 100+ языков (скоро)</p></div></div>
-                    <div class="workshop-tool-toggle"><span>Скоро появится</span><label class="toggle-switch"><input type="checkbox" disabled><span class="toggle-slider"></span></label></div>
-                </div>
-            </div>
-            <div class="workshop-forum">
-                <h2>Обсуждения проектов</h2>
-                <div class="forum-messages" id="forumMessagesContainer"></div>
-                <div class="forum-input-area">
-                    <textarea id="forumInput" placeholder="Обсудить ИИ с сообществом..."></textarea>
-                    <button class="forum-send-btn" id="forumSendBtn"><i class="fas fa-paper-plane"></i></button>
-                </div>
-            </div>
-        `;
-        document.getElementById('toggle-ai-detect')?.addEventListener('change', (e) => toggleWorkshopTool('ai_detect'));
-        document.getElementById('forumSendBtn')?.addEventListener('click', sendForumMessage);
-        document.getElementById('forumInput')?.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendForumMessage(); }
-        });
-        if (!forumLoaded) loadForumMessages();
-        else renderForumMessages();
-    }
-
-    // ========== ИСТОРИЯ С ГРУППИРОВКОЙ ==========
+    // ========== ПОИСК ПО СООБЩЕНИЯМ ==========
     function renderHistory() {
         const list = document.getElementById('history-list');
         if (!list) return;
         const searchTerm = document.getElementById('history-search')?.value.toLowerCase() || '';
-        let filtered = chats.filter(c => c.title.toLowerCase().includes(searchTerm));
+        searchHighlightTerm = searchTerm;
+        let filtered = chats;
+        if (searchTerm) {
+            filtered = chats.filter(c => {
+                if (c.title.toLowerCase().includes(searchTerm)) return true;
+                if (c.messages && c.messages.some(m => m.content && m.content.toLowerCase().includes(searchTerm))) return true;
+                return false;
+            });
+        }
         const toolChats = filtered.filter(c => c.id && c.id.startsWith('tool_'));
         const normalChats = filtered.filter(c => !toolChats.includes(c));
-
         const pinnedChats = normalChats.filter(c => c.pinned);
         const pinnedIds = new Set(pinnedChats.map(c => c.id));
         const folderMap = new Map();
@@ -713,21 +900,14 @@
                 folderMap.get(c.folder_id).push(c);
             } else orphanChats.push(c);
         });
-
         let html = '';
-
         if (toolChats.length > 0 && workshopTools.ai_detect) {
-            html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-wrench"></i> Мастерская</div>`;
-            toolChats.forEach(c => {
-                const toolId = c.id.replace('tool_', '');
-                const toolInfo = getToolInfo(toolId);
-                html += buildToolHistoryItem(c, toolInfo);
-            });
+            html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-wrench"></i> ${t('master')}</div>`;
+            toolChats.forEach(c => html += buildToolHistoryItem(c, getToolInfo(c.id.replace('tool_',''))));
             html += '</div>';
         }
-
         if (pinnedChats.length > 0) {
-            html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-thumbtack"></i> Закрепленные</div>`;
+            html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-thumbtack"></i> ${t('pinned')}</div>`;
             pinnedChats.forEach(c => {
                 const folder = (c.folder_id ? folders.find(f => f.id === c.folder_id) : null);
                 html += buildHistoryItem(c, folder);
@@ -744,18 +924,23 @@
             html += '</div>';
         });
         if (orphanChats.length > 0) {
-            const groups = { 'Сегодня': [], 'Вчера': [], 'Более 2-х дней назад': [] };
-            orphanChats.forEach(c => groups[getDateGroup(c.last_activity || c.created_at)].push(c));
-            for (const g of ['Сегодня', 'Вчера', 'Более 2-х дней назад']) {
+            const groups = { today: [], yesterday: [], older: [] };
+            orphanChats.forEach(c => {
+                const d = new Date(c.last_activity || c.created_at).setHours(0,0,0,0);
+                const today = new Date().setHours(0,0,0,0);
+                if (d === today) groups.today.push(c);
+                else if (d === today - 86400000) groups.yesterday.push(c);
+                else groups.older.push(c);
+            });
+            for (const g of ['today', 'yesterday', 'older']) {
                 if (!groups[g].length) continue;
-                html += `<div class="history-group"><div class="history-group-title">${g}</div>`;
+                html += `<div class="history-group"><div class="history-group-title">${t(g)}</div>`;
                 groups[g].forEach(c => html += buildHistoryItem(c, null));
                 html += '</div>';
             }
         }
-        if (!html) html = '<div style="text-align:center; padding:20px;">Нет чатов</div>';
+        if (!html) html = `<div style="text-align:center; padding:20px;">${t('noChats')}</div>`;
         list.innerHTML = html;
-
         document.querySelectorAll('.history-item').forEach(el => {
             el.addEventListener('click', (e) => {
                 if (!e.target.closest('.chat-actions-hover')) switchChat(el.dataset.id);
@@ -777,10 +962,10 @@
             <div class="history-item ${isActive ? 'active' : ''}" data-id="${chat.id}" ${folderStyle}>
                 ${iconHtml}<span class="chat-title">${escapeHtml(chat.title)}</span>
                 <div class="chat-actions-hover">
-                    <button class="chat-action-btn rename-chat-hover" data-id="${chat.id}" title="Переименовать"><i class="fas fa-pencil-alt"></i></button>
-                    <button class="chat-action-btn pin-chat-hover" data-id="${chat.id}" title="${chat.pinned ? 'Открепить' : 'Закрепить'}"><i class="fas fa-thumbtack ${chat.pinned ? 'pinned' : ''}"></i></button>
-                    <button class="chat-action-btn move-to-folder-hover" data-id="${chat.id}" title="Переместить в папку"><i class="fas fa-folder-open"></i></button>
-                    <button class="chat-action-btn delete-chat-hover" data-id="${chat.id}" title="Удалить"><i class="fas fa-trash"></i></button>
+                    <button class="chat-action-btn rename-chat-hover" data-id="${chat.id}" title="${t('renameChat')}"><i class="fas fa-pencil-alt"></i></button>
+                    <button class="chat-action-btn pin-chat-hover" data-id="${chat.id}" title="${chat.pinned ? t('unpinChat') : t('pinChat')}"><i class="fas fa-thumbtack ${chat.pinned ? 'pinned' : ''}"></i></button>
+                    <button class="chat-action-btn move-to-folder-hover" data-id="${chat.id}" title="${t('moveToFolder')}"><i class="fas fa-folder-open"></i></button>
+                    <button class="chat-action-btn delete-chat-hover" data-id="${chat.id}" title="${t('deleteChat')}"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
         `;
@@ -789,29 +974,25 @@
     function buildToolHistoryItem(chat, toolInfo) {
         const isActive = chat.id === currentChatId;
         return `
-            <div class="history-item tool-chat ${isActive ? 'active' : ''}" data-id="${chat.id}" style="border-left: 3px solid var(--workshop-accent); padding-left: 9px;">
-                <i class="fas ${toolInfo.icon}" style="color: var(--workshop-accent); margin-right: 8px; font-size: 14px;"></i>
+            <div class="history-item tool-chat ${isActive ? 'active' : ''}" data-id="${chat.id}" style="border-left: 3px solid var(--accent); padding-left: 9px;">
+                <i class="fas ${toolInfo.icon}" style="color: var(--accent); margin-right: 8px; font-size: 14px;"></i>
                 <span class="chat-title" style="z-index:1;">${escapeHtml(chat.title)}</span>
             </div>
         `;
     }
 
     function getToolInfo(toolId) {
-        const tools = { ai_detect: { icon: 'fa-search', title: 'Распознать ИИ' } };
+        const tools = { ai_detect: { icon: 'fa-search', title: t('aiDetect') } };
         return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент' };
-    }
-
-    function getDateGroup(ts) {
-        const d = new Date(ts).setHours(0,0,0,0);
-        const t = new Date().setHours(0,0,0,0);
-        if (d === t) return 'Сегодня';
-        if (d === t - 86400000) return 'Вчера';
-        return 'Более 2-х дней назад';
     }
 
     // ========== РЕНДЕР ЧАТА ==========
     function renderChat() {
         const chat = chats.find(c => c.id === currentChatId);
+        const headerEl = document.getElementById('chatHeader');
+        if (headerEl) {
+            headerEl.textContent = chat ? chat.title : '';
+        }
         if (!chat || !chat.messages || chat.messages.length === 0) { renderEmptyState(); document.getElementById('inputArea').style.display = 'none'; return; }
         document.getElementById('inputArea').style.display = 'flex';
         const container = document.getElementById('messages-container');
@@ -825,10 +1006,14 @@
             if (msg.isTyping) messageDiv.classList.add('typing');
             const avatarHTML = msg.role === 'user' ? getUserAvatarHTML() : getBotAvatarHTML();
             let contentHtml = msg.role === 'assistant' ? marked.parse(msg.content) : escapeHtml(msg.content);
+            if (searchHighlightTerm) {
+                const regex = new RegExp(`(${searchHighlightTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                contentHtml = contentHtml.replace(regex, '<span class="search-highlight">$1</span>');
+            }
             messageDiv.innerHTML = `
                 <div class="avatar">${avatarHTML}</div>
                 <div class="message-content-wrapper">
-                    <div class="message-content">${msg.isTyping ? 'Думает...' : contentHtml}</div>
+                    <div class="message-content">${msg.isTyping ? t('thinking') + '...' : contentHtml}</div>
                     <div class="message-time">${formatTime(msg.timestamp || Date.now())}</div>
                 </div>
             `;
@@ -844,7 +1029,7 @@
             btn.addEventListener('click', () => {
                 const idx = parseInt(btn.dataset.msgIdx);
                 const msg = chat.messages[idx];
-                if (msg && msg.content) { navigator.clipboard.writeText(msg.content); showToast('Скопировано', '', 'success', 1500); }
+                if (msg && msg.content) { navigator.clipboard.writeText(msg.content); showToast(t('copy'), '', 'success', 1500); }
             });
         });
         container.querySelectorAll('.regen-msg-btn').forEach(btn => {
@@ -860,11 +1045,11 @@
 
     function formatDateHeader(ts) {
         const d = new Date(ts);
-        const t = new Date();
-        const y = new Date(t);
-        y.setDate(y.getDate() - 1);
-        if (d.toDateString() === t.toDateString()) return 'Сегодня';
-        if (d.toDateString() === y.toDateString()) return 'Вчера';
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        if (d.toDateString() === today.toDateString()) return t('today');
+        if (d.toDateString() === yesterday.toDateString()) return t('yesterday');
         return d.toLocaleDateString('ru-RU');
     }
 
@@ -879,7 +1064,15 @@
                 if (!chat.messages) chat.messages = [];
                 chat.messages.push({ id: messageId, role, content, timestamp, isTyping: false });
                 chat.last_activity = timestamp;
-                if (!(chat.id && chat.id.startsWith('tool_'))) { if (role === 'user' && chat.messages.filter(m => m.role === 'user').length === 1) chat.title = generateChatTitle(content); }
+                if (role === 'user' && chat.messages.filter(m => m.role === 'user').length === 1) {
+                    generateChatTitleWithAI(content).then(title => {
+                        chat.title = title;
+                        saveChatToSupabase(chat);
+                        renderHistory();
+                        const headerEl = document.getElementById('chatHeader');
+                        if (headerEl) headerEl.textContent = title;
+                    });
+                }
                 await saveChatToSupabase(chat);
             }
         }
@@ -890,7 +1083,7 @@
     async function sendMessage() {
         const text = document.getElementById('user-input').value.trim();
         if (!text || isWaitingForResponse) return;
-        if (!mistralApiKey) { showToast('Ошибка', 'API-ключ не загружен', 'error'); return; }
+        if (!mistralApiKey) { showToast(t('errorApiKey'), '', 'error'); return; }
         let chat = chats.find(c => c.id === currentChatId);
         if (!chat || chat.messages.length === 0) {
             const now = Date.now();
@@ -945,7 +1138,6 @@
         if (currentUser && currentUser.fa_icon) return `<i class="${currentUser.fa_icon}"></i>`;
         return '<i class="fas fa-user"></i>';
     }
-
     function updateUserPanel() {
         const nameSpan = document.getElementById('userNameDisplay');
         const avatarImg = document.getElementById('userAvatarImg');
@@ -953,7 +1145,7 @@
             const icon = currentUser.fa_icon ? `<i class="${currentUser.fa_icon}" style="margin-right:6px;"></i>` : '';
             if (nameSpan) nameSpan.innerHTML = `${icon}${currentUser.name || currentUser.login}`;
             if (avatarImg) avatarImg.src = currentUser.avatar || '';
-        } else { if (nameSpan) nameSpan.textContent = 'Пользователь'; if (avatarImg) avatarImg.src = ''; }
+        } else { if (nameSpan) nameSpan.textContent = t('profile'); if (avatarImg) avatarImg.src = ''; }
     }
 
     async function refreshUserProfile() {
@@ -967,12 +1159,12 @@
                 if (data.avatar !== currentUser.avatar) { currentUser.avatar = data.avatar; changed = true; }
                 if (data.description !== currentUser.description) { currentUser.description = data.description; changed = true; }
                 if (data.fa_icon !== currentUser.fa_icon) { currentUser.fa_icon = data.fa_icon; changed = true; }
-                if (changed) { localStorage.setItem('diamond_user', JSON.stringify(currentUser)); updateUserPanel(); console.log('[PROFILE] Обновлён из DiamKey'); }
+                if (changed) { localStorage.setItem('diamond_user', JSON.stringify(currentUser)); updateUserPanel(); }
             }
         } catch (e) { console.warn('[PROFILE] Ошибка синхронизации:', e); }
     }
 
-    // ========== DIAMKEY AUTH (ВСТРОЕННЫЙ) ==========
+    // ========== АВТОРИЗАЦИЯ ==========
     function generateFastSecret() { return Math.random().toString(36).substring(2,15) + Math.random().toString(36).substring(2,15); }
     function generateToken() { const adj=['golden','silver','mystic','shadow','prime','crystal','onyx','brave','frost'], nouns=['falcon','tiger','phoenix','dragon','wolf','spark','nexus','core','vault','key']; return `diamkey_${adj[Math.floor(Math.random()*adj.length)]}_${nouns[Math.floor(Math.random()*nouns.length)]}_${nouns[Math.floor(Math.random()*nouns.length)]}_${Math.floor(1000+Math.random()*9000)}`; }
 
@@ -980,11 +1172,11 @@
         const identity = document.getElementById('loginIdentity')?.value.trim();
         const password = document.getElementById('loginPassword')?.value;
         const btn = document.getElementById('doLoginBtn');
-        if (!identity || !password) return showToast('Введите логин и пароль', '', 'warning');
+        if (!identity || !password) return showToast(t('errorLogin'), '', 'warning');
         btn.disabled = true;
         try {
             const { data: user, error } = await supabaseClient.from('users').select('*').eq('login', identity).eq('password', password).maybeSingle();
-            if (error || !user) { showToast('Неверный логин или пароль'); return; }
+            if (error || !user) { showToast(t('errorLogin'), '', 'error'); return; }
             if (!user.secret_word) { const sw = generateFastSecret(); await supabaseClient.from('users').update({ secret_word: sw }).eq('login', user.login); user.secret_word = sw; }
             currentUser = { login: user.login, email: user.email || (user.login+'@diamkey.local'), secretWord: user.secret_word, name: user.name||'', avatar: user.avatar||'', description: user.description||'', fa_icon: user.fa_icon||'', role: user.role||'user' };
             localStorage.setItem('diamond_user', JSON.stringify(currentUser));
@@ -995,7 +1187,7 @@
             updateUserPanel();
             if (chats.length === 0) renderEmptyState(); else renderChat();
             renderHistory();
-        } catch (e) { console.error(e); showToast('Ошибка сети', '', 'error'); }
+        } catch (e) { console.error(e); showToast(t('errorNetwork'), '', 'error'); }
         finally { btn.disabled = false; }
     }
 
@@ -1003,16 +1195,16 @@
         const loginInput = document.getElementById('regLogin')?.value.trim();
         const password = document.getElementById('regPassword')?.value;
         const btn = document.getElementById('doRegisterBtn');
-        if (!loginInput || password.length < 6) return showToast('Введите логин и пароль (мин. 6 символов)', '', 'warning');
+        if (!loginInput || password.length < 6) return showToast(t('errorRegister'), '', 'warning');
         btn.disabled = true;
         try {
             const { data: exist } = await supabaseClient.from('users').select('login').eq('login', loginInput).maybeSingle();
-            if (exist) { showToast('Логин уже занят'); return; }
+            if (exist) { showToast('Логин уже занят', '', 'warning'); return; }
             const secretWord = generateFastSecret();
             const email = loginInput + '@diamkey.local';
             const token = generateToken();
             const { error } = await supabaseClient.from('users').insert([{ login: loginInput, email, password, token, secret_word: secretWord, name:'', avatar:'', description:'', fa_icon:'', role:'user', is_admin:false }]);
-            if (error) { showToast('Ошибка регистрации: '+error.message); return; }
+            if (error) { showToast(t('errorRegister'), error.message, 'error'); return; }
             currentUser = { login: loginInput, email, secretWord, name:'', avatar:'', description:'', fa_icon:'', role:'user' };
             localStorage.setItem('diamond_user', JSON.stringify(currentUser));
             await loadChatsAndFolders(); await loadForumMessages();
@@ -1022,7 +1214,7 @@
             updateUserPanel();
             renderEmptyState();
             renderHistory();
-        } catch (e) { console.error(e); showToast('Ошибка сети', '', 'error'); }
+        } catch (e) { console.error(e); showToast(t('errorNetwork'), '', 'error'); }
         finally { btn.disabled = false; }
     }
 
@@ -1040,7 +1232,7 @@
         currentUser = null; mistralApiKey = ''; localStorage.removeItem('diamond_user');
         document.getElementById('mainUI').style.display = 'none';
         document.getElementById('choiceScreen').style.display = 'flex';
-        showToast('Вы вышли', '', 'info');
+        showToast(t('logout'), '', 'info');
     }
 
     // ========== UI ПОМОЩНИКИ ==========
@@ -1061,8 +1253,10 @@
 
     function renderEmptyState() {
         const container = document.getElementById('messages-container');
-        container.innerHTML = `<div class="empty-state"><img src="logo.png" class="empty-logo" alt="Diamond AI"><div class="empty-text">Чем могу помочь?</div><div class="empty-input-area"><div class="input-wrapper"><textarea id="empty-input" placeholder="${placeholderTexts[0]}" rows="1"></textarea><button class="send-btn" id="empty-send-btn" disabled><i class="fas fa-arrow-up"></i></button></div></div></div>`;
+        container.innerHTML = `<div class="empty-state"><img src="logo.png" class="empty-logo" alt="Diamond AI"><div class="empty-text">${t('emptyChat')}</div><div class="empty-input-area"><div class="input-wrapper"><textarea id="empty-input" placeholder="${placeholderTexts[0]}" rows="1"></textarea><button class="send-btn" id="empty-send-btn" disabled><i class="fas fa-arrow-up"></i></button></div></div></div>`;
         document.getElementById('inputArea').style.display = 'none';
+        const headerEl = document.getElementById('chatHeader');
+        if (headerEl) headerEl.textContent = '';
         const emptyInput = document.getElementById('empty-input'), emptySendBtn = document.getElementById('empty-send-btn');
         if (emptyInput) {
             if (placeholderInterval) clearInterval(placeholderInterval);
@@ -1080,66 +1274,14 @@
 
     // ========== ОБУЧЕНИЕ ==========
     const tutorialSteps = [
-        {
-            title: 'Добро пожаловать в Diamond AI!',
-            html: `<p>Это <strong style="color:var(--workshop-accent)">Diamond AI</strong> — твой умный помощник. Он отвечает на вопросы, решает задачи, помогает с кодом и даже запоминает твои чаты!</p><p>Сейчас я быстро покажу, как тут всё работает. Это займёт меньше минуты.</p><p>Нажимай <strong>«Далее»</strong>, чтобы продолжить.</p>`,
-            demo: '',
-            position: 'center'
-        },
-        {
-            title: 'Главный чат',
-            html: `<p>Вот так выглядит <strong style="color:var(--workshop-accent)">основной чат</strong> с ИИ. Ты пишешь сообщение в поле ввода, а Diamond AI тебе отвечает.</p><p>В пустом состоянии он покажет подсказки — попробуй нажать на одну из них!</p>`,
-            demo: `<div class="tutorial-demo-box"><i class="fas fa-comment"></i><div><strong>Пример:</strong><br><span style="color:var(--text-secondary)">«Расскажи про теорему Пифагора»</span></div></div>`,
-            position: 'center'
-        },
-        {
-            title: 'Создание нового чата',
-            html: `<p>Хочешь обсудить новую тему? Просто нажми на кнопку <strong style="color:var(--workshop-accent)">«Новый чат»</strong> <i class="fas fa-feather-alt"></i> вверху сайдбара.</p><p>Все твои чаты сохраняются и синхронизируются через DiamKey — ты не потеряешь их даже при смене устройства.</p>`,
-            demo: `<div class="tutorial-demo-box"><i class="fas fa-feather-alt"></i><div><strong>Кнопка «Новый чат»</strong><br><span style="color:var(--text-secondary)">Находится в сайдбаре слева</span></div></div>`,
-            position: 'left'
-        },
-        {
-            title: 'Папки для порядка',
-            html: `<p>Когда чатов становится много, их можно <strong style="color:var(--workshop-accent)">разложить по папкам</strong>. У каждой папки можно выбрать иконку и цвет.</p><p>Нажми на вкладку «Папки» <i class="fas fa-folder"></i>, чтобы создать свою первую папку и перенести туда чаты.</p>`,
-            demo: `<div class="tutorial-demo-box"><i class="fas fa-folder"></i><div><strong>Пример папки:</strong><br><span style="color:var(--text-secondary)">«Учёба», «Работа», «Код»</span></div></div>`,
-            position: 'left'
-        },
-        {
-            title: 'Мастерская',
-            html: `<p>В разделе <strong style="color:var(--workshop-accent)">«Мастерская»</strong> <i class="fas fa-wrench"></i> находятся специальные инструменты. Сейчас там есть <strong>«Распознать ИИ»</strong> — чат, который умеет определять, написан текст человеком или сгенерирован другой нейросетью.</p><p>Включай и выключай инструменты тумблерами, как тебе удобно.</p>`,
-            demo: `<div class="tutorial-demo-box"><i class="fas fa-wrench"></i><div><strong>Инструмент:</strong><br><span style="color:var(--text-secondary)">«Распознать ИИ» — анализ текста</span></div></div>`,
-            position: 'left'
-        },
-        {
-            title: 'Твой профиль',
-            html: `<p>В самом низу сайдбара находится <strong style="color:var(--workshop-accent)">панель пользователя</strong>. Здесь можно:</p><ul style="padding-left:20px; margin:10px 0;"><li>Посмотреть свой ник</li><li>Зайти на DiamKey</li><li>Выйти из аккаунта</li></ul><p>Рядом с ником есть кнопка <strong style="color:var(--workshop-accent)">?</strong> — она запускает это обучение. Можешь открыть его в любой момент!</p>`,
-            demo: `<div class="tutorial-demo-box"><i class="fas fa-user-circle"></i><div><strong>Панель пользователя</strong><br><span style="color:var(--text-secondary)">Внизу сайдбара</span></div></div>`,
-            position: 'left'
-        },
-        {
-            title: 'Поиск по истории',
-            html: `<p>Если чатов накопилось очень много, воспользуйся <strong style="color:var(--workshop-accent)">поиском</strong> <i class="fas fa-search"></i> вверху сайдбара. Просто начни вводить название чата, и список отфильтруется.</p>`,
-            demo: `<div class="tutorial-demo-box"><i class="fas fa-search"></i><div><strong>Поиск чатов</strong><br><span style="color:var(--text-secondary)">Мгновенная фильтрация</span></div></div>`,
-            position: 'left'
-        },
-        {
-            title: 'Закрепление важных чатов',
-            html: `<p>Важные чаты можно <strong style="color:var(--workshop-accent)">закрепить</strong> <i class="fas fa-thumbtack"></i> — наведи на чат и нажми иконку булавки. Закреплённые чаты всегда будут вверху списка, в отдельной группе.</p>`,
-            demo: `<div class="tutorial-demo-box"><i class="fas fa-thumbtack"></i><div><strong>Закрепление чата</strong><br><span style="color:var(--text-secondary)">Булавка при наведении</span></div></div>`,
-            position: 'center'
-        },
-        {
-            title: 'Динамический интерфейс',
-            html: `<p>Сайдбар можно <strong style="color:var(--workshop-accent)">свернуть</strong> кнопкой-бургером <i class="fas fa-bars"></i> в заголовке, чтобы освободить место для чата. В свёрнутом режиме появятся компактные кнопки для быстрого доступа.</p><p>На телефоне панель открывается свайпом или по нажатию.</p>`,
-            demo: `<div class="tutorial-demo-box"><i class="fas fa-bars"></i><div><strong>Бургер-меню</strong><br><span style="color:var(--text-secondary)">Сворачивает сайдбар</span></div></div>`,
-            position: 'center'
-        },
-        {
-            title: 'Готово!',
-            html: `<p>Теперь ты знаешь основы Diamond AI. Вот короткий итог:</p><ul style="padding-left:20px; margin:10px 0;"><li><strong>Чат</strong> — общайся с ИИ</li><li><strong>Папки</strong> — наводи порядок</li><li><strong>Мастерская</strong> — включай инструменты</li><li><strong>Поиск и закрепление</strong> — быстрый доступ</li></ul><p>Если что-то забудешь — просто нажми <strong style="color:var(--workshop-accent)">?</strong> возле ника, и я всё повторю!</p>`,
-            demo: `<div class="tutorial-demo-box"><i class="fas fa-check-circle" style="color:#2ecc71;"></i><div><strong>Ты молодец!</strong><br><span style="color:var(--text-secondary)">Всё получится!</span></div></div>`,
-            position: 'center'
-        }
+        { title: 'Добро пожаловать в Diamond AI!', html: `<p>Это <strong style="color:var(--accent)">Diamond AI</strong> — твой умный помощник. Он отвечает на вопросы, решает задачи, помогает с кодом и даже запоминает твои чаты!</p><p>Сейчас я быстро покажу, как тут всё работает. Это займёт меньше минуты.</p><p>Нажимай <strong>«Далее»</strong>, чтобы продолжить.</p>`, demo: '', interactive: false },
+        { title: 'Главный чат', html: `<p>Вот так выглядит <strong style="color:var(--accent)">основной чат</strong> с ИИ. Ты пишешь сообщение в поле ввода, а Diamond AI тебе отвечает.</p><p>В пустом состоянии он покажет подсказки — попробуй нажать на одну из них!</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-comment"></i><div><strong>Пример:</strong><br><span style="color:var(--text-secondary)">«Расскажи про теорему Пифагора»</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" onclick="document.getElementById('user-input').focus()"><i class="fas fa-hand-pointer"></i> Нажми сюда, чтобы попробовать ввод</div>` },
+        { title: 'Создание нового чата', html: `<p>Хочешь обсудить новую тему? Просто нажми на кнопку <strong style="color:var(--accent)">«Новый чат»</strong> <i class="fas fa-feather-alt"></i> вверху сайдбара.</p><p>Все твои чаты сохраняются и синхронизируются через DiamKey — ты не потеряешь их даже при смене устройства.</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-feather-alt"></i><div><strong>Кнопка «Новый чат»</strong><br><span style="color:var(--text-secondary)">Находится в сайдбаре слева</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" onclick="document.getElementById('new-chat-btn').click()"><i class="fas fa-hand-pointer"></i> Нажми, чтобы создать новый чат</div>` },
+        { title: 'Папки для порядка', html: `<p>Когда чатов становится много, их можно <strong style="color:var(--accent)">разложить по папкам</strong>. У каждой папки можно выбрать иконку и цвет.</p><p>Нажми на вкладку «Папки» <i class="fas fa-folder"></i>, чтобы создать свою первую папку и перенести туда чаты.</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-folder"></i><div><strong>Пример папки:</strong><br><span style="color:var(--text-secondary)">«Учёба», «Работа», «Код»</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" onclick="document.getElementById('folders-page-btn').click()"><i class="fas fa-hand-pointer"></i> Открыть папки</div>` },
+        { title: 'Мастерская', html: `<p>В разделе <strong style="color:var(--accent)">«Мастерская»</strong> <i class="fas fa-wrench"></i> находятся специальные инструменты. Сейчас там есть <strong>«Распознать ИИ»</strong> — чат, который умеет определять, написан текст человеком или сгенерирован другой нейросетью.</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-wrench"></i><div><strong>Инструмент:</strong><br><span style="color:var(--text-secondary)">«Распознать ИИ» — анализ текста</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" onclick="document.getElementById('workshop-page-btn').click()"><i class="fas fa-hand-pointer"></i> Открыть мастерскую</div>` },
+        { title: 'Твой профиль', html: `<p>В самом низу сайдбара находится <strong style="color:var(--accent)">панель пользователя</strong>. Здесь твой ник и аватар. Рядом — кнопка <strong style="color:var(--accent)">шестерёнки</strong> с настройками.</p><p>Там можно сменить язык, включить обучение или выйти.</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-user-circle"></i><div><strong>Панель пользователя</strong><br><span style="color:var(--text-secondary)">Внизу сайдбара</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" onclick="document.getElementById('settingsBtn').click()"><i class="fas fa-hand-pointer"></i> Открыть настройки</div>` },
+        { title: 'Поиск по истории', html: `<p>Если чатов накопилось очень много, воспользуйся <strong style="color:var(--accent)">поиском</strong> <i class="fas fa-search"></i> вверху сайдбара. Он ищет не только по названиям, но и внутри сообщений!</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-search"></i><div><strong>Поиск чатов</strong><br><span style="color:var(--text-secondary)">Мгновенная фильтрация</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" onclick="document.getElementById('history-search').focus()"><i class="fas fa-hand-pointer"></i> Попробовать поиск</div>` },
+        { title: 'Готово!', html: `<p>Теперь ты знаешь основы Diamond AI. Вот короткий итог:</p><ul style="padding-left:20px; margin:10px 0;"><li><strong>Чат</strong> — общайся с ИИ</li><li><strong>Папки</strong> — наводи порядок</li><li><strong>Мастерская</strong> — включай инструменты</li><li><strong>Поиск</strong> — быстрый доступ</li><li><strong>Настройки</strong> — язык и обучение</li></ul><p>Если что-то забудешь — просто нажми <strong style="color:var(--accent)">шестерёнку</strong> возле ника и выбери «Обучение»!</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-check-circle" style="color:#2ecc71;"></i><div><strong>Ты молодец!</strong><br><span style="color:var(--text-secondary)">Всё получится!</span></div></div>`, interactive: false }
     ];
 
     function startTutorial() {
@@ -1197,11 +1339,12 @@
             <div class="tutorial-body">
                 <div id="tutorialContent"></div>
                 ${step.demo ? step.demo : ''}
+                ${step.interactive ? step.interactive : ''}
             </div>
             <div class="tutorial-footer">
-                <button class="tutorial-btn" id="tutorialPrev" ${tutorialStep === 0 ? 'style="visibility:hidden"' : ''}><i class="fas fa-arrow-left"></i> Назад</button>
+                <button class="tutorial-btn" id="tutorialPrev" ${tutorialStep === 0 ? 'style="visibility:hidden"' : ''}><i class="fas fa-arrow-left"></i> ${t('tutorialPrev')}</button>
                 <span style="font-size:12px; color:var(--text-secondary);">${tutorialStep + 1} / ${tutorialSteps.length}</span>
-                <button class="tutorial-btn primary" id="tutorialNext">${tutorialStep === tutorialSteps.length - 1 ? 'Завершить' : 'Далее'} <i class="fas fa-arrow-right"></i></button>
+                <button class="tutorial-btn primary" id="tutorialNext">${tutorialStep === tutorialSteps.length - 1 ? t('tutorialFinish') : t('tutorialNext')} <i class="fas fa-arrow-right"></i></button>
             </div>
         `;
         overlay.innerHTML = '';
@@ -1230,7 +1373,7 @@
                 element.classList.remove('tutorial-typing');
                 element.innerHTML = html;
             }
-        }, 20);
+        }, 10);
     }
 
     // ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
@@ -1246,14 +1389,18 @@
         document.getElementById('user-input')?.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} });
         document.getElementById('send-btn')?.addEventListener('click', sendMessage);
         document.getElementById('history-search')?.addEventListener('input', renderHistory);
-        document.getElementById('dropdown-discord')?.addEventListener('click', ()=>window.open('https://discord.gg/diamondshop','_blank'));
-        document.getElementById('dropdown-diamkey')?.addEventListener('click', ()=>window.open('https://diamkey.ru','_blank'));
-        document.getElementById('dropdown-logout')?.addEventListener('click', logout);
-        document.getElementById('userMenuBtn')?.addEventListener('click', (e)=>{ e.stopPropagation(); document.getElementById('userDropdown').classList.toggle('show'); });
-        document.addEventListener('click', (e)=>{ if(!document.getElementById('userPanel')?.contains(e.target)) document.getElementById('userDropdown')?.classList.remove('show'); });
-        // Кнопка обучения
-        document.getElementById('userTutorialBtn')?.addEventListener('click', startTutorial);
-
+        // Настройки
+        document.getElementById('settingsBtn')?.addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('settingsDropdown').classList.toggle('show'); });
+        document.getElementById('set-discord')?.addEventListener('click', () => window.open('https://discord.gg/diamondshop','_blank'));
+        document.getElementById('set-diamkey')?.addEventListener('click', () => window.open('https://diamkey.ru','_blank'));
+        document.getElementById('set-tutorial')?.addEventListener('click', startTutorial);
+        document.getElementById('set-language')?.addEventListener('click', () => document.getElementById('languageModal').classList.add('active'));
+        document.getElementById('set-logout')?.addEventListener('click', logout);
+        document.addEventListener('click', (e) => { if(!document.getElementById('userPanel')?.contains(e.target)) document.getElementById('settingsDropdown')?.classList.remove('show'); });
+        // Закрытие модалки языка
+        document.getElementById('closeLanguageModal')?.addEventListener('click', () => document.getElementById('languageModal').classList.remove('active'));
+        document.querySelectorAll('.lang-btn').forEach(btn => btn.addEventListener('click', () => setLanguage(btn.dataset.lang)));
+        // Авторизация
         document.getElementById('tabLogin')?.addEventListener('click', ()=>{ document.getElementById('tabLogin').classList.add('active'); document.getElementById('tabRegister').classList.remove('active'); document.getElementById('loginForm').style.display='block'; document.getElementById('registerForm').style.display='none'; });
         document.getElementById('tabRegister')?.addEventListener('click', ()=>{ document.getElementById('tabRegister').classList.add('active'); document.getElementById('tabLogin').classList.remove('active'); document.getElementById('registerForm').style.display='block'; document.getElementById('loginForm').style.display='none'; });
         document.getElementById('doLoginBtn')?.addEventListener('click', login);
@@ -1264,6 +1411,8 @@
     (async function() {
         log('Загрузка...');
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+        const savedLang = localStorage.getItem('diamond_language');
+        if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
         loadWorkshopToolsState();
         await fetchMistralKey();
         const savedUser = localStorage.getItem('diamond_user');
@@ -1285,6 +1434,7 @@
             document.getElementById('choiceScreen').style.display = 'flex';
         }
         setupEventListeners();
+        updateUILanguage();
         updateUserPanel();
         updateSendButtonState();
         if (chats.length) renderHistory();
