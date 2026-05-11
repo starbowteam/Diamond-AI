@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v28 — FINAL FULL: БЫСТРЫЙ ФОРУМ, ПЛАВНОСТЬ, МАСТЕРСКАЯ ====================
+// ==================== DIAMOND AI v29 — VOICE GPT + ПОЛНЫЙ ФУНКЦИОНАЛ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -20,8 +20,7 @@
     let thinkingTimer = null;
     let thinkingDots = 0;
     let workshopTools = {};
-    let forumMessages = [];
-    let forumLoaded = false;
+    let voiceActive = false;
 
     const placeholderTexts = [
         "Что расскажешь о себе?",
@@ -38,7 +37,7 @@
     const currentDateStr = now.toLocaleDateString('ru-RU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
     const SYSTEM_PROMPT = {
         role: 'system',
-        content: `Ты — Diamond AI, интеллектуальный помощник, работающий на модели diamond-ai.fast. Твой создатель — viktorshopa, основатель сервера Diamond и экосистемы проектов: DiamKey (единый аккаунт), Dirmess (мессенджер), Unlock (обход блокировок). Ты создан помогать людям отвечать на вопросы, решать задачи, писать код и проводить анализ. Отвечай строго по делу, используй KaTeX, Latex и тп для математики и других вещей и выделяй код тройными. Будь вежлив и полезен. Я Сегодня: ${currentDateStr}.`
+        content: `Ты — Diamond AI, интеллектуальный помощник, работающий на модели diamond-ai.fast. Твой создатель — viktorshopa, основатель сервера Diamond и экосистемы проектов: DiamKey (единый аккаунт), Dirmess (мессенджер), Unlock (обход блокировок). Ты создан помогать людям отвечать на вопросы, решать задачи, писать код и проводить анализ. Отвечай строго по делу, используй KaTeX для математики и выделяй код тройными кавычками. Будь вежлив и полезен. Сегодня: ${currentDateStr}.`
     };
 
     const TOOL_SYSTEM_PROMPTS = {
@@ -550,7 +549,7 @@
         modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
-    // ========== МАСТЕРСКАЯ + ФОРУМ (исправлено) ==========
+    // ========== МАСТЕРСКАЯ + ФОРУМ ==========
     function loadWorkshopToolsState() {
         const saved = localStorage.getItem('diamond_workshop_tools');
         if (saved) { try { workshopTools = JSON.parse(saved); } catch(e) { workshopTools = {}; } }
@@ -583,61 +582,6 @@
         if (workshopTools[toolId]) { await createToolChatWithGreeting(toolId); showToast('Инструмент включён', 'Чат «Распознать ИИ» активен', 'success'); }
         else { await removeToolChat(toolId); showToast('Инструмент выключен', 'Чат «Распознать ИИ» скрыт', 'info'); if (currentChatId === 'tool_' + toolId) renderEmptyState(); }
         renderWorkshopPage(); renderHistory(); renderChat();
-    }
-
-    async function loadForumMessages() {
-        try {
-            const { data, error } = await supabaseClient.from('forum_masterk').select('*').order('created_at', { ascending: true });
-            if (!error) { forumMessages = data; forumLoaded = true; }
-            renderForumMessages();
-        } catch(e) { console.warn('Ошибка загрузки форума:', e); }
-    }
-
-    function renderForumMessages() {
-        const container = document.getElementById('forumMessagesContainer');
-        if (!container) return;
-        container.innerHTML = forumMessages.map(m => `
-            <div class="forum-message">
-                <div class="forum-avatar">${m.user_avatar ? `<img src="${m.user_avatar}">` : '<i class="fas fa-user"></i>'}</div>
-                <div class="forum-message-content">
-                    <div class="forum-message-header">
-                        <span class="forum-message-author">${escapeHtml(m.user_name || m.user_login)}</span>
-                        <span class="forum-message-time">${new Date(m.created_at).toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' })}</span>
-                    </div>
-                    <div class="forum-message-text">${escapeHtml(m.message)}</div>
-                </div>
-            </div>
-        `).join('');
-        container.scrollTop = container.scrollHeight;
-    }
-
-    async function sendForumMessage() {
-        const input = document.getElementById('forumInput');
-        const text = input.value.trim();
-        if (!text || !currentUser) return;
-        // Мгновенная локальная вставка
-        const tempMsg = {
-            user_login: currentUser.login,
-            user_name: currentUser.name || currentUser.login,
-            user_avatar: currentUser.avatar || '',
-            message: text,
-            created_at: new Date().toISOString()
-        };
-        forumMessages.push(tempMsg);
-        renderForumMessages();
-        input.value = '';
-
-        const { error } = await supabaseClient.from('forum_masterk').insert({
-            user_login: currentUser.login,
-            user_name: currentUser.name || currentUser.login,
-            user_avatar: currentUser.avatar || '',
-            message: text
-        });
-        if (error) {
-            showToast('Ошибка', 'Не удалось отправить сообщение', 'error');
-            forumMessages.pop();
-            renderForumMessages();
-        }
     }
 
     function renderWorkshopPage() {
@@ -686,11 +630,63 @@
         document.getElementById('forumInput')?.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendForumMessage(); }
         });
-        if (!forumLoaded) loadForumMessages();
-        else renderForumMessages();
+        loadForumMessages();
     }
 
-    // ========== ИСТОРИЯ С ГРУППИРОВКОЙ ==========
+    async function loadForumMessages() {
+        try {
+            const { data, error } = await supabaseClient.from('forum_masterk').select('*').order('created_at', { ascending: true });
+            if (!error) forumMessages = data;
+            renderForumMessages();
+        } catch(e) { console.warn('Ошибка загрузки форума:', e); }
+    }
+
+    function renderForumMessages() {
+        const container = document.getElementById('forumMessagesContainer');
+        if (!container) return;
+        container.innerHTML = forumMessages.map(m => `
+            <div class="forum-message">
+                <div class="forum-avatar">${m.user_avatar ? `<img src="${m.user_avatar}">` : '<i class="fas fa-user"></i>'}</div>
+                <div class="forum-message-content">
+                    <div class="forum-message-header">
+                        <span class="forum-message-author">${escapeHtml(m.user_name || m.user_login)}</span>
+                        <span class="forum-message-time">${new Date(m.created_at).toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' })}</span>
+                    </div>
+                    <div class="forum-message-text">${escapeHtml(m.message)}</div>
+                </div>
+            </div>
+        `).join('');
+        container.scrollTop = container.scrollHeight;
+    }
+
+    async function sendForumMessage() {
+        const input = document.getElementById('forumInput');
+        const text = input.value.trim();
+        if (!text || !currentUser) return;
+        const tempMsg = {
+            user_login: currentUser.login,
+            user_name: currentUser.name || currentUser.login,
+            user_avatar: currentUser.avatar || '',
+            message: text,
+            created_at: new Date().toISOString()
+        };
+        forumMessages.push(tempMsg);
+        renderForumMessages();
+        input.value = '';
+        const { error } = await supabaseClient.from('forum_masterk').insert({
+            user_login: currentUser.login,
+            user_name: currentUser.name || currentUser.login,
+            user_avatar: currentUser.avatar || '',
+            message: text
+        });
+        if (error) {
+            showToast('Ошибка', 'Не удалось отправить сообщение', 'error');
+            forumMessages.pop();
+            renderForumMessages();
+        }
+    }
+
+    // ========== ИСТОРИЯ ==========
     function renderHistory() {
         const list = document.getElementById('history-list');
         if (!list) return;
@@ -698,7 +694,6 @@
         let filtered = chats.filter(c => c.title.toLowerCase().includes(searchTerm));
         const toolChats = filtered.filter(c => c.id && c.id.startsWith('tool_'));
         const normalChats = filtered.filter(c => !toolChats.includes(c));
-
         const pinnedChats = normalChats.filter(c => c.pinned);
         const pinnedIds = new Set(pinnedChats.map(c => c.id));
         const folderMap = new Map();
@@ -710,9 +705,7 @@
                 folderMap.get(c.folder_id).push(c);
             } else orphanChats.push(c);
         });
-
         let html = '';
-
         if (toolChats.length > 0 && workshopTools.ai_detect) {
             html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-wrench"></i> Мастерская</div>`;
             toolChats.forEach(c => {
@@ -722,7 +715,6 @@
             });
             html += '</div>';
         }
-
         if (pinnedChats.length > 0) {
             html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-thumbtack"></i> Закрепленные</div>`;
             pinnedChats.forEach(c => {
@@ -752,7 +744,6 @@
         }
         if (!html) html = '<div style="text-align:center; padding:20px;">Нет чатов</div>';
         list.innerHTML = html;
-
         document.querySelectorAll('.history-item').forEach(el => {
             el.addEventListener('click', (e) => {
                 if (!e.target.closest('.chat-actions-hover')) switchChat(el.dataset.id);
@@ -942,7 +933,6 @@
         if (currentUser && currentUser.fa_icon) return `<i class="${currentUser.fa_icon}"></i>`;
         return '<i class="fas fa-user"></i>';
     }
-
     function updateUserPanel() {
         const nameSpan = document.getElementById('userNameDisplay');
         const avatarImg = document.getElementById('userAvatarImg');
@@ -964,7 +954,7 @@
                 if (data.avatar !== currentUser.avatar) { currentUser.avatar = data.avatar; changed = true; }
                 if (data.description !== currentUser.description) { currentUser.description = data.description; changed = true; }
                 if (data.fa_icon !== currentUser.fa_icon) { currentUser.fa_icon = data.fa_icon; changed = true; }
-                if (changed) { localStorage.setItem('diamond_user', JSON.stringify(currentUser)); updateUserPanel(); console.log('[PROFILE] Обновлён из DiamKey'); }
+                if (changed) { localStorage.setItem('diamond_user', JSON.stringify(currentUser)); updateUserPanel(); }
             }
         } catch (e) { console.warn('[PROFILE] Ошибка синхронизации:', e); }
     }
@@ -977,7 +967,7 @@
         const identity = document.getElementById('loginIdentity')?.value.trim();
         const password = document.getElementById('loginPassword')?.value;
         const btn = document.getElementById('doLoginBtn');
-        if (!identity || !password) return showToast('Введите логин и пароль', '', 'warning');
+        if (!identity || !password) return showToast('Введите логин и пароль');
         btn.disabled = true;
         try {
             const { data: user, error } = await supabaseClient.from('users').select('*').eq('login', identity).eq('password', password).maybeSingle();
@@ -985,14 +975,14 @@
             if (!user.secret_word) { const sw = generateFastSecret(); await supabaseClient.from('users').update({ secret_word: sw }).eq('login', user.login); user.secret_word = sw; }
             currentUser = { login: user.login, email: user.email || (user.login+'@diamkey.local'), secretWord: user.secret_word, name: user.name||'', avatar: user.avatar||'', description: user.description||'', fa_icon: user.fa_icon||'', role: user.role||'user' };
             localStorage.setItem('diamond_user', JSON.stringify(currentUser));
-            await loadChatsAndFolders(); await refreshUserProfile(); await loadForumMessages();
+            await loadChatsAndFolders(); await refreshUserProfile();
             document.getElementById('choiceScreen').style.display = 'none';
             document.getElementById('mainUI').style.display = 'flex';
             setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
             updateUserPanel();
             if (chats.length === 0) renderEmptyState(); else renderChat();
             renderHistory();
-        } catch (e) { console.error(e); showToast('Ошибка сети', '', 'error'); }
+        } catch (e) { console.error(e); showToast('Ошибка сети'); }
         finally { btn.disabled = false; }
     }
 
@@ -1000,7 +990,7 @@
         const loginInput = document.getElementById('regLogin')?.value.trim();
         const password = document.getElementById('regPassword')?.value;
         const btn = document.getElementById('doRegisterBtn');
-        if (!loginInput || password.length < 6) return showToast('Введите логин и пароль (мин. 6 символов)', '', 'warning');
+        if (!loginInput || password.length < 6) return showToast('Введите логин и пароль (мин. 6 символов)');
         btn.disabled = true;
         try {
             const { data: exist } = await supabaseClient.from('users').select('login').eq('login', loginInput).maybeSingle();
@@ -1012,14 +1002,14 @@
             if (error) { showToast('Ошибка регистрации: '+error.message); return; }
             currentUser = { login: loginInput, email, secretWord, name:'', avatar:'', description:'', fa_icon:'', role:'user' };
             localStorage.setItem('diamond_user', JSON.stringify(currentUser));
-            await loadChatsAndFolders(); await loadForumMessages();
+            await loadChatsAndFolders();
             document.getElementById('choiceScreen').style.display = 'none';
             document.getElementById('mainUI').style.display = 'flex';
             setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
             updateUserPanel();
             renderEmptyState();
             renderHistory();
-        } catch (e) { console.error(e); showToast('Ошибка сети', '', 'error'); }
+        } catch (e) { console.error(e); showToast('Ошибка сети'); }
         finally { btn.disabled = false; }
     }
 
@@ -1075,6 +1065,43 @@
 
     async function showLoadingScreen() { const ws=document.getElementById('welcomeScreen'); ws.style.display='flex'; await new Promise(r=>setTimeout(r,400)); ws.classList.add('fade-out'); await new Promise(r=>setTimeout(r,300)); ws.style.display='none'; }
 
+    // ========== VOICE GPT ИНИЦИАЛИЗАЦИЯ ==========
+    function initVoiceGPT() {
+        if (typeof VoiceGPT === 'undefined') return;
+        VoiceGPT.init();
+        const voiceBtn = document.getElementById('voice-btn');
+        const voiceBall = document.getElementById('voice-ball');
+        if (voiceBtn) {
+            voiceBtn.addEventListener('click', () => {
+                if (voiceActive) {
+                    VoiceGPT.stop();
+                    voiceBall.classList.remove('listening');
+                    voiceActive = false;
+                } else {
+                    VoiceGPT.start(
+                        (text) => {
+                            document.getElementById('user-input').value = text;
+                            sendMessage();
+                        },
+                        () => {
+                            voiceBall.classList.add('listening');
+                            voiceActive = true;
+                        },
+                        () => {
+                            voiceBall.classList.remove('listening');
+                            voiceActive = false;
+                        },
+                        (volume) => {
+                            if (voiceBall) {
+                                voiceBall.style.transform = `scale(${0.8 + volume * 0.5})`;
+                            }
+                        }
+                    );
+                }
+            });
+        }
+    }
+
     // ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
     function setupEventListeners() {
         document.getElementById('sidebarToggleBtn')?.addEventListener('click', toggleSidebar);
@@ -1111,7 +1138,6 @@
             currentUser = JSON.parse(savedUser);
             await loadChatsAndFolders();
             await refreshUserProfile();
-            await loadForumMessages();
             if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
         }
         await showLoadingScreen();
@@ -1125,6 +1151,7 @@
             document.getElementById('choiceScreen').style.display = 'flex';
         }
         setupEventListeners();
+        initVoiceGPT();
         updateUserPanel();
         updateSendButtonState();
         if (chats.length) renderHistory();
