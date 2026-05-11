@@ -38,7 +38,7 @@
             passPlaceholder: '········',
             newChat: 'Новый чат',
             folders: 'Папки',
-            workshop: 'Мастерская',
+            workshop: 'Мастерская DIAMOND AI',
             searchHistory: 'Поиск в истории...',
             profile: 'Пользователь',
             settings: 'Настройки',
@@ -121,7 +121,7 @@
             passPlaceholder: '········',
             newChat: 'New Chat',
             folders: 'Folders',
-            workshop: 'Workshop',
+            workshop: 'Workshop DIAMOND AI',
             searchHistory: 'Search history...',
             profile: 'User',
             settings: 'Settings',
@@ -958,7 +958,7 @@
                     <h1>${t('masterFull')}</h1>
                     <p>Специальные инструменты для расширенной работы с искусственным интеллектом. Включайте нужные тумблеры, чтобы активировать тематические чаты со строгими правилами.</p>
                 </div>
-                <img src="master.png" alt="Мастерская" class="workshop-banner-img">
+                <img src="master.png" alt="Мастерская DIAMOND AI" class="workshop-banner-img">
             </div>
             <div class="workshop-tools-grid">
                 <div class="workshop-tool-card ${aiDetectActive ? 'active' : ''}">
