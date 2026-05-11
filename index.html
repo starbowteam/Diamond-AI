@@ -10,29 +10,21 @@
     <link rel="icon" type="image/png" sizes="256x256" href="logo.png">
     <meta name="theme-color" content="#1e1e1e">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=29">
+    <link rel="stylesheet" href="style.css?v=30">
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
     
-    <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    
-    <!-- KaTeX + mhchem -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/mhchem.min.js"></script>
-    
-    <!-- Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"></script>
 </head>
 <body>
-    <!-- Заставка-спиннер (быстрый) -->
     <div class="welcome-screen" id="welcomeScreen">
         <div class="spinner-container"><i class="fas fa-circle-notch fa-spin"></i></div>
     </div>
-
-    <!-- Экран выбора (если не авторизован) — теперь содержит форму входа/регистрации -->
     <div class="choice-screen" id="choiceScreen" style="display: none;">
         <div class="choice-container" id="choiceContainer">
             <div class="logo">
@@ -40,38 +32,23 @@
                 <h1>DIAMOND AI</h1>
                 <p>Войдите или создайте Diamkey для продолжения</p>
             </div>
-            <!-- Переключатель вкладок -->
             <div class="auth-tabs">
                 <button class="auth-tab active" id="tabLogin">Вход</button>
                 <button class="auth-tab" id="tabRegister">Регистрация</button>
             </div>
             <div id="loginForm" class="auth-form">
-                <div class="input-group">
-                    <label>Логин</label>
-                    <input id="loginIdentity" placeholder="Введите логин">
-                </div>
-                <div class="input-group">
-                    <label>Пароль</label>
-                    <input id="loginPassword" type="password" placeholder="········">
-                </div>
+                <div class="input-group"><label>Логин</label><input id="loginIdentity" placeholder="Введите логин"></div>
+                <div class="input-group"><label>Пароль</label><input id="loginPassword" type="password" placeholder="········"></div>
                 <button class="btn btn-diamkey" id="doLoginBtn"><i class="fas fa-gem"></i> Войти</button>
             </div>
             <div id="registerForm" class="auth-form" style="display:none;">
-                <div class="input-group">
-                    <label>Логин</label>
-                    <input id="regLogin" placeholder="Придумайте логин">
-                </div>
-                <div class="input-group">
-                    <label>Пароль</label>
-                    <input id="regPassword" type="password" placeholder="Минимум 6 символов">
-                </div>
+                <div class="input-group"><label>Логин</label><input id="regLogin" placeholder="Придумайте логин"></div>
+                <div class="input-group"><label>Пароль</label><input id="regPassword" type="password" placeholder="Минимум 6 символов"></div>
                 <button class="btn btn-diamkey" id="doRegisterBtn"><i class="fas fa-user-plus"></i> Создать Diamkey</button>
             </div>
             <p class="footer-note">Статистика и данные о аккаунте на<br>сайте <a href="https://diamkey.ru" target="_blank">Diamkey.</a></p>
         </div>
     </div>
-
-    <!-- Основной интерфейс (скрыт до входа) -->
     <div class="main-ui" id="mainUI" style="display: none;">
         <header class="title-bar" id="titleBar">
             <div class="title-bar-left">
@@ -88,7 +65,6 @@
             </div>
             <div class="window-controls"></div>
         </header>
-
         <div class="app-container">
             <aside class="sidebar" id="sidebar">
                 <div class="sidebar-header">
@@ -105,20 +81,20 @@
                 <div class="history-list" id="history-list"></div>
                 <div class="user-panel" id="userPanel">
                     <div class="user-avatar"><img id="userAvatarImg" src="" alt="avatar"></div>
-                    <div class="user-info">
-                        <div class="user-name" id="userNameDisplay">Пользователь</div>
-                        <button class="user-tutorial-btn" id="userTutorialBtn" title="Обучение"><i class="fas fa-question-circle"></i></button>
-                    </div>
-                    <button class="user-menu-btn" id="userMenuBtn"><i class="fas fa-ellipsis-v"></i></button>
-                    <div class="user-dropdown" id="userDropdown">
-                        <button id="dropdown-discord"><i class="fab fa-discord"></i> Discord-сервер</button>
-                        <button id="dropdown-diamkey"><i class="fas fa-key"></i> DiamKey</button>
-                        <button id="dropdown-logout"><i class="fas fa-sign-out-alt"></i> Выйти</button>
+                    <div class="user-info"><div class="user-name" id="userNameDisplay">Пользователь</div></div>
+                    <button class="settings-btn" id="settingsBtn" title="Настройки"><i class="fas fa-cog"></i></button>
+                    <div class="settings-dropdown" id="settingsDropdown">
+                        <button id="set-discord"><i class="fab fa-discord"></i> Discord-сервер</button>
+                        <button id="set-diamkey"><i class="fas fa-key"></i> DiamKey</button>
+                        <button id="set-tutorial"><i class="fas fa-question-circle"></i> Обучение</button>
+                        <button id="set-language"><i class="fas fa-globe"></i> Язык</button>
+                        <button id="set-logout"><i class="fas fa-sign-out-alt"></i> Выйти</button>
                     </div>
                 </div>
             </aside>
             <main class="chat-area">
                 <div class="chat-view" id="chatView">
+                    <div class="chat-header" id="chatHeader"></div>
                     <div class="messages-container" id="messages-container"></div>
                     <div class="input-area" id="inputArea" style="display: none;">
                         <div class="input-wrapper">
@@ -128,19 +104,26 @@
                     </div>
                 </div>
                 <div class="folders-page" id="foldersPage" style="display: none;"></div>
-                <div class="workshop-page" id="workshopPage" style="display: none;">
-                    <!-- Контент мастерской будет динамически заполняться -->
-                </div>
+                <div class="workshop-page" id="workshopPage" style="display: none;"></div>
             </main>
         </div>
     </div>
-
-    <!-- Toast-уведомления -->
     <div id="toast-container" class="toast-container"></div>
-
-    <!-- Оверлей для обучения -->
     <div class="tutorial-overlay" id="tutorialOverlay" style="display: none;"></div>
-
-<script src="app.js?v=29"></script>
+    <!-- Модалка выбора языка -->
+    <div class="modal" id="languageModal">
+        <div class="modal-content">
+            <button class="modal-close" id="closeLanguageModal"><i class="fas fa-times"></i></button>
+            <h2>Выберите язык</h2>
+            <div class="language-grid">
+                <button class="lang-btn" data-lang="ru"><i class="fas fa-flag"></i> Русский</button>
+                <button class="lang-btn" data-lang="en"><i class="fas fa-flag-usa"></i> English</button>
+                <button class="lang-btn" data-lang="es"><i class="fas fa-flag"></i> Español</button>
+                <button class="lang-btn" data-lang="ja"><i class="fas fa-flag"></i> 日本語</button>
+                <button class="lang-btn" data-lang="fr"><i class="fas fa-flag"></i> Français</button>
+            </div>
+        </div>
+    </div>
+    <script src="app.js?v=30"></script>
 </body>
 </html>
