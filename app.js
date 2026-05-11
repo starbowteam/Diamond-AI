@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v28 — FINAL FULL: БЫСТРЫЙ ФОРУМ, ПЛАВНОСТЬ, МАСТЕРСКАЯ ====================
+// ==================== DIAMOND AI v29 — ОБУЧЕНИЕ + ПОЛНЫЙ ФУНКЦИОНАЛ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -22,6 +22,9 @@
     let workshopTools = {};
     let forumMessages = [];
     let forumLoaded = false;
+    let tutorialActive = false;
+    let tutorialStep = 0;
+    let tutorialTypingInterval = null;
 
     const placeholderTexts = [
         "Что расскажешь о себе?",
@@ -1075,6 +1078,161 @@
 
     async function showLoadingScreen() { const ws=document.getElementById('welcomeScreen'); ws.style.display='flex'; await new Promise(r=>setTimeout(r,400)); ws.classList.add('fade-out'); await new Promise(r=>setTimeout(r,300)); ws.style.display='none'; }
 
+    // ========== ОБУЧЕНИЕ ==========
+    const tutorialSteps = [
+        {
+            title: 'Добро пожаловать в Diamond AI!',
+            html: `<p>Это <strong style="color:var(--workshop-accent)">Diamond AI</strong> — твой умный помощник. Он отвечает на вопросы, решает задачи, помогает с кодом и даже запоминает твои чаты!</p><p>Сейчас я быстро покажу, как тут всё работает. Это займёт меньше минуты.</p><p>Нажимай <strong>«Далее»</strong>, чтобы продолжить.</p>`,
+            demo: '',
+            position: 'center'
+        },
+        {
+            title: 'Главный чат',
+            html: `<p>Вот так выглядит <strong style="color:var(--workshop-accent)">основной чат</strong> с ИИ. Ты пишешь сообщение в поле ввода, а Diamond AI тебе отвечает.</p><p>В пустом состоянии он покажет подсказки — попробуй нажать на одну из них!</p>`,
+            demo: `<div class="tutorial-demo-box"><i class="fas fa-comment"></i><div><strong>Пример:</strong><br><span style="color:var(--text-secondary)">«Расскажи про теорему Пифагора»</span></div></div>`,
+            position: 'center'
+        },
+        {
+            title: 'Создание нового чата',
+            html: `<p>Хочешь обсудить новую тему? Просто нажми на кнопку <strong style="color:var(--workshop-accent)">«Новый чат»</strong> <i class="fas fa-feather-alt"></i> вверху сайдбара.</p><p>Все твои чаты сохраняются и синхронизируются через DiamKey — ты не потеряешь их даже при смене устройства.</p>`,
+            demo: `<div class="tutorial-demo-box"><i class="fas fa-feather-alt"></i><div><strong>Кнопка «Новый чат»</strong><br><span style="color:var(--text-secondary)">Находится в сайдбаре слева</span></div></div>`,
+            position: 'left'
+        },
+        {
+            title: 'Папки для порядка',
+            html: `<p>Когда чатов становится много, их можно <strong style="color:var(--workshop-accent)">разложить по папкам</strong>. У каждой папки можно выбрать иконку и цвет.</p><p>Нажми на вкладку «Папки» <i class="fas fa-folder"></i>, чтобы создать свою первую папку и перенести туда чаты.</p>`,
+            demo: `<div class="tutorial-demo-box"><i class="fas fa-folder"></i><div><strong>Пример папки:</strong><br><span style="color:var(--text-secondary)">«Учёба», «Работа», «Код»</span></div></div>`,
+            position: 'left'
+        },
+        {
+            title: 'Мастерская',
+            html: `<p>В разделе <strong style="color:var(--workshop-accent)">«Мастерская»</strong> <i class="fas fa-wrench"></i> находятся специальные инструменты. Сейчас там есть <strong>«Распознать ИИ»</strong> — чат, который умеет определять, написан текст человеком или сгенерирован другой нейросетью.</p><p>Включай и выключай инструменты тумблерами, как тебе удобно.</p>`,
+            demo: `<div class="tutorial-demo-box"><i class="fas fa-wrench"></i><div><strong>Инструмент:</strong><br><span style="color:var(--text-secondary)">«Распознать ИИ» — анализ текста</span></div></div>`,
+            position: 'left'
+        },
+        {
+            title: 'Твой профиль',
+            html: `<p>В самом низу сайдбара находится <strong style="color:var(--workshop-accent)">панель пользователя</strong>. Здесь можно:</p><ul style="padding-left:20px; margin:10px 0;"><li>Посмотреть свой ник</li><li>Зайти на DiamKey</li><li>Выйти из аккаунта</li></ul><p>Рядом с ником есть кнопка <strong style="color:var(--workshop-accent)">?</strong> — она запускает это обучение. Можешь открыть его в любой момент!</p>`,
+            demo: `<div class="tutorial-demo-box"><i class="fas fa-user-circle"></i><div><strong>Панель пользователя</strong><br><span style="color:var(--text-secondary)">Внизу сайдбара</span></div></div>`,
+            position: 'left'
+        },
+        {
+            title: 'Поиск по истории',
+            html: `<p>Если чатов накопилось очень много, воспользуйся <strong style="color:var(--workshop-accent)">поиском</strong> <i class="fas fa-search"></i> вверху сайдбара. Просто начни вводить название чата, и список отфильтруется.</p>`,
+            demo: `<div class="tutorial-demo-box"><i class="fas fa-search"></i><div><strong>Поиск чатов</strong><br><span style="color:var(--text-secondary)">Мгновенная фильтрация</span></div></div>`,
+            position: 'left'
+        },
+        {
+            title: 'Закрепление важных чатов',
+            html: `<p>Важные чаты можно <strong style="color:var(--workshop-accent)">закрепить</strong> <i class="fas fa-thumbtack"></i> — наведи на чат и нажми иконку булавки. Закреплённые чаты всегда будут вверху списка, в отдельной группе.</p>`,
+            demo: `<div class="tutorial-demo-box"><i class="fas fa-thumbtack"></i><div><strong>Закрепление чата</strong><br><span style="color:var(--text-secondary)">Булавка при наведении</span></div></div>`,
+            position: 'center'
+        },
+        {
+            title: 'Динамический интерфейс',
+            html: `<p>Сайдбар можно <strong style="color:var(--workshop-accent)">свернуть</strong> кнопкой-бургером <i class="fas fa-bars"></i> в заголовке, чтобы освободить место для чата. В свёрнутом режиме появятся компактные кнопки для быстрого доступа.</p><p>На телефоне панель открывается свайпом или по нажатию.</p>`,
+            demo: `<div class="tutorial-demo-box"><i class="fas fa-bars"></i><div><strong>Бургер-меню</strong><br><span style="color:var(--text-secondary)">Сворачивает сайдбар</span></div></div>`,
+            position: 'center'
+        },
+        {
+            title: 'Готово!',
+            html: `<p>Теперь ты знаешь основы Diamond AI. Вот короткий итог:</p><ul style="padding-left:20px; margin:10px 0;"><li><strong>Чат</strong> — общайся с ИИ</li><li><strong>Папки</strong> — наводи порядок</li><li><strong>Мастерская</strong> — включай инструменты</li><li><strong>Поиск и закрепление</strong> — быстрый доступ</li></ul><p>Если что-то забудешь — просто нажми <strong style="color:var(--workshop-accent)">?</strong> возле ника, и я всё повторю!</p>`,
+            demo: `<div class="tutorial-demo-box"><i class="fas fa-check-circle" style="color:#2ecc71;"></i><div><strong>Ты молодец!</strong><br><span style="color:var(--text-secondary)">Всё получится!</span></div></div>`,
+            position: 'center'
+        }
+    ];
+
+    function startTutorial() {
+        if (tutorialActive) return;
+        tutorialActive = true;
+        tutorialStep = 0;
+        const overlay = document.getElementById('tutorialOverlay');
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        showTutorialStep();
+    }
+
+    function closeTutorial() {
+        tutorialActive = false;
+        const overlay = document.getElementById('tutorialOverlay');
+        overlay.style.display = 'none';
+        if (tutorialTypingInterval) clearInterval(tutorialTypingInterval);
+    }
+
+    function nextTutorialStep() {
+        if (tutorialStep < tutorialSteps.length - 1) {
+            tutorialStep++;
+            showTutorialStep();
+        } else {
+            closeTutorial();
+        }
+    }
+
+    function prevTutorialStep() {
+        if (tutorialStep > 0) {
+            tutorialStep--;
+            showTutorialStep();
+        }
+    }
+
+    function showTutorialStep() {
+        const step = tutorialSteps[tutorialStep];
+        const overlay = document.getElementById('tutorialOverlay');
+        let dots = '';
+        for (let i = 0; i < tutorialSteps.length; i++) {
+            let cls = '';
+            if (i === tutorialStep) cls = 'active';
+            else if (i < tutorialStep) cls = 'done';
+            dots += `<div class="tutorial-step-dot ${cls}"></div>`;
+        }
+        const modal = document.createElement('div');
+        modal.className = 'tutorial-modal';
+        modal.innerHTML = `
+            <div class="tutorial-header">
+                <h2>${step.title}</h2>
+                <button class="tutorial-btn skip" id="tutorialSkip"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="tutorial-step-indicator">${dots}</div>
+            <div class="tutorial-body">
+                <div id="tutorialContent"></div>
+                ${step.demo ? step.demo : ''}
+            </div>
+            <div class="tutorial-footer">
+                <button class="tutorial-btn" id="tutorialPrev" ${tutorialStep === 0 ? 'style="visibility:hidden"' : ''}><i class="fas fa-arrow-left"></i> Назад</button>
+                <span style="font-size:12px; color:var(--text-secondary);">${tutorialStep + 1} / ${tutorialSteps.length}</span>
+                <button class="tutorial-btn primary" id="tutorialNext">${tutorialStep === tutorialSteps.length - 1 ? 'Завершить' : 'Далее'} <i class="fas fa-arrow-right"></i></button>
+            </div>
+        `;
+        overlay.innerHTML = '';
+        overlay.appendChild(modal);
+        document.getElementById('tutorialSkip').addEventListener('click', closeTutorial);
+        document.getElementById('tutorialNext').addEventListener('click', nextTutorialStep);
+        document.getElementById('tutorialPrev').addEventListener('click', prevTutorialStep);
+        const contentEl = document.getElementById('tutorialContent');
+        typeText(contentEl, step.html);
+    }
+
+    function typeText(element, html) {
+        if (tutorialTypingInterval) clearInterval(tutorialTypingInterval);
+        element.innerHTML = '';
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html;
+        const textContent = tempDiv.textContent || tempDiv.innerText;
+        let index = 0;
+        element.classList.add('tutorial-typing');
+        tutorialTypingInterval = setInterval(() => {
+            if (index < textContent.length) {
+                element.textContent += textContent.charAt(index);
+                index++;
+            } else {
+                clearInterval(tutorialTypingInterval);
+                element.classList.remove('tutorial-typing');
+                element.innerHTML = html;
+            }
+        }, 20);
+    }
+
     // ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
     function setupEventListeners() {
         document.getElementById('sidebarToggleBtn')?.addEventListener('click', toggleSidebar);
@@ -1093,6 +1251,8 @@
         document.getElementById('dropdown-logout')?.addEventListener('click', logout);
         document.getElementById('userMenuBtn')?.addEventListener('click', (e)=>{ e.stopPropagation(); document.getElementById('userDropdown').classList.toggle('show'); });
         document.addEventListener('click', (e)=>{ if(!document.getElementById('userPanel')?.contains(e.target)) document.getElementById('userDropdown')?.classList.remove('show'); });
+        // Кнопка обучения
+        document.getElementById('userTutorialBtn')?.addEventListener('click', startTutorial);
 
         document.getElementById('tabLogin')?.addEventListener('click', ()=>{ document.getElementById('tabLogin').classList.add('active'); document.getElementById('tabRegister').classList.remove('active'); document.getElementById('loginForm').style.display='block'; document.getElementById('registerForm').style.display='none'; });
         document.getElementById('tabRegister')?.addEventListener('click', ()=>{ document.getElementById('tabRegister').classList.add('active'); document.getElementById('tabLogin').classList.remove('active'); document.getElementById('registerForm').style.display='block'; document.getElementById('loginForm').style.display='none'; });
