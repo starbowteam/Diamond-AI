@@ -299,15 +299,16 @@ body {
     font-size: 11px; color: var(--text-secondary); border: 1px solid var(--border-color);
 }
 
-/* ========== ЗАГОЛОВОК ЧАТА (стилизованная рамка) ========== */
+/* ========== ЗАГОЛОВОК ЧАТА (стилизованная рамка-кнопка) ========== */
 .chat-header {
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border-color);
-    background: var(--bg-secondary); font-size: 14px; font-weight: 600;
-    color: var(--text-primary); margin: 8px auto; width: fit-content; max-width: 90%;
-    transition: var(--transition);
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 4px 12px; border-radius: 16px; border: 1px solid var(--border-color);
+    background: var(--bg-secondary); font-size: 13px; font-weight: 600;
+    color: var(--text-primary); margin: 8px auto; max-width: 90%;
+    transition: var(--transition); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    cursor: default; user-select: none; line-height: 1.4;
 }
-.chat-header i { color: var(--accent); font-size: 14px; }
+.chat-header i { color: var(--accent); font-size: 13px; flex-shrink: 0; }
 .chat-header.folder-border { border-color: inherit; }
 
 /* ========== ОБЛАСТЬ ВВОДА ========== */
@@ -583,7 +584,7 @@ textarea::placeholder { color: #6a6a6a; }
     background: rgba(160,160,176,0.05); text-align: center; cursor: pointer; transition: var(--transition);
 }
 .tutorial-demo-interactive:hover { background: rgba(160,160,176,0.1); }
-/* Убираем анимацию печатания, контент появляется плавно */
+/* Плавное появление контента вместо печатания */
 .tutorial-fade-text {
     opacity: 0; transition: opacity 0.3s ease;
 }
@@ -649,7 +650,7 @@ textarea::placeholder { color: #6a6a6a; }
     .forum-send-btn { width: 46px; height: 46px; }
     .tutorial-modal { padding: 24px; }
     .language-grid { grid-template-columns: 1fr; }
-    .chat-header { font-size: 13px; padding: 4px 12px; }
+    .chat-header { font-size: 12px; padding: 3px 10px; }
 }
 
 @media (max-width: 480px) {
