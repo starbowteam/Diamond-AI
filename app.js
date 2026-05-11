@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v30 — ПОЛНЫЙ ФУНКЦИОНАЛ (ЧАСТЬ 1) ====================
+// ==================== DIAMOND AI v31 — ПОЛНЫЙ ФУНКЦИОНАЛ (ЧАСТЬ 1) ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -8,7 +8,6 @@
     let chats = [];
     let folders = [];
     let currentUser = null;
-    let mistralApiKey = '';
     let isWaitingForResponse = false;
     let currentAbortController = null;
     let lastNotificationTime = 0;
@@ -24,7 +23,6 @@
     let forumLoaded = false;
     let tutorialActive = false;
     let tutorialStep = 0;
-    let tutorialTypingInterval = null;
     let currentLanguage = 'ru';
     let searchHighlightTerm = '';
 
@@ -74,6 +72,7 @@
             yesterday: 'Вчера',
             older: 'Более 2-х дней назад',
             pinned: 'Закрепленные',
+            masterFull: 'Мастерская Diamond AI',
             master: 'Мастерская',
             aiDetect: 'Распознать ИИ',
             codeReview: 'Code Review',
@@ -88,7 +87,29 @@
             languageChanged: 'Язык изменён',
             searchNotFound: 'Ничего не найдено',
             folderChats: 'Чаты в папке',
-            noFolderChats: 'Нет чатов в этой папке'
+            noFolderChats: 'Нет чатов в этой папке',
+            createFolderTitle: 'Создать папку',
+            editFolder: 'Редактировать папку',
+            folderName: 'Название',
+            folderDesc: 'Описание',
+            folderIcon: 'Иконка',
+            folderColor: 'Цвет',
+            addChatToFolder: 'Добавить чат в папку',
+            noAvailableChats: 'Нет доступных чатов для добавления',
+            viewFolderChats: 'Просмотреть чаты',
+            confirmDeleteFolder: 'Удалить папку? Чаты будут перемещены в корень.',
+            confirmDeleteChat: 'Удалить чат?',
+            chatMoved: 'Чат перемещён',
+            toolActive: 'Активен',
+            toolInactive: 'Выключен',
+            aiDetectGreeting: 'Готов распознавать ваши тексты!',
+            forumTitle: 'Обсуждения проектов',
+            forumPlaceholder: 'Обсудить ИИ с сообществом...',
+            send: 'Отправить',
+            codeRun: 'Выполнить код',
+            codeCopy: 'Копировать',
+            codeDownload: 'Скачать',
+            back: 'Назад'
         },
         en: {
             welcome: 'Welcome to Diamond AI!',
@@ -134,6 +155,7 @@
             yesterday: 'Yesterday',
             older: 'Older',
             pinned: 'Pinned',
+            masterFull: 'Diamond AI Workshop',
             master: 'Workshop',
             aiDetect: 'Detect AI',
             codeReview: 'Code Review',
@@ -148,7 +170,29 @@
             languageChanged: 'Language changed',
             searchNotFound: 'Nothing found',
             folderChats: 'Chats in folder',
-            noFolderChats: 'No chats in this folder'
+            noFolderChats: 'No chats in this folder',
+            createFolderTitle: 'Create Folder',
+            editFolder: 'Edit Folder',
+            folderName: 'Name',
+            folderDesc: 'Description',
+            folderIcon: 'Icon',
+            folderColor: 'Color',
+            addChatToFolder: 'Add chat to folder',
+            noAvailableChats: 'No chats available to add',
+            viewFolderChats: 'View chats',
+            confirmDeleteFolder: 'Delete folder? Chats will be moved to root.',
+            confirmDeleteChat: 'Delete chat?',
+            chatMoved: 'Chat moved',
+            toolActive: 'Active',
+            toolInactive: 'Inactive',
+            aiDetectGreeting: 'Ready to analyze your texts!',
+            forumTitle: 'Project Discussions',
+            forumPlaceholder: 'Discuss AI with the community...',
+            send: 'Send',
+            codeRun: 'Run code',
+            codeCopy: 'Copy',
+            codeDownload: 'Download',
+            back: 'Back'
         }
     };
 
@@ -320,7 +364,7 @@
         modal.innerHTML = `
             <div class="modal-container" style="resize: both; overflow: auto;">
                 <div class="modal-header">
-                    <h3><i class="fas fa-play"></i> Выполнить код (${language || 'текст'})</h3>
+                    <h3><i class="fas fa-play"></i> ${t('codeRun')} (${language || 'текст'})</h3>
                     <button class="close-modal"><i class="fas fa-times"></i></button>
                 </div>
                 <div class="modal-body">
@@ -328,8 +372,8 @@
                     <iframe class="runner-iframe" style="width:100%; height:400px; border:1px solid var(--border-color); border-radius:16px; background:#fff;"></iframe>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-primary run-execute"><i class="fas fa-play"></i> Выполнить</button>
-                    <button class="btn btn-secondary close-modal">Закрыть</button>
+                    <button class="btn btn-primary run-execute"><i class="fas fa-play"></i> ${t('codeRun')}</button>
+                    <button class="btn btn-secondary close-modal">${t('cancel')}</button>
                 </div>
             </div>
         `;
@@ -373,9 +417,9 @@
             header.innerHTML = `
                 <span><i class="fas fa-code"></i> ${language || 'Скрипт'}</span>
                 <div class="code-block-actions">
-                    <button class="copy-code-btn" title="Копировать"><i class="fas fa-copy"></i> Копировать</button>
-                    <button class="download-code-btn" title="Скачать"><i class="fas fa-download"></i> Скачать</button>
-                    <button class="run-code-btn" title="Запустить"><i class="fas fa-play"></i> Запустить</button>
+                    <button class="copy-code-btn" title="${t('codeCopy')}"><i class="fas fa-copy"></i> ${t('codeCopy')}</button>
+                    <button class="download-code-btn" title="${t('codeDownload')}"><i class="fas fa-download"></i> ${t('codeDownload')}</button>
+                    <button class="run-code-btn" title="${t('codeRun')}"><i class="fas fa-play"></i> ${t('codeRun')}</button>
                 </div>
             `;
             pre.parentNode.insertBefore(wrapper, pre);
@@ -385,8 +429,8 @@
             copyBtn.addEventListener('click', () => {
                 const text = pre.textContent;
                 navigator.clipboard.writeText(text).then(() => {
-                    copyBtn.innerHTML = '<i class="fas fa-check"></i> Скопировано';
-                    setTimeout(() => copyBtn.innerHTML = '<i class="fas fa-copy"></i> Копировать', 2000);
+                    copyBtn.innerHTML = '<i class="fas fa-check"></i> ' + t('copy');
+                    setTimeout(() => copyBtn.innerHTML = '<i class="fas fa-copy"></i> ' + t('codeCopy'), 2000);
                 });
             });
             const downloadBtn = wrapper.querySelector('.download-code-btn');
@@ -506,7 +550,12 @@
             });
             if (resp.ok) {
                 const data = await resp.json();
-                const title = data.choices[0].message.content.trim();
+                let title = data.choices[0].message.content.trim();
+                // Фильтрация нежелательных названий
+                const lowerTitle = title.toLowerCase();
+                if (!title || lowerTitle === 'название чата' || lowerTitle === 'chat title' || lowerTitle === 'название' || lowerTitle === 'title') {
+                    return generateChatTitle(text);
+                }
                 return title.length > 50 ? title.slice(0, 47) + '...' : title;
             }
         } catch(e) {}
@@ -525,7 +574,7 @@
             return;
         }
         const chat = chats.find(c => c.id === id);
-        if (chat && confirm('Удалить чат?')) {
+        if (chat && confirm(t('confirmDeleteChat'))) {
             await deleteChatFromSupabase(id);
             chats = chats.filter(c => c.id !== id);
             if (currentChatId === id) currentChatId = chats.length ? chats[0].id : null;
@@ -560,7 +609,7 @@
             chat.title = newTitle;
             await saveChatToSupabase(chat);
             renderHistory();
-            showToast('Чат переименован', newTitle, 'success');
+            showToast(t('renameChat'), newTitle, 'success');
         }
     }
 
@@ -571,9 +620,9 @@
         modal.className = 'modal-overlay';
         modal.innerHTML = `
             <div class="modal-container" style="max-width: 400px;">
-                <div class="modal-header"><h3>${t('renameChat')}</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-header"><h3><i class="fas fa-pencil-alt"></i> ${t('renameChat')}</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
                 <div class="modal-body"><input type="text" id="rename-input" value="${escapeHtml(chat.title)}" style="width:100%; padding:12px; background: var(--bg-tertiary); border:1px solid var(--border-color); border-radius: 20px; color: white;"></div>
-                <div class="modal-footer"><button id="rename-confirm" class="btn btn-primary">${t('save')}</button><button class="btn btn-secondary close-modal">${t('cancel')}</button></div>
+                <div class="modal-footer"><button id="rename-confirm" class="btn btn-primary"><i class="fas fa-check"></i> ${t('save')}</button><button class="btn btn-secondary close-modal"><i class="fas fa-times"></i> ${t('cancel')}</button></div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -610,7 +659,7 @@
         folders.push(folder);
         await saveFolderToSupabase(folder);
         renderFoldersPage();
-        showToast('Папка создана', name, 'success');
+        showToast(t('createFolderTitle'), name, 'success');
     }
 
     async function updateFolder(id, name, desc, icon, color) {
@@ -622,13 +671,13 @@
             f.color = color || '#95a5a6';
             await saveFolderToSupabase(f);
             renderFoldersPage();
-            showToast('Папка обновлена', name, 'success');
+            showToast(t('editFolder'), name, 'success');
         }
     }
 
     async function deleteFolder(id) {
         const f = folders.find(f => f.id === id);
-        if (f && confirm('Удалить папку? Чаты будут перемещены в корень.')) {
+        if (f && confirm(t('confirmDeleteFolder'))) {
             await deleteFolderFromSupabase(id);
             folders = folders.filter(f => f.id !== id);
             for (const chat of chats) {
@@ -650,7 +699,7 @@
             await saveChatToSupabase(chat);
             renderHistory();
             renderFoldersPage();
-            showToast('Чат перемещён', folderId ? 'В папку' : 'Из папки', 'success');
+            showToast(t('chatMoved'), folderId ? 'В папку' : 'Из папки', 'success');
         }
     }
 
@@ -660,12 +709,12 @@
         modal.className = 'modal-overlay';
         modal.innerHTML = `
             <div class="modal-container" style="max-width: 500px;">
-                <div class="modal-header"><h3>${isEdit ? 'Редактировать папку' : 'Создать папку'}</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-header"><h3><i class="fas ${isEdit ? 'fa-edit' : 'fa-plus-circle'}"></i> ${isEdit ? t('editFolder') : t('createFolderTitle')}</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
                 <div class="modal-body">
-                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px;">Название</label><input type="text" id="folder-name" placeholder="Название папки" value="${isEdit ? escapeHtml(folder.name) : ''}" style="width:100%; padding:12px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:16px; color:white;"></div>
-                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px;">Описание</label><textarea id="folder-description" rows="2" placeholder="Описание папки" style="width:100%; padding:12px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:16px; color:white;">${isEdit ? escapeHtml(folder.description || '') : ''}</textarea></div>
-                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px;">Иконка</label><div class="icon-selector" id="icon-selector" style="display:grid; grid-template-columns:repeat(6,1fr); gap:8px; background:var(--bg-tertiary); padding:12px; border-radius:16px;"></div></div>
-                    <div class="form-group"><label style="display:block; margin-bottom:6px;">Цвет</label><div class="color-selector" id="color-selector" style="display:flex; gap:12px; flex-wrap:wrap;">
+                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px;">${t('folderName')}</label><input type="text" id="folder-name" placeholder="${t('folderName')}" value="${isEdit ? escapeHtml(folder.name) : ''}" style="width:100%; padding:12px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:16px; color:white;"></div>
+                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px;">${t('folderDesc')}</label><textarea id="folder-description" rows="2" placeholder="${t('folderDesc')}" style="width:100%; padding:12px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:16px; color:white;">${isEdit ? escapeHtml(folder.description || '') : ''}</textarea></div>
+                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px;">${t('folderIcon')}</label><div class="icon-selector" id="icon-selector" style="display:grid; grid-template-columns:repeat(6,1fr); gap:8px; background:var(--bg-tertiary); padding:12px; border-radius:16px;"></div></div>
+                    <div class="form-group"><label style="display:block; margin-bottom:6px;">${t('folderColor')}</label><div class="color-selector" id="color-selector" style="display:flex; gap:12px; flex-wrap:wrap;">
                         <div class="color-option" data-color="#e74c3c" style="background:#e74c3c; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
                         <div class="color-option" data-color="#f39c12" style="background:#f39c12; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
                         <div class="color-option" data-color="#2ecc71" style="background:#2ecc71; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
@@ -676,7 +725,7 @@
                         <div class="color-option" data-color="#95a5a6" style="background:#95a5a6; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
                     </div></div>
                 </div>
-                <div class="modal-footer"><button id="save-folder-btn" class="btn btn-primary">${t('save')}</button><button class="btn btn-secondary close-modal">${t('cancel')}</button></div>
+                <div class="modal-footer"><button id="save-folder-btn" class="btn btn-primary"><i class="fas fa-check"></i> ${t('save')}</button><button class="btn btn-secondary close-modal"><i class="fas fa-times"></i> ${t('cancel')}</button></div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -719,7 +768,7 @@
         modal.className = 'modal-overlay';
         modal.innerHTML = `
             <div class="modal-container" style="max-width: 400px;">
-                <div class="modal-header"><h3><i class="fas fa-folder"></i> ${t('moveToFolder')}</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-header"><h3><i class="fas fa-folder-open"></i> ${t('moveToFolder')}</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
                 <div class="modal-body">
                     <div class="folder-chats-list" id="folder-options-list">
                         <div class="folder-chat-item" data-id="" style="padding:12px; background:var(--bg-tertiary); border-radius:16px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:10px;">
@@ -732,7 +781,7 @@
                         `).join('')}
                     </div>
                 </div>
-                <div class="modal-footer"><button class="btn btn-secondary close-modal">${t('cancel')}</button></div>
+                <div class="modal-footer"><button class="btn btn-secondary close-modal"><i class="fas fa-arrow-left"></i> ${t('back')}</button></div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -752,16 +801,16 @@
         modal.className = 'modal-overlay';
         modal.innerHTML = `
             <div class="modal-container" style="max-width: 500px;">
-                <div class="modal-header"><h3><i class="fas ${folder.icon}" style="color:${folder.color}"></i> Добавить чат в «${escapeHtml(folder.name)}»</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-header"><h3><i class="fas ${folder.icon}" style="color:${folder.color}"></i> ${t('addChatToFolder')} «${escapeHtml(folder.name)}»</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
                 <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
-                    ${availableChats.length === 0 ? '<p style="text-align:center; padding:20px;">Нет доступных чатов для добавления</p>' : 
+                    ${availableChats.length === 0 ? `<p style="text-align:center; padding:20px;">${t('noAvailableChats')}</p>` : 
                     availableChats.map(c => `
                         <div class="add-chat-item" data-chat-id="${c.id}" style="padding:12px; background:var(--bg-tertiary); border-radius:16px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:10px;">
                             <i class="fas fa-comment"></i><span style="flex:1;">${escapeHtml(c.title)}</span><i class="fas fa-plus"></i>
                         </div>
                     `).join('')}
                 </div>
-                <div class="modal-footer"><button class="btn btn-secondary close-modal">${t('cancel')}</button></div>
+                <div class="modal-footer"><button class="btn btn-secondary close-modal"><i class="fas fa-arrow-left"></i> ${t('back')}</button></div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -780,7 +829,7 @@
             <div class="folders-page-header"><h1><i class="fas fa-folder"></i> ${t('folders')}</h1><p>Организуйте чаты по папкам</p></div>
             <div class="folders-list-container" id="foldersListContainer"></div>
             <div class="folders-page-footer">
-                <button id="create-folder-page-btn" class="btn btn-primary"><i class="fas fa-plus"></i> ${t('createFolder')}</button>
+                <button id="create-folder-page-btn" class="btn btn-primary"><i class="fas fa-plus-circle"></i> ${t('createFolder')}</button>
                 <button id="back-to-chat-from-folders" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> ${t('backToChat')}</button>
             </div>
         `;
@@ -788,22 +837,25 @@
         document.getElementById('back-to-chat-from-folders').addEventListener('click', switchToChatView);
         const listContainer = document.getElementById('foldersListContainer');
         if (folders.length === 0) { listContainer.innerHTML = `<div class="folder-empty">${t('folderEmpty')}</div>`; return; }
-        listContainer.innerHTML = folders.map(f => `
+        listContainer.innerHTML = folders.map(f => {
+            const count = chats.filter(c => c.folder_id === f.id).length;
+            return `
             <div class="folder-card" data-id="${f.id}">
                 <div class="folder-icon" style="background:${f.color}20; color:${f.color}"><i class="fas ${f.icon}"></i></div>
                 <div class="folder-info">
                     <div class="folder-name"><span style="color:${f.color}">${escapeHtml(f.name)}</span></div>
                     <div class="folder-description">${escapeHtml(f.description) || 'Нет описания'}</div>
-                    <div class="folder-stats">${chats.filter(c => c.folder_id === f.id).length} чатов</div>
+                    <div class="folder-stats">${count} чатов</div>
                 </div>
                 <div class="folder-actions">
-                    <button class="add-chat-to-folder" data-id="${f.id}" title="Добавить чат"><i class="fas fa-plus"></i></button>
-                    <button class="view-folder-chats" data-id="${f.id}" title="Чаты"><i class="fas fa-comments"></i></button>
-                    <button class="edit-folder" data-id="${f.id}" title="Редактировать"><i class="fas fa-edit"></i></button>
-                    <button class="delete-folder" data-id="${f.id}" title="Удалить"><i class="fas fa-trash"></i></button>
+                    <button class="add-chat-to-folder" data-id="${f.id}" title="${t('addChatToFolder')}"><i class="fas fa-plus"></i></button>
+                    <button class="view-folder-chats" data-id="${f.id}" title="${t('viewFolderChats')}"><i class="fas fa-comments"></i></button>
+                    <button class="edit-folder" data-id="${f.id}" title="${t('editFolder')}"><i class="fas fa-edit"></i></button>
+                    <button class="delete-folder" data-id="${f.id}" title="${t('deleteChat')}"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
         document.querySelectorAll('.add-chat-to-folder').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); showAddChatToFolderModal(btn.dataset.id); }; });
         document.querySelectorAll('.view-folder-chats').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); const folderId = btn.dataset.id; const folder = folders.find(f => f.id === folderId); if (folder) showFolderChatsModal(folder); }; });
         document.querySelectorAll('.edit-folder').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); currentEditingFolderId = btn.dataset.id; const f = folders.find(f => f.id === currentEditingFolderId); showFolderEditModal(f); }; });
@@ -826,7 +878,7 @@
                         `).join('') : `<div style="text-align:center; padding:20px; color:var(--text-secondary);">${t('noFolderChats')}</div>`}
                     </div>
                 </div>
-                <div class="modal-footer"><button class="btn btn-secondary close-modal">${t('cancel')}</button></div>
+                <div class="modal-footer"><button class="btn btn-secondary close-modal"><i class="fas fa-arrow-left"></i> ${t('back')}</button></div>
             </div>
         `;
         document.body.appendChild(modal);
@@ -856,7 +908,7 @@
             messages: [{
                 id: Date.now().toString(),
                 role: 'assistant',
-                content: 'Готов распознавать ваши тексты!',
+                content: t('aiDetectGreeting'),
                 timestamp: Date.now(),
                 isTyping: false
             }],
@@ -887,10 +939,10 @@
         saveWorkshopToolsState();
         if (workshopTools[toolId]) {
             await createToolChatWithGreeting(toolId);
-            showToast('Инструмент включён', 'Чат «Распознать ИИ» активен', 'success');
+            showToast(t('toolActive'), 'Чат «Распознать ИИ» активен', 'success');
         } else {
             await removeToolChat(toolId);
-            showToast('Инструмент выключен', 'Чат «Распознать ИИ» скрыт', 'info');
+            showToast(t('toolInactive'), 'Чат «Распознать ИИ» скрыт', 'info');
             if (currentChatId === 'tool_' + toolId) renderEmptyState();
         }
         renderWorkshopPage(); renderHistory(); renderChat();
@@ -903,7 +955,7 @@
         container.innerHTML = `
             <div class="workshop-banner">
                 <div class="workshop-banner-text">
-                    <h1>${t('master')}</h1>
+                    <h1>${t('masterFull')}</h1>
                     <p>Специальные инструменты для расширенной работы с искусственным интеллектом. Включайте нужные тумблеры, чтобы активировать тематические чаты со строгими правилами.</p>
                 </div>
                 <img src="master.png" alt="Мастерская" class="workshop-banner-img">
@@ -915,7 +967,7 @@
                         <div class="workshop-tool-info"><h3>${t('aiDetect')}</h3><p>Анализ текста на оригинальность. Определяет, написан ли текст человеком или сгенерирован ИИ (GPT, Mistral и др.)</p></div>
                     </div>
                     <div class="workshop-tool-toggle">
-                        <span>${aiDetectActive ? 'Активен' : 'Выключен'}</span>
+                        <span>${aiDetectActive ? t('toolActive') : t('toolInactive')}</span>
                         <label class="toggle-switch"><input type="checkbox" id="toggle-ai-detect" ${aiDetectActive ? 'checked' : ''}><span class="toggle-slider"></span></label>
                     </div>
                 </div>
@@ -929,11 +981,11 @@
                 </div>
             </div>
             <div class="workshop-forum">
-                <h2>Обсуждения проектов</h2>
+                <h2><i class="fas fa-comments"></i> ${t('forumTitle')}</h2>
                 <div class="forum-messages" id="forumMessagesContainer"></div>
                 <div class="forum-input-area">
-                    <textarea id="forumInput" placeholder="Обсудить ИИ с сообществом..."></textarea>
-                    <button class="forum-send-btn" id="forumSendBtn"><i class="fas fa-paper-plane"></i></button>
+                    <textarea id="forumInput" placeholder="${t('forumPlaceholder')}"></textarea>
+                    <button class="forum-send-btn" id="forumSendBtn" title="${t('send')}"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
         `;
@@ -1113,12 +1165,25 @@
         return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент' };
     }
 
-    // ========== РЕНДЕР ЧАТА ==========
+    // ========== РЕНДЕР ЧАТА (с рамкой папки) ==========
     function renderChat() {
         const chat = chats.find(c => c.id === currentChatId);
         const headerEl = document.getElementById('chatHeader');
         if (headerEl) {
-            headerEl.textContent = chat ? chat.title : '';
+            // сбрасываем
+            headerEl.innerHTML = '';
+            headerEl.style.borderColor = 'var(--border-color)';
+            headerEl.classList.remove('folder-border');
+            if (chat) {
+                const folder = chat.folder_id ? folders.find(f => f.id === chat.folder_id) : null;
+                if (folder) {
+                    headerEl.style.borderColor = folder.color;
+                    headerEl.classList.add('folder-border');
+                }
+                headerEl.innerHTML = `<i class="fas fa-feather-alt"></i> ${escapeHtml(chat.title)}`;
+            } else {
+                headerEl.textContent = '';
+            }
         }
         if (!chat || !chat.messages || chat.messages.length === 0) {
             renderEmptyState();
@@ -1204,7 +1269,7 @@
                         saveChatToSupabase(chat);
                         renderHistory();
                         const headerEl = document.getElementById('chatHeader');
-                        if (headerEl) headerEl.textContent = title;
+                        if (headerEl) headerEl.innerHTML = `<i class="fas fa-feather-alt"></i> ${escapeHtml(chat.title)}`;
                     });
                 }
                 await saveChatToSupabase(chat);
@@ -1324,7 +1389,7 @@
         } catch (e) { console.warn('[PROFILE] Ошибка синхронизации:', e); }
     }
 
-    // ========== АВТОРИЗАЦИЯ ==========
+    // ========== АВТОРИЗАЦИЯ (без изменений) ==========
     function generateFastSecret() { return Math.random().toString(36).substring(2,15) + Math.random().toString(36).substring(2,15); }
     function generateToken() { const adj=['golden','silver','mystic','shadow','prime','crystal','onyx','brave','frost'], nouns=['falcon','tiger','phoenix','dragon','wolf','spark','nexus','core','vault','key']; return `diamkey_${adj[Math.floor(Math.random()*adj.length)]}_${nouns[Math.floor(Math.random()*nouns.length)]}_${nouns[Math.floor(Math.random()*nouns.length)]}_${Math.floor(1000+Math.random()*9000)}`; }
 
@@ -1378,6 +1443,7 @@
         finally { btn.disabled = false; }
     }
 
+    let mistralApiKey = ''; // пока оставлено для совместимости, будет заменено на прокси
     async function fetchMistralKey() {
         try {
             const resp = await fetch(`${SUPABASE_URL}/rest/v1/service_config?id=eq.1`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
@@ -1416,7 +1482,7 @@
         container.innerHTML = `<div class="empty-state"><img src="logo.png" class="empty-logo" alt="Diamond AI"><div class="empty-text">${t('emptyChat')}</div><div class="empty-input-area"><div class="input-wrapper"><textarea id="empty-input" placeholder="${placeholderTexts[0]}" rows="1"></textarea><button class="send-btn" id="empty-send-btn" disabled><i class="fas fa-arrow-up"></i></button></div></div></div>`;
         document.getElementById('inputArea').style.display = 'none';
         const headerEl = document.getElementById('chatHeader');
-        if (headerEl) headerEl.textContent = '';
+        if (headerEl) headerEl.innerHTML = '';
         const emptyInput = document.getElementById('empty-input'), emptySendBtn = document.getElementById('empty-send-btn');
         if (emptyInput) {
             if (placeholderInterval) clearInterval(placeholderInterval);
@@ -1432,7 +1498,7 @@
 
     async function showLoadingScreen() { const ws=document.getElementById('welcomeScreen'); ws.style.display='flex'; await new Promise(r=>setTimeout(r,400)); ws.classList.add('fade-out'); await new Promise(r=>setTimeout(r,300)); ws.style.display='none'; }
 
-    // ========== ОБУЧЕНИЕ ==========
+    // ========== ОБУЧЕНИЕ (без печатания, с плавным появлением) ==========
     const tutorialSteps = [
         { title: 'Добро пожаловать в Diamond AI!', html: `<p>Это <strong style="color:var(--accent)">Diamond AI</strong> — твой умный помощник. Он отвечает на вопросы, решает задачи, помогает с кодом и даже запоминает твои чаты!</p><p>Сейчас я быстро покажу, как тут всё работает. Это займёт меньше минуты.</p><p>Нажимай <strong>«Далее»</strong>, чтобы продолжить.</p>`, demo: '', interactive: false },
         { title: 'Главный чат', html: `<p>Вот так выглядит <strong style="color:var(--accent)">основной чат</strong> с ИИ. Ты пишешь сообщение в поле ввода, а Diamond AI тебе отвечает.</p><p>В пустом состоянии он покажет подсказки — попробуй нажать на одну из них!</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-comment"></i><div><strong>Пример:</strong><br><span style="color:var(--text-secondary)">«Расскажи про теорему Пифагора»</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" id="tutorialFocusInput"><i class="fas fa-hand-pointer"></i> Нажми сюда, чтобы попробовать ввод</div>` },
@@ -1450,16 +1516,12 @@
         tutorialStep = 0;
         const overlay = document.getElementById('tutorialOverlay');
         overlay.style.display = 'flex';
-        overlay.style.alignItems = 'center';
-        overlay.style.justifyContent = 'center';
         showTutorialStep();
     }
 
     function closeTutorial() {
         tutorialActive = false;
-        const overlay = document.getElementById('tutorialOverlay');
-        overlay.style.display = 'none';
-        if (tutorialTypingInterval) clearInterval(tutorialTypingInterval);
+        document.getElementById('tutorialOverlay').style.display = 'none';
     }
 
     function nextTutorialStep() {
@@ -1486,7 +1548,11 @@
         modal.innerHTML = `
             <div class="tutorial-header"><h2>${step.title}</h2><button class="tutorial-btn skip" id="tutorialSkip"><i class="fas fa-times"></i></button></div>
             <div class="tutorial-step-indicator">${dots}</div>
-            <div class="tutorial-body"><div id="tutorialContent"></div>${step.demo ? step.demo : ''}${step.interactive ? step.interactive : ''}</div>
+            <div class="tutorial-body">
+                <div id="tutorialContent" class="tutorial-fade-text"></div>
+                ${step.demo ? step.demo : ''}
+                ${step.interactive ? step.interactive : ''}
+            </div>
             <div class="tutorial-footer">
                 <button class="tutorial-btn" id="tutorialPrev" ${tutorialStep === 0 ? 'style="visibility:hidden"' : ''}><i class="fas fa-arrow-left"></i> ${t('tutorialPrev')}</button>
                 <span style="font-size:12px; color:var(--text-secondary);">${tutorialStep + 1} / ${tutorialSteps.length}</span>
@@ -1495,12 +1561,18 @@
         `;
         overlay.innerHTML = '';
         overlay.appendChild(modal);
+        const contentEl = document.getElementById('tutorialContent');
+        if (contentEl) {
+            contentEl.innerHTML = step.html;
+            // плавное появление
+            requestAnimationFrame(() => {
+                contentEl.classList.add('show');
+            });
+        }
         document.getElementById('tutorialSkip').addEventListener('click', closeTutorial);
         document.getElementById('tutorialNext').addEventListener('click', nextTutorialStep);
         document.getElementById('tutorialPrev').addEventListener('click', prevTutorialStep);
-        const contentEl = document.getElementById('tutorialContent');
-        typeText(contentEl, step.html);
-        // Интерактивные элементы
+        // интерактивные элементы
         setTimeout(() => {
             document.getElementById('tutorialFocusInput')?.addEventListener('click', () => { closeTutorial(); document.getElementById('user-input')?.focus(); });
             document.getElementById('tutorialNewChat')?.addEventListener('click', () => { closeTutorial(); createNewChat(); });
@@ -1509,26 +1581,6 @@
             document.getElementById('tutorialOpenSettings')?.addEventListener('click', () => { closeTutorial(); document.getElementById('settingsBtn')?.click(); });
             document.getElementById('tutorialFocusSearch')?.addEventListener('click', () => { closeTutorial(); document.getElementById('history-search')?.focus(); });
         }, 100);
-    }
-
-    function typeText(element, html) {
-        if (tutorialTypingInterval) clearInterval(tutorialTypingInterval);
-        element.innerHTML = '';
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-        const textContent = tempDiv.textContent || tempDiv.innerText;
-        let index = 0;
-        element.classList.add('tutorial-typing');
-        tutorialTypingInterval = setInterval(() => {
-            if (index < textContent.length) {
-                element.textContent += textContent.charAt(index);
-                index++;
-            } else {
-                clearInterval(tutorialTypingInterval);
-                element.classList.remove('tutorial-typing');
-                element.innerHTML = html;
-            }
-        }, 10);
     }
 
     // ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
