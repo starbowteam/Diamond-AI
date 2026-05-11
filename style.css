@@ -13,6 +13,7 @@
     --collapsed-left-offset: 85px;
     --accent: #a0a0b0;
     --accent-glow: rgba(160, 160, 176, 0.15);
+    --tutorial-bg: #1e1e1e;
 }
 
 * {
@@ -298,12 +299,16 @@ body {
     font-size: 11px; color: var(--text-secondary); border: 1px solid var(--border-color);
 }
 
-/* ========== ЗАГОЛОВОК ЧАТА ========== */
+/* ========== ЗАГОЛОВОК ЧАТА (стилизованная рамка) ========== */
 .chat-header {
-    padding: 10px 20px; text-align: center; border-bottom: 1px solid var(--border-color);
-    background: var(--bg-secondary); font-size: 14px; font-weight: 600; color: var(--text-primary);
-    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border-color);
+    background: var(--bg-secondary); font-size: 14px; font-weight: 600;
+    color: var(--text-primary); margin: 8px auto; width: fit-content; max-width: 90%;
+    transition: var(--transition);
 }
+.chat-header i { color: var(--accent); font-size: 14px; }
+.chat-header.folder-border { border-color: inherit; }
 
 /* ========== ОБЛАСТЬ ВВОДА ========== */
 .input-area { padding: 0 24px 24px 24px; background: transparent; margin-top: auto; width: 100%; }
@@ -386,7 +391,7 @@ textarea::placeholder { color: #6a6a6a; }
     text-align: center; border: 1px solid var(--border-color); position: relative;
 }
 .modal-close { position: absolute; top: 16px; right: 20px; background: none; border: none; font-size: 1.5rem; color: #ccc; cursor: pointer; }
-.language-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 20px; }
+.language-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 20px; }
 .lang-btn {
     padding: 14px; border-radius: 16px; border: 1px solid var(--border-color);
     background: var(--bg-tertiary); color: var(--text-primary); cursor: pointer;
@@ -461,7 +466,10 @@ textarea::placeholder { color: #6a6a6a; }
     flex-wrap: wrap;
 }
 .workshop-banner-text { flex: 1; min-width: 250px; }
-.workshop-banner-text h1 { font-size: 48px; font-weight: 800; color: var(--text-primary); margin-bottom: 14px; }
+.workshop-banner-text h1 {
+    font-size: 48px; font-weight: 800; color: var(--text-primary);
+    margin-bottom: 14px; letter-spacing: -1px; line-height: 1.1;
+}
 .workshop-banner-text p { font-size: 18px; color: var(--text-secondary); line-height: 1.6; max-width: 650px; }
 .workshop-banner-img {
     width: 220px; height: 220px; border-radius: 28px; object-fit: cover;
@@ -549,7 +557,7 @@ textarea::placeholder { color: #6a6a6a; }
     animation: fadeIn 0.3s ease;
 }
 .tutorial-modal {
-    background: #1a1a24; border: 1px solid var(--accent); border-radius: 32px;
+    background: var(--tutorial-bg); border: 1px solid var(--accent); border-radius: 32px;
     padding: 32px; max-width: 620px; width: 92%;
     box-shadow: 0 20px 50px rgba(160,160,176,0.2), 0 0 0 1px var(--accent) inset;
     position: relative; overflow: hidden; animation: scaleIn 0.3s ease;
@@ -575,11 +583,11 @@ textarea::placeholder { color: #6a6a6a; }
     background: rgba(160,160,176,0.05); text-align: center; cursor: pointer; transition: var(--transition);
 }
 .tutorial-demo-interactive:hover { background: rgba(160,160,176,0.1); }
-.tutorial-typing {
-    display: inline-block; overflow: hidden; white-space: nowrap;
-    border-right: 2px solid var(--accent); animation: blinkCursor 0.8s infinite;
+/* Убираем анимацию печатания, контент появляется плавно */
+.tutorial-fade-text {
+    opacity: 0; transition: opacity 0.3s ease;
 }
-@keyframes blinkCursor { 0%,100% { border-color: transparent } 50% { border-color: var(--accent) } }
+.tutorial-fade-text.show { opacity: 1; }
 .tutorial-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .tutorial-btn {
     padding: 10px 20px; border-radius: 28px; font-weight: 600; font-size: 14px;
@@ -641,6 +649,7 @@ textarea::placeholder { color: #6a6a6a; }
     .forum-send-btn { width: 46px; height: 46px; }
     .tutorial-modal { padding: 24px; }
     .language-grid { grid-template-columns: 1fr; }
+    .chat-header { font-size: 13px; padding: 4px 12px; }
 }
 
 @media (max-width: 480px) {
