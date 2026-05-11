@@ -10,36 +10,71 @@
     <link rel="icon" type="image/png" sizes="256x256" href="logo.png">
     <meta name="theme-color" content="#1e1e1e">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=30">
+    <link rel="stylesheet" href="style.css?v=28">
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <!-- KaTeX + mhchem -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/mhchem.min.js"></script>
+
     <!-- Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"></script>
+
     <!-- Voice GPT Engine -->
     <script src="voice-engine.js"></script>
 </head>
 <body>
+    <!-- Заставка-спиннер -->
     <div class="welcome-screen" id="welcomeScreen">
         <div class="spinner-container"><i class="fas fa-circle-notch fa-spin"></i></div>
     </div>
+
+    <!-- Экран выбора (если не авторизован) — теперь содержит форму входа/регистрации -->
     <div class="choice-screen" id="choiceScreen" style="display: none;">
-        <div class="choice-container">
+        <div class="choice-container" id="choiceContainer">
             <div class="logo">
                 <img src="logo.png" alt="logo" class="logo-img">
                 <h1>DIAMOND AI</h1>
-                <p>Войдите через Diamkey, чтобы продолжить</p>
+                <p>Войдите или создайте Diamkey для продолжения</p>
             </div>
-            <button class="btn btn-diamkey" id="diamkeyLoginBtn"><i class="fas fa-gem"></i> Войти по Diamkey</button>
-            <p class="footer-note">Нет аккаунта? <a href="https://diamkey.ru" target="_blank">Создать Diamkey</a></p>
+            <!-- Переключатель вкладок -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tabLogin">Вход</button>
+                <button class="auth-tab" id="tabRegister">Регистрация</button>
+            </div>
+            <div id="loginForm" class="auth-form">
+                <div class="input-group">
+                    <label>Логин</label>
+                    <input id="loginIdentity" placeholder="Введите логин">
+                </div>
+                <div class="input-group">
+                    <label>Пароль</label>
+                    <input id="loginPassword" type="password" placeholder="········">
+                </div>
+                <button class="btn btn-diamkey" id="doLoginBtn"><i class="fas fa-gem"></i> Войти</button>
+            </div>
+            <div id="registerForm" class="auth-form" style="display:none;">
+                <div class="input-group">
+                    <label>Логин</label>
+                    <input id="regLogin" placeholder="Придумайте логин">
+                </div>
+                <div class="input-group">
+                    <label>Пароль</label>
+                    <input id="regPassword" type="password" placeholder="Минимум 6 символов">
+                </div>
+                <button class="btn btn-diamkey" id="doRegisterBtn"><i class="fas fa-user-plus"></i> Создать Diamkey</button>
+            </div>
+            <p class="footer-note">Статистика и данные о аккаунте на<br>сайте <a href="https://diamkey.ru" target="_blank">Diamkey.</a></p>
         </div>
     </div>
+
+    <!-- Основной интерфейс (скрыт до входа) -->
     <div class="main-ui" id="mainUI" style="display: none;">
         <header class="title-bar" id="titleBar">
             <div class="title-bar-left">
@@ -56,6 +91,7 @@
             </div>
             <div class="window-controls"></div>
         </header>
+
         <div class="app-container">
             <aside class="sidebar" id="sidebar">
                 <div class="sidebar-header">
@@ -87,7 +123,6 @@
                     <div class="input-area" id="inputArea" style="display: none;">
                         <div class="input-wrapper">
                             <textarea id="user-input" placeholder="Введите свой запрос..." rows="1"></textarea>
-                            <!-- Голосовой помощник и кнопка отправки -->
                             <button class="voice-btn" id="voice-btn" title="Голосовой помощник">
                                 <div class="voice-ball" id="voice-ball"></div>
                                 Голос
@@ -97,11 +132,16 @@
                     </div>
                 </div>
                 <div class="folders-page" id="foldersPage" style="display: none;"></div>
-                <div class="workshop-page" id="workshopPage" style="display: none;"></div>
+                <div class="workshop-page" id="workshopPage" style="display: none;">
+                    <!-- Контент мастерской будет динамически заполняться -->
+                </div>
             </main>
         </div>
     </div>
+
+    <!-- Toast-уведомления -->
     <div id="toast-container" class="toast-container"></div>
-    <script src="app.js?v=30"></script>
+
+    <script src="app.js?v=28"></script>
 </body>
 </html>
