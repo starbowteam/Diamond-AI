@@ -21,6 +21,7 @@
     let thinkingDots = 0;
     let workshopTools = {};
     let voiceActive = false;
+    let forumMessages = [];
 
     const placeholderTexts = [
         "Что расскажешь о себе?",
@@ -913,10 +914,7 @@
         if (msgIndex !== -1) chat.messages.splice(msgIndex, 1);
         if (success && assistantMessage) {
             await addMessageToDOM('assistant', assistantMessage, true);
-            // Озвучиваем ответ через VoiceGPT
-            if (typeof VoiceGPT !== 'undefined' && VoiceGPT.speak) {
-                VoiceGPT.speak(assistantMessage);
-            }
+            if (typeof VoiceGPT !== 'undefined' && VoiceGPT.speak) { VoiceGPT.speak(assistantMessage); }
         } else {
             await addMessageToDOM('assistant', '❌ Не удалось получить ответ. Попробуйте позже.', true);
         }
@@ -940,6 +938,7 @@
         if (currentUser && currentUser.fa_icon) return `<i class="${currentUser.fa_icon}"></i>`;
         return '<i class="fas fa-user"></i>';
     }
+
     function updateUserPanel() {
         const nameSpan = document.getElementById('userNameDisplay');
         const avatarImg = document.getElementById('userAvatarImg');
@@ -1069,7 +1068,6 @@
     }
 
     function sendMessageFromEmpty(text) { document.getElementById('user-input').value = text; sendMessage(); const emptyInput=document.getElementById('empty-input'); if(emptyInput) emptyInput.value=''; }
-
     async function showLoadingScreen() { const ws=document.getElementById('welcomeScreen'); ws.style.display='flex'; await new Promise(r=>setTimeout(r,400)); ws.classList.add('fade-out'); await new Promise(r=>setTimeout(r,300)); ws.style.display='none'; }
 
     // ========== VOICE GPT ИНИЦИАЛИЗАЦИЯ ==========
@@ -1078,35 +1076,29 @@
         VoiceGPT.init();
         const voiceBtn = document.getElementById('voice-btn');
         const voiceBall = document.getElementById('voice-ball');
-        if (voiceBtn) {
-            voiceBtn.addEventListener('click', () => {
-                if (voiceActive) {
-                    VoiceGPT.stop();
-                    voiceBall.classList.remove('listening');
-                    voiceActive = false;
-                } else {
-                    VoiceGPT.start(
-                        (text) => {
-                            document.getElementById('user-input').value = text;
-                            sendMessage();
-                        },
-                        () => {
-                            voiceBall.classList.add('listening');
-                            voiceActive = true;
-                        },
-                        () => {
-                            voiceBall.classList.remove('listening');
-                            voiceActive = false;
-                        },
-                        (volume) => {
-                            if (voiceBall) {
-                                voiceBall.style.transform = `scale(${0.8 + volume * 0.5})`;
-                            }
-                        }
-                    );
-                }
-            });
+        if (!voiceBtn) return;
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            voiceBtn.disabled = true;
+            voiceBtn.style.opacity = '0.5';
+            voiceBtn.title = 'Голосовой ввод не поддерживается вашим браузером. Попробуйте Chrome или Edge.';
+            voiceBall.style.opacity = '0.4';
+            return;
         }
+        voiceBtn.addEventListener('click', () => {
+            if (voiceActive) {
+                VoiceGPT.stop();
+                voiceBall.classList.remove('listening');
+                voiceActive = false;
+            } else {
+                VoiceGPT.start(
+                    (text) => { document.getElementById('user-input').value = text; sendMessage(); },
+                    () => { voiceBall.classList.add('listening'); voiceActive = true; },
+                    () => { voiceBall.classList.remove('listening'); voiceActive = false; },
+                    (volume) => { if (voiceBall) voiceBall.style.transform = `scale(${0.8 + volume * 0.5})`; }
+                );
+            }
+        });
     }
 
     // ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
@@ -1128,6 +1120,20 @@
         document.getElementById('userMenuBtn')?.addEventListener('click', (e)=>{ e.stopPropagation(); document.getElementById('userDropdown').classList.toggle('show'); });
         document.addEventListener('click', (e)=>{ if(!document.getElementById('userPanel')?.contains(e.target)) document.getElementById('userDropdown')?.classList.remove('show'); });
 
+        // Кнопка "Войти" в навбаре открывает модалку входа
+        const authBtn = document.getElementById('authBtn');
+        if (authBtn) {
+            authBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentUser) {
+                    logout();
+                } else {
+                    openAuthModal('login');
+                }
+            });
+        }
+
+        // Переключатели табов входа/регистрации
         document.getElementById('tabLogin')?.addEventListener('click', ()=>{ document.getElementById('tabLogin').classList.add('active'); document.getElementById('tabRegister').classList.remove('active'); document.getElementById('loginForm').style.display='block'; document.getElementById('registerForm').style.display='none'; });
         document.getElementById('tabRegister')?.addEventListener('click', ()=>{ document.getElementById('tabRegister').classList.add('active'); document.getElementById('tabLogin').classList.remove('active'); document.getElementById('registerForm').style.display='block'; document.getElementById('loginForm').style.display='none'; });
         document.getElementById('doLoginBtn')?.addEventListener('click', login);
