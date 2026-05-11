@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v29 — VOICE GPT + ПОЛНЫЙ ФУНКЦИОНАЛ ====================
+// ==================== DIAMOND AI v30 — VOICE GPT + ПОЛНЫЙ ФУНКЦИОНАЛ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -911,8 +911,15 @@
         stopThinkingAnimation();
         const msgIndex = chat.messages.findIndex(m => m.id === typingMsg.id);
         if (msgIndex !== -1) chat.messages.splice(msgIndex, 1);
-        if (success && assistantMessage) await addMessageToDOM('assistant', assistantMessage, true);
-        else await addMessageToDOM('assistant', '❌ Не удалось получить ответ. Попробуйте позже.', true);
+        if (success && assistantMessage) {
+            await addMessageToDOM('assistant', assistantMessage, true);
+            // Озвучиваем ответ через VoiceGPT
+            if (typeof VoiceGPT !== 'undefined' && VoiceGPT.speak) {
+                VoiceGPT.speak(assistantMessage);
+            }
+        } else {
+            await addMessageToDOM('assistant', '❌ Не удалось получить ответ. Попробуйте позже.', true);
+        }
         isWaitingForResponse = false; currentAbortController = null; updateSendButtonState(); renderChat(); scrollToBottom();
     }
 
