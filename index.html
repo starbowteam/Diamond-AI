@@ -10,7 +10,7 @@
     <link rel="icon" type="image/png" sizes="256x256" href="logo.png">
     <meta name="theme-color" content="#1e1e1e">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link rel="stylesheet" href="style.css?v=31">
+    <link rel="stylesheet" href="style.css?v=32">
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -83,13 +83,6 @@
                     <div class="user-avatar"><img id="userAvatarImg" src="" alt="avatar"></div>
                     <div class="user-info"><div class="user-name" id="userNameDisplay">Пользователь</div></div>
                     <button class="settings-btn" id="settingsBtn" title="Настройки"><i class="fas fa-cog"></i></button>
-                    <div class="settings-dropdown" id="settingsDropdown">
-                        <button id="set-discord"><i class="fab fa-discord"></i> Discord-сервер</button>
-                        <button id="set-diamkey"><i class="fas fa-key"></i> DiamKey</button>
-                        <button id="set-tutorial"><i class="fas fa-question-circle"></i> Обучение</button>
-                        <button id="set-language"><i class="fas fa-globe"></i> Язык</button>
-                        <button id="set-logout"><i class="fas fa-sign-out-alt"></i> Выйти</button>
-                    </div>
                 </div>
             </aside>
             <main class="chat-area">
@@ -110,17 +103,7 @@
     </div>
     <div id="toast-container" class="toast-container"></div>
     <div class="tutorial-overlay" id="tutorialOverlay" style="display: none;"></div>
-<!-- Модалка выбора языка -->
-<div class="modal" id="languageModal">
-    <div class="modal-content">
-        <button class="modal-close" id="closeLanguageModal"><i class="fas fa-times"></i></button>
-        <h2><i class="fas fa-globe"></i> Выберите язык</h2>
-        <div class="language-grid">
-            <button class="lang-btn" data-lang="ru">Русский</button>
-            <button class="lang-btn" data-lang="en">English</button>
-        </div>
-    </div>
-</div>
-    <script src="app.js?v=31"></script>
+    <!-- Новая модалка настроек (добавляется динамически) -->
+    <script src="app.js?v=32"></script>
 </body>
 </html>
