@@ -775,7 +775,25 @@ textarea::placeholder { color: #6a6a6a; }
 }
 .attachment-card:hover {
     border-color: #5a5a5a;
+    
 }
+
+/* ========== ФИКС: сообщения пользователя – всё содержимое прижимаем вправо ========== */
+.message.user .message-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.message.user .message-content-wrapper > * {
+    /* чтобы кнопки действий и время тоже были справа */
+    align-self: flex-end;
+}
+
+.message.user .message-actions {
+    justify-content: flex-end;
+}
+
 .attachment-icon {
     width: 44px;
     height: 44px;
