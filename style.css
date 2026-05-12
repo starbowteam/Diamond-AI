@@ -964,6 +964,19 @@ textarea::placeholder { color: #6a6a6a; }
     .workshop-tool-info p { font-size: 14px; }
 }
 
+/* ===== ГАРАНТИРОВАННЫЙ СДВИГ КАРТОЧКИ ВПРАВО В СВОИХ СООБЩЕНИЯХ ===== */
+.message.user .attachment-card {
+    align-self: flex-end !important;   /* прижимаем к правому краю флекс-контейнера */
+    margin-left: auto;                /* страховка на случай, если флекс не сработает */
+}
+
+/* Делаем обёртку флекс-колонкой с выравниванием вправо */
+.message.user .message-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
 /* ФИКС: сообщения пользователя выравниваются вправо вместе с вложениями */
 .message.user .message-content-wrapper {
     display: flex;
