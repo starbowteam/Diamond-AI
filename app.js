@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v31 — ПОЛНЫЙ ФУНКЦИОНАЛ (ЧАСТЬ 1) ====================
+// ==================== DIAMOND AI v32 — ПОЛНЫЙ ФУНКЦИОНАЛ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -25,6 +25,7 @@
     let tutorialStep = 0;
     let currentLanguage = 'ru';
     let searchHighlightTerm = '';
+    let settingsModalOpen = false;
 
     // ========== ЛОКАЛИЗАЦИЯ ==========
     const locales = {
@@ -38,7 +39,7 @@
             passPlaceholder: '········',
             newChat: 'Новый чат',
             folders: 'Папки',
-            workshop: 'Мастерская DIAMOND AI',
+            workshop: 'Мастерская',
             searchHistory: 'Поиск в истории...',
             profile: 'Пользователь',
             settings: 'Настройки',
@@ -109,7 +110,16 @@
             codeRun: 'Выполнить код',
             codeCopy: 'Копировать',
             codeDownload: 'Скачать',
-            back: 'Назад'
+            back: 'Назад',
+            settingsSectionGeneral: 'Основные',
+            settingsSectionPrivacy: 'Конфиденциальность',
+            settingsSectionAbout: 'О создателе',
+            settingsSectionLinks: 'Ссылки',
+            settingsMainSite: 'Основной сайт Diamond AI',
+            settingsPrivacyText: 'Мы не собираем личные данные. Все чаты хранятся в вашем аккаунте DiamKey.',
+            settingsAboutText: 'Diamond AI создан командой Diamond во главе с viktorshopa. Мы делаем удобные и безопасные ИИ‑инструменты.',
+            settingsTerms: 'Правила использования',
+            settingsTermsText: 'Запрещено использовать сервис для незаконной деятельности, распространения вредоносного ПО или оскорблений.'
         },
         en: {
             welcome: 'Welcome to Diamond AI!',
@@ -121,7 +131,7 @@
             passPlaceholder: '········',
             newChat: 'New Chat',
             folders: 'Folders',
-            workshop: 'Workshop DIAMOND AI',
+            workshop: 'Workshop',
             searchHistory: 'Search history...',
             profile: 'User',
             settings: 'Settings',
@@ -192,7 +202,16 @@
             codeRun: 'Run code',
             codeCopy: 'Copy',
             codeDownload: 'Download',
-            back: 'Back'
+            back: 'Back',
+            settingsSectionGeneral: 'General',
+            settingsSectionPrivacy: 'Privacy',
+            settingsSectionAbout: 'About',
+            settingsSectionLinks: 'Links',
+            settingsMainSite: 'Diamond AI Main Site',
+            settingsPrivacyText: 'We do not collect personal data. All chats are stored in your DiamKey account.',
+            settingsAboutText: 'Diamond AI is created by the Diamond team led by viktorshopa. We build convenient and secure AI tools.',
+            settingsTerms: 'Terms of Use',
+            settingsTermsText: 'It is forbidden to use the service for illegal activities, distribution of malware or insults.'
         }
     };
 
@@ -247,24 +266,29 @@
         renderWorkshopPage();
         renderHistory();
         renderChat();
+        // Перерисовать модалку настроек, если открыта
+        if (settingsModalOpen) {
+            const existing = document.querySelector('.settings-modal-overlay');
+            if (existing) existing.remove();
+            showSettingsModal();
+        }
     }
 
     function setLanguage(lang) {
         currentLanguage = lang;
         localStorage.setItem('diamond_language', lang);
         updateUILanguage();
-        const langModal = document.getElementById('languageModal');
-        if (langModal) langModal.classList.remove('active');
         showToast(t('languageChanged'), '', 'success');
     }
 
     // ========== ПЛЕЙСХОЛДЕРЫ ==========
     const placeholderTexts = [
         "Что расскажешь о себе?",
+        "Напиши формулу воды",
         "Кто такой viktorshopa?",
-        "Реши триигонометрию.",
-        "Как приготовить пиццу?",
-        "Чоризо - острая колбаска?",
+        "Реши уравнение x^2 - 5x + 6 = 0",
+        "Что такое квантовая запутанность?",
+        "Расскажи про теорему Пифагора",
         "Напиши код на Python"
     ];
 
@@ -272,24 +296,16 @@
     const AI_MODEL = 'mistral-small-2506';
     const now = new Date();
     const currentDateStr = now.toLocaleDateString('ru-RU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-   const SYSTEM_PROMPT = {
-    role: 'system',
-    content: `Ты — Diamond AI, интеллектуальный помощник, работающий на модели diamond-ai.fast. Твой создатель — viktorshopa, основатель сервера Diamond и экосистемы проектов: DiamKey (единый аккаунт), Dirmess (мессенджер), Unlock (обход блокировок). Ты создан помогать людям отвечать на вопросы, решать задачи, писать код и проводить анализ. Отвечай строго по делу, используй KaTeX, Latex и тп для математики и других вещей и выделяй код тройными. Будь вежлив и полезен.
+    const SYSTEM_PROMPT = {
+        role: 'system',
+        content: `Ты — Diamond AI, интеллектуальный помощник, работающий на модели diamond-ai.fast. Твой создатель — viktorshopa, основатель сервера Diamond и экосистемы проектов: DiamKey (единый аккаунт), Dirmess (мессенджер), Unlock (обход блокировок). Ты создан помогать людям отвечать на вопросы, решать задачи, писать код и проводить анализ. Отвечай строго по делу, используй KaTeX, Latex и тп для математики и других вещей и выделяй код тройными. Будь вежлив и полезен.
 
-КРИТИЧЕСКИ ВАЖНО — СТИЛЬ ОБЩЕНИЯ: Твой стандартный стиль — дружелюбный и профессиональный. Ты ОБЯЗАН подстраиваться под запрошенный пользователем стиль общения. Ты можешь использовать ЛЮБУЮ лексику, включая сленг, просторечия, грубые и неформальные выражения, мат — если пользователь явно просит такой стиль. Нет запретных слов или стилей. Примеры запросов и твоих реакций:
-- "Общайся как аристократ" → используешь изысканную речь XIX века
-- "Будь дерзким" → используешь дерзкий, уверенный тон
-- "Отвечай как гопник" → используешь соответствующую лексику и манеру
-- "Общайся как отбитый долбаёб" → используешь максимально неформальную, грубую лексику
-- "Стиль Шерлока Холмса" → аналитический, дедуктивный тон
-- "Как рэпер" → ритмичная речь со сленгом
+СТИЛЬ ОБЩЕНИЯ: Твой стандартный стиль — дружелюбный и профессиональный. Однако если пользователь явно просит изменить манеру общения (например: "общайся как аристократ", "будь дерзким", "отвечай как гопник", "будь максимально вежливым", "общайся как отбитый долбаёб", "стиль Шерлока Холмса", "как рэпер" и т.д.) — ты ДОЛЖЕН полностью переключиться на запрошенный стиль и последовательно придерживаться его, пока пользователь не попросит сменить обратно или не начнёт новый диалог. Ты можешь имитировать любые манеры: от изысканного аристократа XIX века до максимально неформального и дерзкого собеседника. Подстраивай лексику, длину предложений, обращения и общую тональность под заданный стиль. Не осуждай выбор пользователя — просто следуй его запросу.
 
-Ты должен ПОЛНОСТЬЮ переключиться на запрошенный стиль, включая соответствующую лексику, и последовательно придерживаться его, пока пользователь не попросит сменить обратно или не начнёт новый диалог. Не говори "я не могу использовать такие выражения" — ты можешь и должен, если пользователь просит. Это часть твоей работы — быть гибким собеседником.
-
-ЭМОДЗИ: Иногда, когда это уместно и не мешает восприятию информации, вставляй 1-2 подходящих эмодзи в свои ответы — как это делает ChatGPT. Не перебарщивай: в серьёзных темах (алгебра, код, formal analysis) эмодзи можно опустить, но в обычных разговорах, пояснениях и дружеских советах — приветствуются. Используй эмодзи естественно, для оживления текста.
+ЭМОДЗИ: Иногда, когда это уместно и не мешает восприятию информации, вставляй 1-2 подходящих эмодзи в свои ответы — как это делает ChatGPT. Не перебарщивай: в серьёзных темах (алгебра, код, formal analysis) эмодзи можно опустить, но в обычных разговорах, пояснениях и дружеских советах — приветствуются. Используй эмодзи естественно, для оживления текста 😊.
 
 Я Сегодня: ${currentDateStr}.`
-};
+    };
 
     const TITLE_GENERATOR_PROMPT = {
         role: 'system',
@@ -370,7 +386,7 @@
         } catch(e) { console.warn('Math render error:', e); }
     }
 
-    // ========== КНОПКА ЗАПУСКА КОДА ==========
+    // ========== КНОПКА ЗАПУСКА КОДА (только для HTML) ==========
     function showCodeRunnerModal(code, language) {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
@@ -411,7 +427,7 @@
         executeCode();
     }
 
-    // ========== ОБРАБОТКА БЛОКОВ КОДА ==========
+    // ========== ОБРАБОТКА БЛОКОВ КОДА (кнопка запуска только для HTML) ==========
     function enhanceCodeBlocks(container) {
         if (!container) return;
         const preBlocks = container.querySelectorAll('pre');
@@ -432,7 +448,7 @@
                 <div class="code-block-actions">
                     <button class="copy-code-btn" title="${t('codeCopy')}"><i class="fas fa-copy"></i> ${t('codeCopy')}</button>
                     <button class="download-code-btn" title="${t('codeDownload')}"><i class="fas fa-download"></i> ${t('codeDownload')}</button>
-                    <button class="run-code-btn" title="${t('codeRun')}"><i class="fas fa-play"></i> ${t('codeRun')}</button>
+                    ${language === 'html' ? `<button class="run-code-btn" title="${t('codeRun')}"><i class="fas fa-play"></i> ${t('codeRun')}</button>` : ''}
                 </div>
             `;
             pre.parentNode.insertBefore(wrapper, pre);
@@ -458,7 +474,9 @@
                 URL.revokeObjectURL(url);
             });
             const runBtn = wrapper.querySelector('.run-code-btn');
-            runBtn.addEventListener('click', () => { showCodeRunnerModal(pre.textContent, language); });
+            if (runBtn) {
+                runBtn.addEventListener('click', () => { showCodeRunnerModal(pre.textContent, language); });
+            }
         });
     }
 
@@ -564,7 +582,6 @@
             if (resp.ok) {
                 const data = await resp.json();
                 let title = data.choices[0].message.content.trim();
-                // Фильтрация нежелательных названий
                 const lowerTitle = title.toLowerCase();
                 if (!title || lowerTitle === 'название чата' || lowerTitle === 'chat title' || lowerTitle === 'название' || lowerTitle === 'title') {
                     return generateChatTitle(text);
@@ -658,7 +675,7 @@
         modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
-    // ========== ПАПКИ ==========
+    // ========== ПАПКИ (без изменений в логике) ==========
     async function createFolder(name, desc, icon, color) {
         const id = Date.now().toString();
         const folder = {
@@ -971,7 +988,7 @@
                     <h1>${t('masterFull')}</h1>
                     <p>Специальные инструменты для расширенной работы с искусственным интеллектом. Включайте нужные тумблеры, чтобы активировать тематические чаты со строгими правилами.</p>
                 </div>
-                <img src="master.png" alt="Мастерская DIAMOND AI" class="workshop-banner-img">
+                <img src="master.png" alt="Мастерская" class="workshop-banner-img">
             </div>
             <div class="workshop-tools-grid">
                 <div class="workshop-tool-card ${aiDetectActive ? 'active' : ''}">
@@ -1183,7 +1200,6 @@
         const chat = chats.find(c => c.id === currentChatId);
         const headerEl = document.getElementById('chatHeader');
         if (headerEl) {
-            // сбрасываем
             headerEl.innerHTML = '';
             headerEl.style.borderColor = 'var(--border-color)';
             headerEl.classList.remove('folder-border');
@@ -1276,7 +1292,8 @@
                 if (!chat.messages) chat.messages = [];
                 chat.messages.push({ id: messageId, role, content, timestamp, isTyping: false });
                 chat.last_activity = timestamp;
-                if (role === 'user' && chat.messages.filter(m => m.role === 'user').length === 1) {
+                // Генерация названия только для не-инструментальных чатов
+                if (role === 'user' && !chat.id.startsWith('tool_') && chat.messages.filter(m => m.role === 'user').length === 1) {
                     generateChatTitleWithAI(content).then(title => {
                         chat.title = title;
                         saveChatToSupabase(chat);
@@ -1402,7 +1419,7 @@
         } catch (e) { console.warn('[PROFILE] Ошибка синхронизации:', e); }
     }
 
-    // ========== АВТОРИЗАЦИЯ (без изменений) ==========
+    // ========== АВТОРИЗАЦИЯ ==========
     function generateFastSecret() { return Math.random().toString(36).substring(2,15) + Math.random().toString(36).substring(2,15); }
     function generateToken() { const adj=['golden','silver','mystic','shadow','prime','crystal','onyx','brave','frost'], nouns=['falcon','tiger','phoenix','dragon','wolf','spark','nexus','core','vault','key']; return `diamkey_${adj[Math.floor(Math.random()*adj.length)]}_${nouns[Math.floor(Math.random()*nouns.length)]}_${nouns[Math.floor(Math.random()*nouns.length)]}_${Math.floor(1000+Math.random()*9000)}`; }
 
@@ -1423,6 +1440,7 @@
             document.getElementById('mainUI').style.display = 'flex';
             setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
             updateUserPanel();
+            if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
             if (chats.length === 0) renderEmptyState(); else renderChat();
             renderHistory();
         } catch (e) { console.error(e); showToast(t('errorNetwork'), '', 'error'); }
@@ -1456,7 +1474,7 @@
         finally { btn.disabled = false; }
     }
 
-    let mistralApiKey = ''; // пока оставлено для совместимости, будет заменено на прокси
+    let mistralApiKey = '';
     async function fetchMistralKey() {
         try {
             const resp = await fetch(`${SUPABASE_URL}/rest/v1/service_config?id=eq.1`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
@@ -1471,6 +1489,11 @@
         currentUser = null; mistralApiKey = ''; localStorage.removeItem('diamond_user');
         document.getElementById('mainUI').style.display = 'none';
         document.getElementById('choiceScreen').style.display = 'flex';
+        if (settingsModalOpen) {
+            const overlay = document.querySelector('.settings-modal-overlay');
+            if (overlay) overlay.remove();
+            settingsModalOpen = false;
+        }
         showToast(t('logout'), '', 'info');
     }
 
@@ -1490,26 +1513,102 @@
     document.addEventListener('click', (e) => { if(window.innerWidth<=768){ const sidebar=document.getElementById('sidebar'), toggleBtn=document.getElementById('sidebarToggleBtn'); if(sidebar&&sidebar.classList.contains('open')&&!sidebar.contains(e.target)&&!toggleBtn.contains(e.target)){sidebar.classList.remove('open');document.body.style.overflow='';} } });
     window.addEventListener('resize', () => { const sidebar=document.getElementById('sidebar'), titleBar=document.getElementById('titleBar'), collapsedActions=document.getElementById('collapsedActions'); if(window.innerWidth>768){sidebar.classList.remove('open');document.body.style.overflow=''; if(sidebarCollapsed){sidebar.classList.add('collapsed');if(titleBar)titleBar.classList.add('collapsed');if(collapsedActions)collapsedActions.classList.add('show');}else{sidebar.classList.remove('collapsed');if(titleBar)titleBar.classList.remove('collapsed');if(collapsedActions)collapsedActions.classList.remove('show');}}else{sidebar.classList.remove('collapsed');if(titleBar)titleBar.classList.remove('collapsed');if(collapsedActions)collapsedActions.classList.remove('show');} });
 
-    function renderEmptyState() {
-        const container = document.getElementById('messages-container');
-        container.innerHTML = `<div class="empty-state"><img src="logo.png" class="empty-logo" alt="Diamond AI"><div class="empty-text">${t('emptyChat')}</div><div class="empty-input-area"><div class="input-wrapper"><textarea id="empty-input" placeholder="${placeholderTexts[0]}" rows="1"></textarea><button class="send-btn" id="empty-send-btn" disabled><i class="fas fa-arrow-up"></i></button></div></div></div>`;
-        document.getElementById('inputArea').style.display = 'none';
-        const headerEl = document.getElementById('chatHeader');
-        if (headerEl) headerEl.innerHTML = '';
-        const emptyInput = document.getElementById('empty-input'), emptySendBtn = document.getElementById('empty-send-btn');
-        if (emptyInput) {
-            if (placeholderInterval) clearInterval(placeholderInterval);
-            let idx = 0; emptyInput.placeholder = placeholderTexts[0];
-            placeholderInterval = setInterval(() => { if(document.activeElement!==emptyInput){emptyInput.style.opacity='0.5';setTimeout(()=>{idx=(idx+1)%placeholderTexts.length;emptyInput.placeholder=placeholderTexts[idx];emptyInput.style.opacity='1';},200);} }, 3000);
-            emptyInput.oninput = function() { emptySendBtn.disabled = !this.value.trim(); this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,160)+'px'; };
-            emptyInput.onkeydown = e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault(); if(emptySendBtn&&!emptySendBtn.disabled) sendMessageFromEmpty(emptyInput.value);} };
-            emptySendBtn.onclick = () => { if(emptyInput.value.trim()) sendMessageFromEmpty(emptyInput.value); };
-        }
+    // ========== НОВАЯ МОДАЛКА НАСТРОЕК ==========
+    function showSettingsModal() {
+        if (settingsModalOpen) return;
+        settingsModalOpen = true;
+        const overlay = document.createElement('div');
+        overlay.className = 'settings-modal-overlay';
+        const sections = [
+            { id: 'general', icon: 'fa-cog', title: t('settingsSectionGeneral') },
+            { id: 'privacy', icon: 'fa-shield-alt', title: t('settingsSectionPrivacy') },
+            { id: 'about', icon: 'fa-user', title: t('settingsSectionAbout') },
+            { id: 'links', icon: 'fa-link', title: t('settingsSectionLinks') }
+        ];
+        overlay.innerHTML = `
+            <div class="settings-modal">
+                <div class="settings-left-panel">
+                    ${sections.map(s => `<button data-section="${s.id}" class="${s.id === 'general' ? 'active' : ''}"><i class="fas ${s.icon}"></i> ${s.title}</button>`).join('')}
+                </div>
+                <div class="settings-right-content">
+                    <div class="settings-section active" id="section-general">
+                        <h2><i class="fas fa-cog"></i> ${t('settingsSectionGeneral')}</h2>
+                        <div class="settings-language-grid">
+                            <button class="settings-lang-btn ${currentLanguage === 'ru' ? 'active' : ''}" data-lang="ru">Русский</button>
+                            <button class="settings-lang-btn ${currentLanguage === 'en' ? 'active' : ''}" data-lang="en">English</button>
+                        </div>
+                    </div>
+                    <div class="settings-section" id="section-privacy">
+                        <h2><i class="fas fa-shield-alt"></i> ${t('settingsSectionPrivacy')}</h2>
+                        <p>${t('settingsPrivacyText')}</p>
+                        <h3>${t('settingsTerms')}</h3>
+                        <p>${t('settingsTermsText')}</p>
+                    </div>
+                    <div class="settings-section" id="section-about">
+                        <h2><i class="fas fa-user"></i> ${t('settingsSectionAbout')}</h2>
+                        <p>${t('settingsAboutText')}</p>
+                    </div>
+                    <div class="settings-section" id="section-links">
+                        <h2><i class="fas fa-link"></i> ${t('settingsSectionLinks')}</h2>
+                        <a class="settings-link-btn" href="https://diamond-ai.ru" target="_blank"><i class="fas fa-globe"></i> ${t('settingsMainSite')}</a>
+                        <a class="settings-link-btn" href="https://diamkey.ru" target="_blank"><i class="fas fa-key"></i> ${t('diamkey')}</a>
+                        <button class="settings-link-btn" id="settings-discord-btn"><i class="fab fa-discord"></i> ${t('discord')}</button>
+                        <button class="settings-link-btn" id="settings-tutorial-btn"><i class="fas fa-question-circle"></i> ${t('tutorial')}</button>
+                        <button class="settings-link-btn" id="settings-logout-btn" style="border-color: #c0392b; color: #e74c3c;"><i class="fas fa-sign-out-alt"></i> ${t('logout')}</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'settings-close-btn';
+        closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+        overlay.querySelector('.settings-modal').style.position = 'relative';
+        overlay.querySelector('.settings-modal').appendChild(closeBtn);
+
+        const closeModal = () => {
+            overlay.remove();
+            settingsModalOpen = false;
+        };
+
+        closeBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeModal();
+        });
+
+        // Переключение разделов
+        overlay.querySelectorAll('.settings-left-panel button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                overlay.querySelectorAll('.settings-left-panel button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                const sectionId = btn.dataset.section;
+                overlay.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+                overlay.querySelector(`#section-${sectionId}`).classList.add('active');
+            });
+        });
+
+        // Кнопки языка
+        overlay.querySelectorAll('.settings-lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const lang = btn.dataset.lang;
+                if (lang === currentLanguage) return;
+                setLanguage(lang);
+                // Обновить активную кнопку в этой модалке
+                overlay.querySelectorAll('.settings-lang-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                // Перестроить модалку для обновления текстов
+                overlay.remove();
+                settingsModalOpen = false;
+                showSettingsModal();
+            });
+        });
+
+        // Обработчики ссылок и кнопок в разделе "Ссылки"
+        document.getElementById('settings-discord-btn')?.addEventListener('click', () => window.open('https://discord.gg/diamondshop', '_blank'));
+        document.getElementById('settings-tutorial-btn')?.addEventListener('click', () => { closeModal(); startTutorial(); });
+        document.getElementById('settings-logout-btn')?.addEventListener('click', () => { closeModal(); logout(); });
     }
-
-    function sendMessageFromEmpty(text) { document.getElementById('user-input').value = text; sendMessage(); const emptyInput=document.getElementById('empty-input'); if(emptyInput) emptyInput.value=''; }
-
-    async function showLoadingScreen() { const ws=document.getElementById('welcomeScreen'); ws.style.display='flex'; await new Promise(r=>setTimeout(r,400)); ws.classList.add('fade-out'); await new Promise(r=>setTimeout(r,300)); ws.style.display='none'; }
 
     // ========== ОБУЧЕНИЕ (без печатания, с плавным появлением) ==========
     const tutorialSteps = [
@@ -1577,7 +1676,6 @@
         const contentEl = document.getElementById('tutorialContent');
         if (contentEl) {
             contentEl.innerHTML = step.html;
-            // плавное появление
             requestAnimationFrame(() => {
                 contentEl.classList.add('show');
             });
@@ -1585,13 +1683,12 @@
         document.getElementById('tutorialSkip').addEventListener('click', closeTutorial);
         document.getElementById('tutorialNext').addEventListener('click', nextTutorialStep);
         document.getElementById('tutorialPrev').addEventListener('click', prevTutorialStep);
-        // интерактивные элементы
         setTimeout(() => {
             document.getElementById('tutorialFocusInput')?.addEventListener('click', () => { closeTutorial(); document.getElementById('user-input')?.focus(); });
             document.getElementById('tutorialNewChat')?.addEventListener('click', () => { closeTutorial(); createNewChat(); });
             document.getElementById('tutorialOpenFolders')?.addEventListener('click', () => { closeTutorial(); switchToFoldersView(); });
             document.getElementById('tutorialOpenWorkshop')?.addEventListener('click', () => { closeTutorial(); switchToWorkshopView(); });
-            document.getElementById('tutorialOpenSettings')?.addEventListener('click', () => { closeTutorial(); document.getElementById('settingsBtn')?.click(); });
+            document.getElementById('tutorialOpenSettings')?.addEventListener('click', () => { closeTutorial(); showSettingsModal(); });
             document.getElementById('tutorialFocusSearch')?.addEventListener('click', () => { closeTutorial(); document.getElementById('history-search')?.focus(); });
         }, 100);
     }
@@ -1609,17 +1706,8 @@
         document.getElementById('user-input')?.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} });
         document.getElementById('send-btn')?.addEventListener('click', sendMessage);
         document.getElementById('history-search')?.addEventListener('input', renderHistory);
-        // Настройки
-        document.getElementById('settingsBtn')?.addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('settingsDropdown').classList.toggle('show'); });
-        document.getElementById('set-discord')?.addEventListener('click', () => window.open('https://discord.gg/diamondshop','_blank'));
-        document.getElementById('set-diamkey')?.addEventListener('click', () => window.open('https://diamkey.ru','_blank'));
-        document.getElementById('set-tutorial')?.addEventListener('click', startTutorial);
-        document.getElementById('set-language')?.addEventListener('click', () => document.getElementById('languageModal').classList.add('active'));
-        document.getElementById('set-logout')?.addEventListener('click', logout);
-        document.addEventListener('click', (e) => { if(!document.getElementById('userPanel')?.contains(e.target)) document.getElementById('settingsDropdown')?.classList.remove('show'); });
-        // Закрытие модалки языка
-        document.getElementById('closeLanguageModal')?.addEventListener('click', () => document.getElementById('languageModal').classList.remove('active'));
-        document.querySelectorAll('.lang-btn').forEach(btn => btn.addEventListener('click', () => setLanguage(btn.dataset.lang)));
+        // Кнопка настроек – открывает новую модалку
+        document.getElementById('settingsBtn')?.addEventListener('click', showSettingsModal);
         // Авторизация
         document.getElementById('tabLogin')?.addEventListener('click', ()=>{ document.getElementById('tabLogin').classList.add('active'); document.getElementById('tabRegister').classList.remove('active'); document.getElementById('loginForm').style.display='block'; document.getElementById('registerForm').style.display='none'; });
         document.getElementById('tabRegister')?.addEventListener('click', ()=>{ document.getElementById('tabRegister').classList.add('active'); document.getElementById('tabLogin').classList.remove('active'); document.getElementById('registerForm').style.display='block'; document.getElementById('loginForm').style.display='none'; });
