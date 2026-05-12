@@ -269,7 +269,7 @@ body {
 }
 .action-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 
-/* Поиск */
+/* Подсветка найденного текста */
 .search-highlight {
     background: rgba(160, 160, 176, 0.3); color: white; border-radius: 4px; padding: 0 2px;
 }
@@ -286,7 +286,7 @@ body {
     font-size: 11px; color: var(--text-secondary); border: 1px solid var(--border-color);
 }
 
-/* ========== ЗАГОЛОВОК ЧАТА (рамка) ========== */
+/* ========== ЗАГОЛОВОК ЧАТА (стилизованная рамка-кнопка) ========== */
 .chat-header {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     padding: 4px 12px; border-radius: 16px; border: 1px solid var(--border-color);
@@ -529,7 +529,7 @@ textarea::placeholder { color: #6a6a6a; }
 }
 .forum-send-btn:hover { background: #b0b0c0; }
 
-/* ========== ОБУЧЕНИЕ ========== */
+/* ========== ОБУЧЕНИЕ (TUTORIAL) ========== */
 .tutorial-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
     background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
@@ -563,7 +563,10 @@ textarea::placeholder { color: #6a6a6a; }
     background: rgba(160,160,176,0.05); text-align: center; cursor: pointer; transition: var(--transition);
 }
 .tutorial-demo-interactive:hover { background: rgba(160,160,176,0.1); }
-.tutorial-fade-text { opacity: 0; transition: opacity 0.3s ease; }
+/* Плавное появление контента вместо печатания */
+.tutorial-fade-text {
+    opacity: 0; transition: opacity 0.3s ease;
+}
 .tutorial-fade-text.show { opacity: 1; }
 .tutorial-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .tutorial-btn {
@@ -745,6 +748,9 @@ textarea::placeholder { color: #6a6a6a; }
     background: var(--bg-hover);
     color: var(--text-primary);
 }
+.settings-modal-wrapper {
+    position: relative;
+}
 
 /* ========== КАРТОЧКА ПРИКРЕПЛЕННОГО ФАЙЛА ========== */
 .attachment-preview-container {
@@ -765,6 +771,7 @@ textarea::placeholder { color: #6a6a6a; }
     max-width: 400px;
     transition: var(--transition);
     position: relative;
+    margin-top: 6px;
 }
 .attachment-card:hover {
     border-color: #5a5a5a;
@@ -837,6 +844,12 @@ textarea::placeholder { color: #6a6a6a; }
     transition: width 0.3s ease;
 }
 
+/* ========== ФИКС: вложения пользователя справа ========== */
+.message.user .attachment-card {
+    align-self: flex-end;
+    margin-left: auto;
+}
+
 /* ========== АДАПТИВ ========== */
 @media (max-width: 768px) {
     body { font-size: 16px; }
@@ -859,7 +872,7 @@ textarea::placeholder { color: #6a6a6a; }
     .chat-action-btn { width: 44px; height: 44px; font-size: 18px; }
     .messages-container { padding: 20px; gap: 20px; }
     .message { max-width: 95%; gap: 12px; }
-    .message-content { font-size: 16px; padding: 12px 16px; border-radius: 24px; }
+    .message-content { font-size: 16px; padding: 12px 16px 10px 21px; border-radius: 24px; }
     .avatar { width: 44px; height: 44px; }
     .message-time { font-size: 12px; }
     .action-btn { width: 32px; height: 32px; }
@@ -921,7 +934,7 @@ textarea::placeholder { color: #6a6a6a; }
     .sidebar-toggle-btn { width: 44px; height: 44px; }
     .logo-text { font-size: 20px; }
     .action-btn-icon { width: 34px; height: 34px; font-size: 16px; }
-    .message-content { font-size: 15px; padding: 10px 14px; }
+    .message-content { font-size: 15px; padding: 10px 14px 8px 21px; }
     .code-block-header { flex-direction: column; align-items: flex-start; }
     .code-block-actions { align-self: flex-end; }
     .folder-actions button { width: 48px; height: 48px; }
@@ -931,10 +944,4 @@ textarea::placeholder { color: #6a6a6a; }
     .workshop-tool-card { padding: 24px; }
     .workshop-tool-info h3 { font-size: 18px; }
     .workshop-tool-info p { font-size: 14px; }
-}
-
-.message.user .message-content-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
 }
