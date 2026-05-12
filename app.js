@@ -1519,100 +1519,104 @@
     }
 
     // ========== ОТПРАВКА СООБЩЕНИЯ (с вложением) ==========
-    async function sendMessage() {
-        const text = document.getElementById('user-input').value.trim();
-        if ((!text && !pendingAttachment) || isWaitingForResponse) return;
-        if (!mistralApiKey) { showToast(t('errorApiKey'), '', 'error'); return; }
-        let chat = chats.find(c => c.id === currentChatId);
-        if (!chat || chat.messages.length === 0) {
-            const now = Date.now();
-            const isTool = currentChatId && currentChatId.startsWith('tool_');
-            if (isTool) {
-                chat = chats.find(c => c.id === currentChatId);
-                if (!chat) { showToast('Ошибка', 'Инструментальный чат не найден', 'error'); return; }
-            } else {
-                chat = {
-                    id: now.toString(),
-                    title: generateChatTitle(text || (pendingAttachment ? pendingAttachment.name : '')),
-                    messages: [],
-                    created_at: now,
-                    last_activity: now,
-                    pinned: false,
-                    folder_id: null,
-                    isTool: false
-                };
-                chats.unshift(chat);
-                currentChatId = chat.id;
-                await saveChatToSupabase(chat);
-                renderHistory();
-                document.getElementById('inputArea').style.display = 'flex';
-            }
-        }
-
-        let userContent = text || '';
-        let attachmentData = null;
-        if (pendingAttachment) {
-            attachmentData = {
-                type: pendingAttachment.type,
-                name: pendingAttachment.name,
-                size: pendingAttachment.size
+async function sendMessage() {
+    const text = document.getElementById('user-input').value.trim();
+    if ((!text && !pendingAttachment) || isWaitingForResponse) return;
+    if (!mistralApiKey) { showToast(t('errorApiKey'), '', 'error'); return; }
+    let chat = chats.find(c => c.id === currentChatId);
+    if (!chat || chat.messages.length === 0) {
+        const now = Date.now();
+        const isTool = currentChatId && currentChatId.startsWith('tool_');
+        if (isTool) {
+            chat = chats.find(c => c.id === currentChatId);
+            if (!chat) { showToast('Ошибка', 'Инструментальный чат не найден', 'error'); return; }
+        } else {
+            chat = {
+                id: now.toString(),
+                title: generateChatTitle(text || (pendingAttachment ? pendingAttachment.name : '')),
+                messages: [],
+                created_at: now,
+                last_activity: now,
+                pinned: false,
+                folder_id: null,
+                isTool: false
             };
+            chats.unshift(chat);
+            currentChatId = chat.id;
+            await saveChatToSupabase(chat);
+            renderHistory();
+            document.getElementById('inputArea').style.display = 'flex';
         }
-        await addMessageToDOM('user', userContent, true, attachmentData);
-        document.getElementById('user-input').value = '';
-        updateSendButtonState();
-        removeAttachmentPreview();
+    }
 
-        isWaitingForResponse = true;
-        updateSendButtonState();
-        const typingMsg = { id: Date.now().toString(), role: 'assistant', content: '', isTyping: true, timestamp: Date.now() };
-        chat.messages.push(typingMsg); renderChat(); scrollToBottom(); startThinkingAnimation();
-        let systemPrompt = (chat.id && chat.id.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[chat.id.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
+    let userContent = text || '';
+    let attachmentData = null;
+    if (pendingAttachment) {
+        attachmentData = {
+            type: pendingAttachment.type,
+            name: pendingAttachment.name,
+            size: pendingAttachment.size
+        };
+    }
+    await addMessageToDOM('user', userContent, true, attachmentData);
+    document.getElementById('user-input').value = '';
+    updateSendButtonState();
+    removeAttachmentPreview();
 
-        let userMessageForAI = userContent;
-        if (pendingAttachment && pendingAttachment.content) {
-            userMessageForAI = `[Файл: ${pendingAttachment.name}]\nСодержимое:\n${pendingAttachment.content}\n\nЗапрос пользователя: ${userContent || 'Проанализируй содержимое файла'}`;
-            systemPrompt = {
-                ...systemPrompt,
-                content: systemPrompt.content + '\n\nВАЖНО: Ты получил содержимое файла. Проанализируй его и ответь пользователю. Не говори, что ты не можешь просматривать фото — текст уже перед тобой.'
-            };
-        } else if (pendingAttachment && !pendingAttachment.content) {
-            userMessageForAI = userContent || 'Проанализируй содержимое файла';
+    isWaitingForResponse = true;
+    updateSendButtonState();
+    const typingMsg = { id: Date.now().toString(), role: 'assistant', content: '', isTyping: true, timestamp: Date.now() };
+    chat.messages.push(typingMsg); renderChat(); scrollToBottom(); startThinkingAnimation();
+
+    let systemPrompt = (chat.id && chat.id.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[chat.id.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
+
+    // Всегда добавляем жёсткую инструкцию, если есть вложение
+    let userMessageForAI = userContent;
+    if (pendingAttachment) {
+        let fileContent = pendingAttachment.content || '';
+        if (!fileContent) {
             showToast(t('ocrEmpty'), 'Текст не распознан, отправляю без содержимого', 'warning');
         }
-
-        const contextMessages = chat.messages.filter(m => !m.isTyping).slice(-15);
-        const messagesForAI = [
-            systemPrompt,
-            ...contextMessages.map(m => {
-                if (m.role === 'user' && m.attachment && m.content !== userContent) {
-                    return { role: 'user', content: m.content };
-                }
-                return { role: m.role, content: m.content };
-            }).filter(m => m.role !== 'system'),
-            { role: 'user', content: userMessageForAI }
-        ];
-
-        const controller = new AbortController(); currentAbortController = controller;
-        let success = false, assistantMessage = '';
-        try {
-            const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
-                method: 'POST',
-                headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
-                body: JSON.stringify({ model: AI_MODEL, messages: messagesForAI, temperature: 0.3, max_tokens: 1500 }),
-                signal: controller.signal
-            });
-            if (resp.ok) { const data = await resp.json(); assistantMessage = data.choices[0].message.content; success = true; }
-            else console.error('Mistral API error:', resp.status);
-        } catch (e) { if (e.name === 'AbortError') console.log('Request aborted'); else console.warn('Mistral error:', e); }
-        stopThinkingAnimation();
-        const msgIndex = chat.messages.findIndex(m => m.id === typingMsg.id);
-        if (msgIndex !== -1) chat.messages.splice(msgIndex, 1);
-        if (success && assistantMessage) await addMessageToDOM('assistant', assistantMessage, true);
-        else await addMessageToDOM('assistant', '❌ Не удалось получить ответ. Попробуйте позже.', true);
-        pendingAttachment = null;
-        isWaitingForResponse = false; currentAbortController = null; updateSendButtonState(); renderChat(); scrollToBottom();
+        userMessageForAI = `[Файл: ${pendingAttachment.name}]\nСодержимое:\n${fileContent}\n\nЗапрос пользователя: ${userContent || 'Проанализируй содержимое файла'}`;
+        // Добавляем в системный промпт запрет на отказ
+        systemPrompt = {
+            ...systemPrompt,
+            content: systemPrompt.content + '\n\nВАЖНО: Ты получил содержимое файла (текст выше). Проанализируй его и ответь пользователю. Никогда не говори «я не могу просматривать фото» или «я не вижу изображение» — текст уже перед тобой.'
+        };
     }
+
+    const contextMessages = chat.messages.filter(m => !m.isTyping).slice(-15);
+    const messagesForAI = [
+        systemPrompt,
+        ...contextMessages.map(m => {
+            if (m.role === 'user' && m.attachment && m.content !== userContent) {
+                return { role: 'user', content: m.content };
+            }
+            return { role: m.role, content: m.content };
+        }).filter(m => m.role !== 'system'),
+        { role: 'user', content: userMessageForAI }
+    ];
+
+    const controller = new AbortController(); currentAbortController = controller;
+    let success = false, assistantMessage = '';
+    try {
+        const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
+            method: 'POST',
+            headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
+            body: JSON.stringify({ model: AI_MODEL, messages: messagesForAI, temperature: 0.3, max_tokens: 1500 }),
+            signal: controller.signal
+        });
+        if (resp.ok) { const data = await resp.json(); assistantMessage = data.choices[0].message.content; success = true; }
+        else console.error('Mistral API error:', resp.status);
+    } catch (e) { if (e.name === 'AbortError') console.log('Request aborted'); else console.warn('Mistral error:', e); }
+    stopThinkingAnimation();
+    const msgIndex = chat.messages.findIndex(m => m.id === typingMsg.id);
+    if (msgIndex !== -1) chat.messages.splice(msgIndex, 1);
+    if (success && assistantMessage) await addMessageToDOM('assistant', assistantMessage, true);
+    else await addMessageToDOM('assistant', '❌ Не удалось получить ответ. Попробуйте позже.', true);
+    pendingAttachment = null;
+    isWaitingForResponse = false; currentAbortController = null; updateSendButtonState(); renderChat(); scrollToBottom();
+}
 
     function stopGeneration() { if (currentAbortController) { currentAbortController.abort(); stopThinkingAnimation(); showToast('Генерация остановлена', '', 'info'); } }
 
