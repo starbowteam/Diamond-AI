@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v32 — ПОЛНЫЙ ФУНКЦИОНАЛ ====================
+// ==================== DIAMOND AI v33 — ИСПРАВЛЕННАЯ ЗАГРУЗКА И НАСТРОЙКИ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -266,7 +266,6 @@
         renderWorkshopPage();
         renderHistory();
         renderChat();
-        // Перерисовать модалку настроек, если открыта
         if (settingsModalOpen) {
             const existing = document.querySelector('.settings-modal-overlay');
             if (existing) existing.remove();
@@ -1594,10 +1593,8 @@
                 const lang = btn.dataset.lang;
                 if (lang === currentLanguage) return;
                 setLanguage(lang);
-                // Обновить активную кнопку в этой модалке
                 overlay.querySelectorAll('.settings-lang-btn').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
-                // Перестроить модалку для обновления текстов
                 overlay.remove();
                 settingsModalOpen = false;
                 showSettingsModal();
@@ -1608,6 +1605,16 @@
         document.getElementById('settings-discord-btn')?.addEventListener('click', () => window.open('https://discord.gg/diamondshop', '_blank'));
         document.getElementById('settings-tutorial-btn')?.addEventListener('click', () => { closeModal(); startTutorial(); });
         document.getElementById('settings-logout-btn')?.addEventListener('click', () => { closeModal(); logout(); });
+    }
+
+    // ========== ЗАГРУЗОЧНЫЙ ЭКРАН (showLoadingScreen ВОЗВРАЩЁН) ==========
+    async function showLoadingScreen() {
+        const ws = document.getElementById('welcomeScreen');
+        ws.style.display = 'flex';
+        await new Promise(r => setTimeout(r, 400));
+        ws.classList.add('fade-out');
+        await new Promise(r => setTimeout(r, 300));
+        ws.style.display = 'none';
     }
 
     // ========== ОБУЧЕНИЕ (без печатания, с плавным появлением) ==========
@@ -1715,7 +1722,7 @@
         document.getElementById('doRegisterBtn')?.addEventListener('click', register);
     }
 
-    // ========== ИНИЦИАЛИЗАЦИЯ ==========
+    // ========== ИНИЦИАЛИЗАЦИЯ (showLoadingScreen теперь определена) ==========
     (async function() {
         log('Загрузка...');
         if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
@@ -1731,7 +1738,7 @@
             await loadForumMessages();
             if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
         }
-        await showLoadingScreen();
+        await showLoadingScreen(); // теперь работает
         if (currentUser) {
             document.getElementById('choiceScreen').style.display = 'none';
             document.getElementById('mainUI').style.display = 'flex';
