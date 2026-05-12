@@ -1563,7 +1563,7 @@
             { id: 'general', icon: 'fa-cog', title: t('settingsSectionGeneral') },
             { id: 'diamondai', icon: 'fa-gem', title: t('settingsDiamondAI') },
             { id: 'diamkey', icon: 'fa-key', title: t('settingsDiamKey') },
-            { id: 'discord', icon: 'fa-discord', title: t('settingsDiscord') },
+            { id: 'discord', icon: 'fa-brands fa-discord', title: t('settingsDiscord') },
             { id: 'tutorial', icon: 'fa-question-circle', title: t('settingsTutorial') },
             { id: 'privacy', icon: 'fa-shield-alt', title: t('settingsSectionPrivacy') },
             { id: 'about', icon: 'fa-user', title: t('settingsSectionAbout') },
