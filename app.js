@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v37 — ИСПРАВЛЕНО: ФАЙЛЫ ПЕРЕДАЮТСЯ СКРЫТО, ИИ ИХ ЧИТАЕТ ====================
+// ==================== DIAMOND AI v39 — ПОЛНЫЙ ФУНКЦИОНАЛ С MERMAID, УЛУЧШЕННЫМ OCR, ПРИВЯЗКОЙ ФАЙЛОВ К ЧАТАМ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -27,10 +27,11 @@
     let searchHighlightTerm = '';
     let settingsModalOpen = false;
 
-    let pendingAttachment = null;   // { file, type, name, size, content }
+    // Прикреплённые файлы теперь привязаны к чату
+    let chatAttachments = {};   // { [chatId]: { file, type, name, size, content } }
     let fileInputEl = null;
 
-    // ========== ЛОКАЛИЗАЦИЯ (полная) ==========
+    // ========== ЛОКАЛИЗАЦИЯ (твоя, без изменений) ==========
     const locales = {
         ru: {
             welcome: 'Добро пожаловать в Diamond AI!',
@@ -400,7 +401,7 @@
         if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; }
     }
 
-    // ========== LaTeX РЕНДЕР ==========
+    // ========== LaTeX РЕНДЕР (KaTeX + авто‑рендер) ==========
     function renderMathInElementWithMhchem(element) {
         if (!element || typeof renderMathInElement === 'undefined') return;
         try {
@@ -414,6 +415,25 @@
                 macros: { "\\ce": "\\ce" }
             });
         } catch(e) { console.warn('Math render error:', e); }
+    }
+
+    // ========== MERMAID РЕНДЕР ДИАГРАММ ==========
+    function renderMermaidBlocks(container) {
+        if (!container || typeof mermaid === 'undefined') return;
+        const mermaidBlocks = container.querySelectorAll('pre code.language-mermaid, pre code.language-mermaid');
+        mermaidBlocks.forEach(async (block) => {
+            const code = block.textContent;
+            const id = 'mermaid-' + Math.random().toString(36).substr(2, 9);
+            try {
+                const { svg } = await mermaid.render(id, code);
+                const wrapper = document.createElement('div');
+                wrapper.className = 'mermaid-container';
+                wrapper.innerHTML = svg;
+                block.parentElement.replaceWith(wrapper);
+            } catch (e) {
+                console.warn('Mermaid render error:', e);
+            }
+        });
     }
 
     // ========== КНОПКА ЗАПУСКА КОДА (только для HTML) ==========
@@ -457,7 +477,7 @@
         executeCode();
     }
 
-    // ========== ОБРАБОТКА БЛОКОВ КОДА (кнопка запуска только для HTML) ==========
+    // ========== ОБРАБОТКА БЛОКОВ КОДА ==========
     function enhanceCodeBlocks(container) {
         if (!container) return;
         const preBlocks = container.querySelectorAll('pre');
@@ -583,6 +603,7 @@
         if (!currentUser) return;
         const { error } = await supabaseClient.from('diamond_chats').delete().eq('id', chatId).eq('user_login', currentUser.login);
         if (error) { console.error('Ошибка удаления чата:', error); }
+        delete chatAttachments[chatId];
     }
 
     async function deleteFolderFromSupabase(folderId) {
@@ -626,6 +647,7 @@
         currentChatId = null;
         switchToChatView();
         renderEmptyState();
+        clearAttachmentPreview();
     }
 
     async function deleteChat(id) {
@@ -646,10 +668,22 @@
     }
 
     async function switchChat(id) {
+        // Сохраняем вложение текущего чата
+        if (currentChatId && chatAttachments[currentChatId]) {
+            // уже сохранено
+        }
         currentChatId = id;
         switchToChatView();
         renderChat();
         renderHistory();
+        // Подставляем вложение нового чата
+        clearAttachmentPreview();
+        const att = chatAttachments[id];
+        if (att) {
+            showAttachmentPreviewFromData(att);
+        } else {
+            removeAttachmentPreview();
+        }
     }
 
     async function togglePin(id) {
@@ -1225,7 +1259,7 @@
         return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент' };
     }
 
-    // ========== РЕНДЕР ЧАТА (с вложениями) ==========
+    // ========== РЕНДЕР ЧАТА (с Mermaid и вложениями) ==========
     function renderChat() {
         const chat = chats.find(c => c.id === currentChatId);
         const headerEl = document.getElementById('chatHeader');
@@ -1279,7 +1313,7 @@
                 const actionsDiv = document.createElement('div');
                 actionsDiv.className = 'message-actions';
                 actionsDiv.innerHTML = `<button class="action-btn copy-msg-btn" data-msg-idx="${idx}"><i class="fas fa-copy"></i></button><button class="action-btn regen-msg-btn" data-msg-idx="${idx}"><i class="fas fa-sync-alt"></i></button>`;
-                messageDiv.appendChild(actionsDiv);
+                messageDiv.querySelector('.message-content-wrapper').appendChild(actionsDiv);
             }
             if (msg.attachment) {
                 const attachDiv = document.createElement('div');
@@ -1316,7 +1350,11 @@
                 if (msg && msg.role === 'assistant') regenerateResponse(msg);
             });
         });
-        setTimeout(() => { renderMathInElementWithMhchem(container); enhanceCodeBlocks(container); }, 10);
+        setTimeout(() => {
+            renderMathInElementWithMhchem(container);
+            enhanceCodeBlocks(container);
+            renderMermaidBlocks(container);
+        }, 10);
         scrollToBottom();
     }
 
@@ -1361,7 +1399,7 @@
         renderChat(); return messageId;
     }
 
-    // ========== ПРИКРЕПЛЕНИЕ ФАЙЛОВ ==========
+    // ========== ПРИКРЕПЛЕНИЕ ФАЙЛОВ (с привязкой к чату) ==========
     function setupFileAttachment() {
         const inputWrapper = document.querySelector('.input-wrapper');
         if (!inputWrapper || fileInputEl) return;
@@ -1423,7 +1461,7 @@
             return;
         }
 
-        pendingAttachment = {
+        const attachment = {
             file: file,
             type: type,
             name: file.name,
@@ -1431,7 +1469,44 @@
             content: content
         };
 
+        // Привязываем к текущему чату
+        if (currentChatId) {
+            chatAttachments[currentChatId] = attachment;
+        }
+
         updateAttachmentStatus(t('fileReady'));
+    }
+
+    function showAttachmentPreviewFromData(data) {
+        let preview = document.querySelector('.attachment-preview-container');
+        if (!preview) {
+            preview = document.createElement('div');
+            preview.className = 'attachment-preview-container';
+            const inputArea = document.getElementById('inputArea');
+            inputArea.parentNode.insertBefore(preview, inputArea);
+        }
+        const ext = data.name.split('.').pop().toLowerCase();
+        const logoMap = {
+            'png': 'png.png', 'jpg': 'jpg.png', 'jpeg': 'jpg.png',
+            'html': 'html.png', 'js': 'js.png', 'css': 'css.png',
+            'docx': 'docx.png'
+        };
+        const logo = logoMap[ext] || 'png.png';
+        preview.innerHTML = `
+            <div class="attachment-card">
+                <div class="attachment-icon"><img src="${logo}" alt="${ext}"></div>
+                <div class="attachment-info">
+                    <div class="attachment-name">${escapeHtml(data.name)}</div>
+                    <div class="attachment-meta">${formatFileSize(data.size)}</div>
+                </div>
+                <div class="attachment-status"><i class="fas fa-check"></i> ${t('fileReady')}</div>
+                <button class="attachment-remove" id="attach-remove"><i class="fas fa-times"></i></button>
+            </div>
+        `;
+        document.getElementById('attach-remove').addEventListener('click', () => {
+            delete chatAttachments[currentChatId];
+            removeAttachmentPreview();
+        });
     }
 
     function showAttachmentPreview(file) {
@@ -1461,7 +1536,10 @@
                 <button class="attachment-remove" id="attach-remove"><i class="fas fa-times"></i></button>
             </div>
         `;
-        document.getElementById('attach-remove').addEventListener('click', removeAttachmentPreview);
+        document.getElementById('attach-remove').addEventListener('click', () => {
+            delete chatAttachments[currentChatId];
+            removeAttachmentPreview();
+        });
     }
 
     function updateAttachmentStatus(status) {
@@ -1476,9 +1554,12 @@
     }
 
     function removeAttachmentPreview() {
-        pendingAttachment = null;
         const preview = document.querySelector('.attachment-preview-container');
         if (preview) preview.remove();
+    }
+
+    function clearAttachmentPreview() {
+        removeAttachmentPreview();
     }
 
     function readFileAsText(file) {
@@ -1490,14 +1571,37 @@
         });
     }
 
-    // ========== OCR (Tesseract v2) ==========
+    // ========== УЛУЧШЕННЫЙ OCR (Tesseract.js v2 + canvas-препроцессинг) ==========
     async function performOCR(file) {
         if (typeof Tesseract === 'undefined') {
             showToast(t('fileError'), 'Библиотека распознавания не загружена', 'error');
             throw new Error('Tesseract не загружен');
         }
         try {
-            const result = await Tesseract.recognize(file, 'eng+rus', {
+            // Препроцессинг: повышаем контраст через canvas
+            const img = await loadImage(file);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+                const threshold = 128;
+                const val = gray > threshold ? 255 : 0;
+                data[i] = val;
+                data[i + 1] = val;
+                data[i + 2] = val;
+            }
+            ctx.putImageData(imageData, 0, 0);
+            const processedBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+
+            const result = await Tesseract.recognize(processedBlob, 'eng+rus', {
                 logger: (m) => {
                     if (m.status === 'recognizing text') {
                         const progressBar = document.getElementById('attach-progress');
@@ -1512,6 +1616,20 @@
         }
     }
 
+    function loadImage(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = e.target.result;
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
     async function readDocx(file) {
         if (typeof mammoth === 'undefined') {
             throw new Error('Mammoth не загружен');
@@ -1521,10 +1639,12 @@
         return result.value || '';
     }
 
-    // ========== ОТПРАВКА СООБЩЕНИЯ (ИСПРАВЛЕНО) ==========
+    // ========== ОТПРАВКА СООБЩЕНИЯ (с вложением чата) ==========
     async function sendMessage() {
         const text = document.getElementById('user-input').value.trim();
-        if ((!text && !pendingAttachment) || isWaitingForResponse) return;
+        // Получаем вложение текущего чата
+        const attachment = currentChatId ? chatAttachments[currentChatId] : null;
+        if ((!text && !attachment) || isWaitingForResponse) return;
         if (!mistralApiKey) { showToast(t('errorApiKey'), '', 'error'); return; }
         let chat = chats.find(c => c.id === currentChatId);
         if (!chat || chat.messages.length === 0) {
@@ -1536,7 +1656,7 @@
             } else {
                 chat = {
                     id: now.toString(),
-                    title: generateChatTitle(text || (pendingAttachment ? pendingAttachment.name : '')),
+                    title: generateChatTitle(text || (attachment ? attachment.name : '')),
                     messages: [],
                     created_at: now,
                     last_activity: now,
@@ -1546,17 +1666,16 @@
                 };
                 chats.unshift(chat);
                 currentChatId = chat.id;
+                if (attachment) {
+                    chatAttachments[currentChatId] = attachment;
+                }
                 await saveChatToSupabase(chat);
                 renderHistory();
                 document.getElementById('inputArea').style.display = 'flex';
             }
         }
 
-        // Сохраняем вложение до очистки
-        const attachment = pendingAttachment;
         const userText = text || '';
-
-        // Добавляем сообщение пользователя в DOM
         const attachmentData = attachment ? {
             type: attachment.type,
             name: attachment.name,
@@ -1566,8 +1685,9 @@
         document.getElementById('user-input').value = '';
         updateSendButtonState();
 
-        // Удаляем preview ТОЛЬКО после использования attachment
+        // Удаляем превью и вложение этого чата
         removeAttachmentPreview();
+        delete chatAttachments[currentChatId];
 
         isWaitingForResponse = true;
         updateSendButtonState();
@@ -1617,7 +1737,6 @@
         if (msgIndex !== -1) chat.messages.splice(msgIndex, 1);
         if (success && assistantMessage) await addMessageToDOM('assistant', assistantMessage, true);
         else await addMessageToDOM('assistant', '❌ Не удалось получить ответ. Попробуйте позже.', true);
-        pendingAttachment = null;
         isWaitingForResponse = false; currentAbortController = null; updateSendButtonState(); renderChat(); scrollToBottom();
     }
 
@@ -1742,6 +1861,7 @@
         currentUser = null; mistralApiKey = ''; localStorage.removeItem('diamond_user');
         document.getElementById('mainUI').style.display = 'none';
         document.getElementById('choiceScreen').style.display = 'flex';
+        chatAttachments = {};
         if (settingsModalOpen) {
             const overlay = document.querySelector('.settings-modal-overlay');
             if (overlay) overlay.remove();
@@ -1754,7 +1874,8 @@
     function updateSendButtonState() {
         const btn = document.getElementById('send-btn');
         const input = document.getElementById('user-input');
-        if (btn) btn.disabled = (!input.value.trim() && !pendingAttachment) || isWaitingForResponse;
+        const hasAttachment = currentChatId && chatAttachments[currentChatId];
+        if (btn) btn.disabled = (!input.value.trim() && !hasAttachment) || isWaitingForResponse;
     }
     function switchToFoldersView() { currentView='folders'; document.getElementById('chatView').style.display='none'; document.getElementById('foldersPage').style.display='flex'; document.getElementById('workshopPage').style.display='none'; renderFoldersPage(); }
     function switchToChatView() { if(placeholderInterval) clearInterval(placeholderInterval); currentView='chat'; document.getElementById('chatView').style.display='flex'; document.getElementById('foldersPage').style.display='none'; document.getElementById('workshopPage').style.display='none'; renderChat(); }
