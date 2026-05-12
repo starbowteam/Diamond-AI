@@ -255,7 +255,7 @@ body {
 .avatar i { font-size: 20px; color: var(--text-primary); }
 .message-content-wrapper { max-width: calc(100% - 50px); }
 .message-content {
-    background: var(--bg-tertiary); padding: 8px 14px 8px 23px; border-radius: 20px;
+    background: var(--bg-tertiary); padding: 8px 14px 8px 21px; border-radius: 20px;
     line-height: 1.45; font-size: 15px; border: 1px solid var(--border-color);
     color: var(--text-primary); word-break: break-word; white-space: pre-wrap;
 }
