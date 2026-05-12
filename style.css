@@ -752,12 +752,13 @@ textarea::placeholder { color: #6a6a6a; }
     position: relative;
 }
 
-/* ========== КАРТОЧКА ПРИКРЕПЛЕННОГО ФАЙЛА (без фона) ========== */
+/* ========== КАРТОЧКА ПРИКРЕПЛЕННОГО ФАЙЛА (без фона, превью справа) ========== */
 .attachment-preview-container {
     padding: 0 24px 12px;
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    justify-content: flex-end;   /* выравнивание вправо */
 }
 .attachment-card {
     display: flex;
@@ -767,11 +768,12 @@ textarea::placeholder { color: #6a6a6a; }
     border: 1px solid var(--border-color);
     border-radius: 24px;
     padding: 12px 16px;
-    width: 100%;
+    width: fit-content;
     max-width: 400px;
     transition: var(--transition);
     position: relative;
     margin-top: 6px;
+    align-self: flex-end;         /* чтобы внутри флекс-контейнера тоже прижать вправо */
 }
 .attachment-card:hover {
     border-color: #5a5a5a;
