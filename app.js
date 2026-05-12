@@ -1560,7 +1560,7 @@
         const overlay = document.createElement('div');
         overlay.className = 'settings-modal-overlay';
         const sections = [
-            { id: 'general', icon: 'fa-cog', title: t('settingsSectionGeneral') },
+            { id: 'general', icon: 'fa-globe', title: t('settingsSectionGeneral') },
             { id: 'diamondai', icon: 'fa-gem', title: t('settingsDiamondAI') },
             { id: 'diamkey', icon: 'fa-key', title: t('settingsDiamKey') },
             { id: 'discord', icon: 'fa-brands fa-discord', title: t('settingsDiscord') },
