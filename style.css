@@ -752,7 +752,7 @@ textarea::placeholder { color: #6a6a6a; }
     position: relative;
 }
 
-/* ========== КАРТОЧКА ПРИКРЕПЛЕННОГО ФАЙЛА ========== */
+/* ========== КАРТОЧКА ПРИКРЕПЛЕННОГО ФАЙЛА (без фона) ========== */
 .attachment-preview-container {
     padding: 0 24px 12px;
     display: flex;
@@ -763,7 +763,7 @@ textarea::placeholder { color: #6a6a6a; }
     display: flex;
     align-items: center;
     gap: 14px;
-    background: var(--bg-secondary);
+    background: transparent;              /* убрали фон */
     border: 1px solid var(--border-color);
     border-radius: 24px;
     padding: 12px 16px;
@@ -775,25 +775,7 @@ textarea::placeholder { color: #6a6a6a; }
 }
 .attachment-card:hover {
     border-color: #5a5a5a;
-    
 }
-
-/* ========== ФИКС: сообщения пользователя – всё содержимое прижимаем вправо ========== */
-.message.user .message-content-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-.message.user .message-content-wrapper > * {
-    /* чтобы кнопки действий и время тоже были справа */
-    align-self: flex-end;
-}
-
-.message.user .message-actions {
-    justify-content: flex-end;
-}
-
 .attachment-icon {
     width: 44px;
     height: 44px;
@@ -862,10 +844,24 @@ textarea::placeholder { color: #6a6a6a; }
     transition: width 0.3s ease;
 }
 
-/* ========== ФИКС: вложения пользователя справа ========== */
+/* Карточка пользователя – справа */
 .message.user .attachment-card {
     align-self: flex-end;
     margin-left: auto;
+}
+
+/* ========== MERMAID ========== */
+.mermaid-container {
+    margin: 12px 0;
+    padding: 16px;
+    background: #1a1a1e;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow-x: auto;
+}
+.mermaid-container svg {
+    max-width: 100%;
+    height: auto;
 }
 
 /* ========== АДАПТИВ ========== */
@@ -962,28 +958,4 @@ textarea::placeholder { color: #6a6a6a; }
     .workshop-tool-card { padding: 24px; }
     .workshop-tool-info h3 { font-size: 18px; }
     .workshop-tool-info p { font-size: 14px; }
-}
-
-/* ===== ГАРАНТИРОВАННЫЙ СДВИГ КАРТОЧКИ ВПРАВО В СВОИХ СООБЩЕНИЯХ ===== */
-.message.user .attachment-card {
-    align-self: flex-end !important;   /* прижимаем к правому краю флекс-контейнера */
-    margin-left: auto;                /* страховка на случай, если флекс не сработает */
-}
-
-/* Делаем обёртку флекс-колонкой с выравниванием вправо */
-.message.user .message-content-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-
-/* ФИКС: сообщения пользователя выравниваются вправо вместе с вложениями */
-.message.user .message-content-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-}
-/* Для ассистента явно оставляем левое выравнивание */
-.message.assistant .message-content-wrapper {
-    align-items: flex-start;
 }
