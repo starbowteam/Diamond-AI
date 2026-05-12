@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v39 — ПОЛНЫЙ ФУНКЦИОНАЛ С MERMAID, УЛУЧШЕННЫМ OCR, ПРИВЯЗКОЙ ФАЙЛОВ К ЧАТАМ ====================
+// ==================== DIAMOND AI v39.1 — ПОЛНЫЙ ФУНКЦИОНАЛ С MERMAID, УЛУЧШЕННЫМ OCR, ПРИВЯЗКОЙ ФАЙЛОВ К ЧАТАМ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -1600,8 +1600,10 @@
             }
             ctx.putImageData(imageData, 0, 0);
             const processedBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+            // Создаём настоящий File с именем, чтобы Tesseract не ругался
+            const processedFile = new File([processedBlob], file.name, { type: 'image/png' });
 
-            const result = await Tesseract.recognize(processedBlob, 'eng+rus', {
+            const result = await Tesseract.recognize(processedFile, 'eng+rus', {
                 logger: (m) => {
                     if (m.status === 'recognizing text') {
                         const progressBar = document.getElementById('attach-progress');
