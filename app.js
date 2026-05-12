@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v35 — ПРИКРЕПЛЕНИЕ ФАЙЛОВ, OCR, ЧТЕНИЕ КОДА/DOCX ====================
+// ==================== DIAMOND AI v36 — ПОЛНЫЙ ФУНКЦИОНАЛ + ИСПРАВЛЕНИЯ OCR ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -31,7 +31,7 @@
     let pendingAttachment = null;   // { file, type, name, size, content }
     let fileInputEl = null;
 
-    // ========== ЛОКАЛИЗАЦИЯ (твоя, без изменений) ==========
+    // ========== ЛОКАЛИЗАЦИЯ ==========
     const locales = {
         ru: {
             welcome: 'Добро пожаловать в Diamond AI!',
@@ -138,7 +138,8 @@
             attachFile: 'Прикрепить файл',
             fileProcessing: 'Обработка...',
             fileReady: 'Готово',
-            fileError: 'Ошибка обработки файла'
+            fileError: 'Ошибка обработки файла',
+            ocrEmpty: 'Не удалось распознать текст'
         },
         en: {
             welcome: 'Welcome to Diamond AI!',
@@ -245,7 +246,8 @@
             attachFile: 'Attach file',
             fileProcessing: 'Processing...',
             fileReady: 'Ready',
-            fileError: 'File processing error'
+            fileError: 'File processing error',
+            ocrEmpty: 'Could not recognize text'
         }
     };
 
@@ -1314,12 +1316,6 @@
         scrollToBottom();
     }
 
-    function formatFileSize(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    }
-
     function formatDateHeader(ts) {
         const d = new Date(ts);
         const today = new Date();
@@ -1331,6 +1327,12 @@
     }
 
     function formatTime(ts) { return new Date(ts).toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' }); }
+
+    function formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
 
     async function addMessageToDOM(role, content, save = true, attachment = null) {
         const timestamp = Date.now();
@@ -1361,27 +1363,23 @@
         const inputWrapper = document.querySelector('.input-wrapper');
         if (!inputWrapper || fileInputEl) return;
 
-        // Создаём скрытый input
         fileInputEl = document.createElement('input');
         fileInputEl.type = 'file';
         fileInputEl.accept = '.png,.jpg,.jpeg,.html,.js,.css,.docx';
         fileInputEl.style.display = 'none';
         document.body.appendChild(fileInputEl);
 
-        // Кнопка-скрепка
         const attachBtn = document.createElement('button');
         attachBtn.className = 'attach-btn';
         attachBtn.innerHTML = '<i class="fas fa-paperclip"></i>';
         attachBtn.title = t('attachFile');
         attachBtn.addEventListener('click', () => fileInputEl.click());
 
-        // Вставляем перед кнопкой отправки
         const sendBtn = document.getElementById('send-btn');
         if (sendBtn) {
             inputWrapper.insertBefore(attachBtn, sendBtn);
         }
 
-        // Обработчик выбора файла
         fileInputEl.addEventListener('change', handleFileSelect);
     }
 
@@ -1396,11 +1394,9 @@
             return;
         }
 
-        // Показываем карточку с прогрессом
         showAttachmentPreview(file);
         fileInputEl.value = '';
 
-        // Читаем содержимое
         let content = '';
         const type = file.type;
         try {
@@ -1424,7 +1420,6 @@
             return;
         }
 
-        // Сохраняем
         pendingAttachment = {
             file: file,
             type: type,
@@ -1433,7 +1428,6 @@
             content: content
         };
 
-        // Обновляем статус
         updateAttachmentStatus(t('fileReady'));
     }
 
@@ -1493,19 +1487,26 @@
         });
     }
 
+    // ========== ИСПРАВЛЕННАЯ ФУНКЦИЯ OCR ==========
     async function performOCR(file) {
         if (typeof Tesseract === 'undefined') {
+            showToast(t('fileError'), 'Библиотека распознавания не загружена', 'error');
             throw new Error('Tesseract не загружен');
         }
-        const result = await Tesseract.recognize(file, 'eng+rus', {
-            logger: (m) => {
-                if (m.status === 'recognizing text') {
-                    const progressBar = document.getElementById('attach-progress');
-                    if (progressBar) progressBar.style.width = Math.round(m.progress * 100) + '%';
+        try {
+            const result = await Tesseract.recognize(file, 'eng+rus', {
+                logger: (m) => {
+                    if (m.status === 'recognizing text') {
+                        const progressBar = document.getElementById('attach-progress');
+                        if (progressBar) progressBar.style.width = Math.round(m.progress * 100) + '%';
+                    }
                 }
-            }
-        });
-        return result.data.text || '';
+            });
+            return result.data.text || '';
+        } catch (e) {
+            showToast(t('fileError'), 'Не удалось распознать изображение', 'error');
+            throw e;
+        }
     }
 
     async function readDocx(file) {
@@ -1548,7 +1549,6 @@
             }
         }
 
-        // Формируем сообщение пользователя
         let userContent = text || '';
         let attachmentData = null;
         if (pendingAttachment) {
@@ -1563,19 +1563,25 @@
         updateSendButtonState();
         removeAttachmentPreview();
 
-        // Готовим запрос к ИИ с содержимым файла
         isWaitingForResponse = true;
         updateSendButtonState();
         const typingMsg = { id: Date.now().toString(), role: 'assistant', content: '', isTyping: true, timestamp: Date.now() };
         chat.messages.push(typingMsg); renderChat(); scrollToBottom(); startThinkingAnimation();
         let systemPrompt = (chat.id && chat.id.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[chat.id.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
-        const contextMessages = chat.messages.filter(m => !m.isTyping).slice(-15);
 
         let userMessageForAI = userContent;
         if (pendingAttachment && pendingAttachment.content) {
             userMessageForAI = `[Файл: ${pendingAttachment.name}]\nСодержимое:\n${pendingAttachment.content}\n\nЗапрос пользователя: ${userContent || 'Проанализируй содержимое файла'}`;
+            systemPrompt = {
+                ...systemPrompt,
+                content: systemPrompt.content + '\n\nВАЖНО: Ты получил содержимое файла. Проанализируй его и ответь пользователю. Не говори, что ты не можешь просматривать фото — текст уже перед тобой.'
+            };
+        } else if (pendingAttachment && !pendingAttachment.content) {
+            userMessageForAI = userContent || 'Проанализируй содержимое файла';
+            showToast(t('ocrEmpty'), 'Текст не распознан, отправляю без содержимого', 'warning');
         }
 
+        const contextMessages = chat.messages.filter(m => !m.isTyping).slice(-15);
         const messagesForAI = [
             systemPrompt,
             ...contextMessages.map(m => {
@@ -1681,7 +1687,7 @@
             if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
             if (chats.length === 0) renderEmptyState(); else renderChat();
             renderHistory();
-            setupFileAttachment(); // добавить скрепку после загрузки
+            setupFileAttachment();
         } catch (e) { console.error(e); showToast(t('errorNetwork'), '', 'error'); }
         finally { btn.disabled = false; }
     }
@@ -1709,7 +1715,7 @@
             updateUserPanel();
             renderEmptyState();
             renderHistory();
-            setupFileAttachment(); // добавить скрепку после регистрации
+            setupFileAttachment();
         } catch (e) { console.error(e); showToast(t('errorNetwork'), '', 'error'); }
         finally { btn.disabled = false; }
     }
@@ -1743,7 +1749,6 @@
         const input = document.getElementById('user-input');
         if (btn) btn.disabled = (!input.value.trim() && !pendingAttachment) || isWaitingForResponse;
     }
-
     function switchToFoldersView() { currentView='folders'; document.getElementById('chatView').style.display='none'; document.getElementById('foldersPage').style.display='flex'; document.getElementById('workshopPage').style.display='none'; renderFoldersPage(); }
     function switchToChatView() { if(placeholderInterval) clearInterval(placeholderInterval); currentView='chat'; document.getElementById('chatView').style.display='flex'; document.getElementById('foldersPage').style.display='none'; document.getElementById('workshopPage').style.display='none'; renderChat(); }
     function switchToWorkshopView() { if(placeholderInterval) clearInterval(placeholderInterval); currentView='workshop'; document.getElementById('chatView').style.display='none'; document.getElementById('foldersPage').style.display='none'; document.getElementById('workshopPage').style.display='flex'; renderWorkshopPage(); }
@@ -1872,7 +1877,6 @@
             if (e.target === overlay) closeModal();
         });
 
-        // Переключение разделов
         overlay.querySelectorAll('.settings-left-panel button').forEach(btn => {
             btn.addEventListener('click', () => {
                 overlay.querySelectorAll('.settings-left-panel button').forEach(b => b.classList.remove('active'));
@@ -1883,7 +1887,6 @@
             });
         });
 
-        // Кнопки языка
         overlay.querySelectorAll('.settings-lang-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const lang = btn.dataset.lang;
@@ -1897,7 +1900,6 @@
             });
         });
 
-        // Обработчики
         document.getElementById('settings-discord-btn')?.addEventListener('click', () => window.open('https://discord.gg/diamondshop', '_blank'));
         document.getElementById('settings-tutorial-btn')?.addEventListener('click', () => { closeModal(); startTutorial(); });
         document.getElementById('settings-logout-btn')?.addEventListener('click', () => { closeModal(); logout(); });
@@ -2028,7 +2030,7 @@
             document.getElementById('mainUI').style.display = 'flex';
             setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
             updateUserPanel();
-            setupFileAttachment(); // скрепка при загрузке с сессией
+            setupFileAttachment();
             if (chats.length === 0) renderEmptyState(); else renderChat();
         } else {
             document.getElementById('choiceScreen').style.display = 'flex';
