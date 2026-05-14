@@ -2173,4 +2173,59 @@
         document.documentElement.style.setProperty('--collapsed-left-offset', '85px');
         log('Готово');
     })();
+
+    // ========== ДИНАМИЧЕСКАЯ ЗАГРУЗКА ТЯЖЁЛЫХ БИБЛИОТЕК (для ускорения первого старта) ==========
+    const libsLoaded = { tesseract: false, mammoth: false, mermaid: false };
+
+    function loadScript(src) {
+        return new Promise((resolve, reject) => {
+            if (document.querySelector(`script[src="${src}"]`)) return resolve();
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    async function ensureTesseract() {
+        if (!libsLoaded.tesseract) {
+            await loadScript('https://cdn.jsdelivr.net/npm/tesseract.js@2/dist/tesseract.min.js');
+            libsLoaded.tesseract = true;
+        }
+    }
+
+    async function ensureMammoth() {
+        if (!libsLoaded.mammoth) {
+            await loadScript('https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js');
+            libsLoaded.mammoth = true;
+        }
+    }
+
+    async function ensureMermaid() {
+        if (!libsLoaded.mermaid) {
+            await loadScript('https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js');
+            libsLoaded.mermaid = true;
+            if (typeof mermaid !== 'undefined') mermaid.initialize({ startOnLoad: false });
+        }
+    }
+
+    // Перехватываем оригинальные функции, чтобы они сначала загрузили нужную библиотеку
+    const __performOCR = performOCR;
+    performOCR = async function(file) {
+        await ensureTesseract();
+        return __performOCR(file);
+    };
+
+    const __readDocx = readDocx;
+    readDocx = async function(file) {
+        await ensureMammoth();
+        return __readDocx(file);
+    };
+
+    const __renderMermaidBlocks = renderMermaidBlocks;
+    renderMermaidBlocks = async function(container) {
+        await ensureMermaid();
+        return __renderMermaidBlocks(container);
+    };
 })();
