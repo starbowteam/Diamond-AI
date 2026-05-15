@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v41.1 — ИСПРАВЛЕНИЕ ИСЧЕЗАЮЩЕЙ РАМКИ БОТА ====================
+// ==================== DIAMOND AI v41.2 — АВАТАРКА У ИНДИКАТОРА, ПЛАВНОЕ ПОЯВЛЕНИЕ РАМКИ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -398,19 +398,26 @@
         if (container) container.scrollTop = container.scrollHeight;
     }
 
-    // ========== НОВАЯ АНИМАЦИЯ "ДУМАЕТ..." ==========
+    // ========== ИСПРАВЛЕННАЯ АНИМАЦИЯ "ДУМАЕТ..." С АВАТАРКОЙ ==========
     function startThinkingAnimation() {
         if (thinkingTimer) clearInterval(thinkingTimer);
         const container = document.getElementById('messages-container');
         if (!container) return;
 
         const indicator = document.createElement('div');
-        indicator.className = 'thinking-indicator';
+        indicator.className = 'message assistant thinking';
         indicator.id = 'thinking-indicator';
-        indicator.innerHTML = `<i class="fas fa-feather-alt"></i> <span class="thinking-text">${t('thinking')}</span>`;
+        indicator.innerHTML = `
+            <div class="avatar">${getBotAvatarHTML()}</div>
+            <div class="message-content-wrapper">
+                <div class="thinking-indicator-content">
+                    <span class="thinking-text">${t('thinking')}</span>
+                </div>
+            </div>
+        `;
         container.appendChild(indicator);
         requestAnimationFrame(() => {
-            indicator.classList.add('show');
+            indicator.style.opacity = '1';
         });
         scrollToBottom();
 
@@ -433,7 +440,7 @@
         if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; }
         const indicator = document.getElementById('thinking-indicator');
         if (indicator) {
-            indicator.classList.remove('show');
+            indicator.style.opacity = '0';
             setTimeout(() => indicator.remove(), 300);
         }
     }
@@ -1295,7 +1302,7 @@
         return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент' };
     }
 
-    // ========== РЕНДЕР ЧАТА (исправлен) ==========
+    // ========== РЕНДЕР ЧАТА (сообщения всегда видны) ==========
     function renderChat() {
         const chat = chats.find(c => c.id === currentChatId);
         const headerEl = document.getElementById('chatHeader');
@@ -1420,6 +1427,7 @@
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
+    // ========== ИСПРАВЛЕННОЕ ДОБАВЛЕНИЕ СООБЩЕНИЯ (плавное появление) ==========
     async function addMessageToDOM(role, content, save = true, attachment = null) {
         const timestamp = Date.now();
         const messageId = timestamp + Math.random();
@@ -1442,7 +1450,21 @@
                 await saveChatToSupabase(chat);
             }
         }
-        renderChat(); // перерисовываем чат, чтобы новое сообщение появилось сразу
+        renderChat();
+        // Добавляем плавное появление для последнего сообщения ассистента
+        if (role === 'assistant') {
+            const container = document.getElementById('messages-container');
+            if (container) {
+                const lastMsgContent = container.querySelector('.message.assistant:last-child .message-content');
+                if (lastMsgContent) {
+                    lastMsgContent.style.opacity = '0';
+                    requestAnimationFrame(() => {
+                        lastMsgContent.style.opacity = '1';
+                        lastMsgContent.style.transition = 'opacity 0.3s ease';
+                    });
+                }
+            }
+        }
         return messageId;
     }
 
