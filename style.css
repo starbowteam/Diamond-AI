@@ -1087,3 +1087,19 @@ textarea::placeholder { color: #6a6a6a; }
     .workshop-tool-info h3 { font-size: 18px; }
     .workshop-tool-info p { font-size: 14px; }
 }
+
+/* Пульсация масштаба для кнопки настроек */
+.settings-btn.scale-pulse {
+    animation: scalePulse 2s infinite ease-in-out;
+}
+@keyframes scalePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+}
+
+/* Подсветка вкладки обучения, если не пройдено */
+.settings-left-panel button.tutorial-tab-highlight {
+    background: rgba(179, 157, 219, 0.2);
+    animation: softBlink 2s infinite;
+    border-left: 3px solid var(--blink-color);
+}
