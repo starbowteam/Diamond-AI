@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v41 — НАСТРОЙКИ, ТЕМА, УНИФИЦИРОВАННЫЕ МОДАЛКИ ====================
+// ==================== DIAMOND AI v40 — НАСТРОЙКИ DIAMKEY, ПЛАВНЫЕ АНИМАЦИИ, МИГАНИЕ ОБУЧЕНИЯ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -26,12 +26,15 @@
     let currentLanguage = 'ru';
     let searchHighlightTerm = '';
     let settingsModalOpen = false;
-    let currentTheme = 'dark'; // dark / light
 
+    // Прикреплённые файлы теперь привязаны к чату
     let chatAttachments = {};
     let fileInputEl = null;
 
-    // ========== ЛОКАЛИЗАЦИЯ ==========
+    // Флаг обучения (будет загружен из Supabase)
+    let tutorialCompleted = true; // по умолчанию true, чтобы не мигало без загрузки
+
+    // ========== ЛОКАЛИЗАЦИЯ (с новыми ключами) ==========
     const locales = {
         ru: {
             welcome: 'Добро пожаловать в Diamond AI!',
@@ -54,7 +57,9 @@
             logout: 'Выйти',
             emptyChat: 'Чем могу помочь?',
             inputPlaceholder: 'Введите свой запрос...',
-            thinking: 'Думает',
+            thinking: 'Думаю',
+            thinkingPreparing: 'Готовлю ответ',
+            thinkingTyping: 'Печатаю ответ',
             copy: 'Скопировано',
             renameChat: 'Переименовать чат',
             pinChat: 'Закрепить',
@@ -115,12 +120,11 @@
             codeCopy: 'Копировать',
             codeDownload: 'Скачать',
             back: 'Назад',
-            settingsSectionGeneral: 'Язык',
+            settingsSectionGeneral: 'Язык Diamond AI',
             settingsSectionPrivacy: 'Конфиденциальность',
             settingsSectionAbout: 'О создателе',
             settingsDiamondAI: 'Diamond AI',
             settingsDiamKey: 'DiamKey',
-            settingsDiscord: 'Discord',
             settingsTutorial: 'Обучение',
             settingsLogout: 'Выход',
             settingsMainSite: 'Основной сайт Diamond AI',
@@ -129,7 +133,7 @@
             settingsTerms: 'Правила использования',
             settingsTermsText: 'Запрещено использовать сервис для незаконной деятельности, распространения вредоносного ПО или оскорблений.',
             settingsDiamondAIDesc: 'Diamond AI — интеллектуальный помощник с синхронизацией через DiamKey. Тот сервис, которым вы пользуетесь прямо сейчас, ИИ часто обновляется, и дорабатывается. Стабильная работа гарантирована.',
-            settingsDiamKeyDesc: 'DiamKey — единая система аутентификации для всей экосистемы Diamond. Один аккаунт даёт доступ к ИИ-помощнику Diamond AI, защищённому мессенджеру Dirmess, сервису обхода блокировок Unlock и будущим приложениям. Ваши чаты, папки и настройки автоматически синхронизируются на всех устройствах.',
+            settingsDiamKeyDesc: 'DiamKey — единая система аутентификации для всей экосистемы Diamond. Здесь вы можете изменить свои глобальные данные профиля.',
             settingsDiscordDesc: 'Присоединяйтесь к нашему сообществу в Discord. Там мы публикуем новые новости, а также обновления всей экосистемы!',
             settingsLogoutConfirm: 'Выйти из аккаунта?',
             aiDetectToolDesc: 'Анализ текста на оригинальность. Определяет, написан ли текст человеком или сгенерирован ИИ (GPT, Mistral и др.)',
@@ -142,19 +146,18 @@
             ocrEmpty: 'Не удалось распознать текст',
             fileUnsupported: 'Неподдерживаемый формат',
             fileUnsupportedDesc: 'Разрешены png, jpg, html, js, css, docx',
-            changeAvatar: 'Сменить аватар',
-            changeNick: 'Сменить ник',
-            changePassword: 'Сменить пароль',
-            newNick: 'Новый ник',
-            newPassword: 'Новый пароль',
-            confirmPassword: 'Подтвердите пароль',
-            passwordsNotMatch: 'Пароли не совпадают',
-            nickChanged: 'Ник изменён',
-            passwordChanged: 'Пароль изменён',
-            avatarChanged: 'Аватар обновлён',
-            themeLight: 'Светлая',
-            themeDark: 'Тёмная',
-            switchTheme: 'Сменить тему'
+            // DiamKey settings
+            diamkeyAvatar: 'Аватар',
+            diamkeyChangeAvatar: 'Нажмите, чтобы сменить аватар',
+            diamkeyNickname: 'Никнейм',
+            diamkeyPassword: 'Новый пароль',
+            diamkeySave: 'Сохранить изменения',
+            diamkeyTotalMessages: 'Всего сообщений',
+            diamkeyTotalChats: 'Всего чатов',
+            // Подсказки
+            languageHint: 'Выберите язык интерфейса',
+            tutorialHint: 'Пройдите обучение, чтобы узнать все возможности Diamond AI',
+            tutorialNotCompletedHint: 'Нажмите, чтобы пройти обучение'
         },
         en: {
             welcome: 'Welcome to Diamond AI!',
@@ -178,6 +181,8 @@
             emptyChat: 'How can I help?',
             inputPlaceholder: 'Type your message...',
             thinking: 'Thinking',
+            thinkingPreparing: 'Preparing answer',
+            thinkingTyping: 'Typing answer',
             copy: 'Copied',
             renameChat: 'Rename Chat',
             pinChat: 'Pin',
@@ -238,12 +243,11 @@
             codeCopy: 'Copy',
             codeDownload: 'Download',
             back: 'Back',
-            settingsSectionGeneral: 'Language',
+            settingsSectionGeneral: 'Language Diamond AI',
             settingsSectionPrivacy: 'Privacy',
             settingsSectionAbout: 'About',
             settingsDiamondAI: 'Diamond AI',
             settingsDiamKey: 'DiamKey',
-            settingsDiscord: 'Discord',
             settingsTutorial: 'Tutorial',
             settingsLogout: 'Logout',
             settingsMainSite: 'Diamond AI Main Site',
@@ -252,7 +256,7 @@
             settingsTerms: 'Terms of Use',
             settingsTermsText: 'It is forbidden to use the service for illegal activities, distribution of malware or insults.',
             settingsDiamondAIDesc: 'Diamond AI is an intelligent assistant that syncs via DiamKey. The service youre using right now, AI, is frequently updated and improved. Stable performance is guaranteed.',
-            settingsDiamKeyDesc: 'DiamKey is a unified automation system for all types of diamonds. One account gives you access to the AI diamond assistant A.I., the secure Dirmess messenger, the bypass service for unlocking blocks, and future applications. Your chats, folders, and settings are automatically synchronized across all devices.',
+            settingsDiamKeyDesc: 'DiamKey is the unified authentication system for the entire Diamond ecosystem. Here you can change your global profile data.',
             settingsDiscordDesc: 'Join our community on Discord. We post new news and updates about the entire ecosystem there!',
             settingsLogoutConfirm: 'Logout from account?',
             aiDetectToolDesc: 'Text originality analysis. Determines whether text is written by a human or generated by AI.',
@@ -265,19 +269,18 @@
             ocrEmpty: 'Could not recognize text',
             fileUnsupported: 'Unsupported format',
             fileUnsupportedDesc: 'Allowed: png, jpg, html, js, css, docx',
-            changeAvatar: 'Change avatar',
-            changeNick: 'Change nickname',
-            changePassword: 'Change password',
-            newNick: 'New nickname',
-            newPassword: 'New password',
-            confirmPassword: 'Confirm password',
-            passwordsNotMatch: 'Passwords do not match',
-            nickChanged: 'Nickname changed',
-            passwordChanged: 'Password changed',
-            avatarChanged: 'Avatar updated',
-            themeLight: 'Light',
-            themeDark: 'Dark',
-            switchTheme: 'Switch theme'
+            // DiamKey settings
+            diamkeyAvatar: 'Avatar',
+            diamkeyChangeAvatar: 'Click to change avatar',
+            diamkeyNickname: 'Nickname',
+            diamkeyPassword: 'New password',
+            diamkeySave: 'Save changes',
+            diamkeyTotalMessages: 'Total messages',
+            diamkeyTotalChats: 'Total chats',
+            // Подсказки
+            languageHint: 'Select interface language',
+            tutorialHint: 'Take the tutorial to learn all Diamond AI features',
+            tutorialNotCompletedHint: 'Click to take the tutorial'
         }
     };
 
@@ -334,25 +337,6 @@
         localStorage.setItem('diamond_language', lang);
         updateUILanguage();
         showToast(t('languageChanged'), '', 'success');
-    }
-
-    // ========== ТЕМА ==========
-    function applyTheme() {
-        if (currentTheme === 'light') {
-            document.body.classList.add('light-theme');
-        } else {
-            document.body.classList.remove('light-theme');
-        }
-        const icon = document.querySelector('#themeToggleBtn i');
-        if (icon) {
-            icon.className = currentTheme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
-        }
-    }
-
-    function toggleTheme() {
-        currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        localStorage.setItem('diamond_theme', currentTheme);
-        applyTheme();
     }
 
     // ========== ПЛЕЙСХОЛДЕРЫ ==========
@@ -428,31 +412,59 @@
         if (container) container.scrollTop = container.scrollHeight;
     }
 
-    // ========== АНИМАЦИЯ "ДУМАЕТ" ==========
+    // ========== НОВАЯ АНИМАЦИЯ "ДУМАЕТ..." (с иконкой и сменой фраз) ==========
     function startThinkingAnimation() {
         if (thinkingTimer) clearInterval(thinkingTimer);
-        thinkingDots = 1;
-        const typingEl = document.querySelector('.message.assistant.typing .message-content');
-        if (typingEl) {
-            typingEl.innerHTML = t('thinking');
-            thinkingTimer = setInterval(() => {
-                thinkingDots = thinkingDots === 3 ? 1 : thinkingDots + 1;
-                if (typingEl) typingEl.innerHTML = t('thinking') + '.'.repeat(thinkingDots);
-            }, 500);
-        }
+        const container = document.getElementById('messages-container');
+        if (!container) return;
+
+        // Создаём индикатор
+        const indicator = document.createElement('div');
+        indicator.className = 'thinking-indicator';
+        indicator.id = 'thinking-indicator';
+        indicator.innerHTML = `<i class="fas fa-feather-alt"></i> <span class="thinking-text">${t('thinking')}</span>`;
+        container.appendChild(indicator);
+        requestAnimationFrame(() => {
+            indicator.classList.add('show');
+        });
+        scrollToBottom();
+
+        const phrases = [t('thinking'), t('thinkingPreparing'), t('thinkingTyping')];
+        let phraseIndex = 0;
+
+        thinkingTimer = setInterval(() => {
+            phraseIndex = (phraseIndex + 1) % phrases.length;
+            const textEl = indicator.querySelector('.thinking-text');
+            if (textEl) {
+                textEl.style.opacity = '0';
+                setTimeout(() => {
+                    textEl.textContent = phrases[phraseIndex];
+                    textEl.style.opacity = '1';
+                }, 300);
+            }
+        }, 2000);
     }
 
     function stopThinkingAnimation() {
-        if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; }
+        if (thinkingTimer) {
+            clearInterval(thinkingTimer);
+            thinkingTimer = null;
+        }
+        const indicator = document.getElementById('thinking-indicator');
+        if (indicator) {
+            indicator.classList.remove('show');
+            setTimeout(() => indicator.remove(), 300);
+        }
     }
 
-    // ========== LaTeX РЕНДЕР ==========
+    // ========== LaTeX РЕНДЕР (KaTeX + авто‑рендер) ==========
     function renderMathInElementWithMhchem(element) {
         if (!element || typeof renderMathInElement === 'undefined') return;
         try {
             renderMathInElement(element, {
                 delimiters: [
                     {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
                     {left: '\\(', right: '\\)', display: false},
                     {left: '\\[', right: '\\]', display: true}
                 ],
@@ -462,7 +474,7 @@
         } catch(e) { console.warn('Math render error:', e); }
     }
 
-    // ========== MERMAID РЕНДЕР ==========
+    // ========== MERMAID РЕНДЕР ДИАГРАММ ==========
     function renderMermaidBlocks(container) {
         if (!container || typeof mermaid === 'undefined') return;
         const mermaidBlocks = container.querySelectorAll('pre code.language-mermaid');
@@ -481,30 +493,30 @@
         });
     }
 
-    // ========== КНОПКА ЗАПУСКА КОДА (только HTML) ==========
+    // ========== КНОПКА ЗАПУСКА КОДА (только для HTML) ==========
     function showCodeRunnerModal(code, language) {
-        const overlay = document.createElement('div');
-        overlay.className = 'diamond-modal-overlay';
-        overlay.innerHTML = `
-            <div class="diamond-modal" style="max-width: 800px;">
-                <div class="diamond-modal-header">
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-container" style="resize: both; overflow: auto;">
+                <div class="modal-header">
                     <h3><i class="fas fa-play"></i> ${t('codeRun')} (${language || 'текст'})</h3>
-                    <button class="diamond-modal-close"><i class="fas fa-times"></i></button>
+                    <button class="close-modal"><i class="fas fa-times"></i></button>
                 </div>
-                <div class="diamond-modal-body">
+                <div class="modal-body">
                     <textarea class="code-editor" rows="10" spellcheck="false">${escapeHtml(code)}</textarea>
                     <iframe class="runner-iframe" style="width:100%; height:400px; border:1px solid var(--border-color); border-radius:16px; background:#fff;"></iframe>
                 </div>
-                <div class="diamond-modal-footer">
+                <div class="modal-footer">
                     <button class="btn btn-primary run-execute"><i class="fas fa-play"></i> ${t('codeRun')}</button>
-                    <button class="btn btn-secondary diamond-modal-close">${t('cancel')}</button>
+                    <button class="btn btn-secondary close-modal">${t('cancel')}</button>
                 </div>
             </div>
         `;
-        document.body.appendChild(overlay);
-        const editor = overlay.querySelector('.code-editor');
-        const iframe = overlay.querySelector('.runner-iframe');
-        const runExecute = overlay.querySelector('.run-execute');
+        document.body.appendChild(modal);
+        const editor = modal.querySelector('.code-editor');
+        const iframe = modal.querySelector('.runner-iframe');
+        const runExecute = modal.querySelector('.run-execute');
         function executeCode() {
             const newCode = editor.value;
             let htmlContent = newCode;
@@ -517,8 +529,8 @@
             setTimeout(() => URL.revokeObjectURL(url), 1000);
         }
         runExecute.addEventListener('click', executeCode);
-        overlay.querySelectorAll('.diamond-modal-close').forEach(btn => btn.addEventListener('click', () => overlay.remove()));
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+        modal.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', () => modal.remove()));
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
         executeCode();
     }
 
@@ -713,6 +725,9 @@
     }
 
     async function switchChat(id) {
+        if (currentChatId && chatAttachments[currentChatId]) {
+            // уже сохранено
+        }
         currentChatId = id;
         switchToChatView();
         renderChat();
@@ -747,33 +762,24 @@
         }
     }
 
-    // ========== УНИФИЦИРОВАННАЯ МОДАЛКА ПЕРЕИМЕНОВАНИЯ ЧАТА ==========
     function showRenameModal(chatId) {
         const chat = chats.find(c => c.id === chatId);
         if (!chat || chatId.startsWith('tool_')) return;
-        const overlay = document.createElement('div');
-        overlay.className = 'diamond-modal-overlay';
-        overlay.innerHTML = `
-            <div class="diamond-modal" style="max-width: 400px;">
-                <div class="diamond-modal-header">
-                    <h3><i class="fas fa-pencil-alt"></i> ${t('renameChat')}</h3>
-                    <button class="diamond-modal-close"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="diamond-modal-body">
-                    <input type="text" id="rename-input" value="${escapeHtml(chat.title)}" style="width:100%; padding:12px; background: var(--bg-tertiary); border:1px solid var(--border-color); border-radius: 20px; color: var(--text-primary);">
-                </div>
-                <div class="diamond-modal-footer">
-                    <button id="rename-confirm" class="btn btn-primary"><i class="fas fa-check"></i> ${t('save')}</button>
-                    <button class="btn btn-secondary diamond-modal-close">${t('cancel')}</button>
-                </div>
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-container" style="max-width: 400px;">
+                <div class="modal-header"><h3><i class="fas fa-pencil-alt"></i> ${t('renameChat')}</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-body"><input type="text" id="rename-input" value="${escapeHtml(chat.title)}" style="width:100%; padding:12px; background: var(--bg-tertiary); border:1px solid var(--border-color); border-radius: 20px; color: white;"></div>
+                <div class="modal-footer"><button id="rename-confirm" class="btn btn-primary"><i class="fas fa-check"></i> ${t('save')}</button><button class="btn btn-secondary close-modal"><i class="fas fa-times"></i> ${t('cancel')}</button></div>
             </div>
         `;
-        document.body.appendChild(overlay);
-        const input = overlay.querySelector('#rename-input');
+        document.body.appendChild(modal);
+        const input = modal.querySelector('#rename-input');
         input.focus();
-        const close = () => overlay.remove();
-        overlay.querySelectorAll('.diamond-modal-close').forEach(btn => btn.addEventListener('click', close));
-        overlay.querySelector('#rename-confirm').onclick = async () => {
+        const close = () => modal.remove();
+        modal.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', close));
+        modal.querySelector('#rename-confirm').onclick = async () => {
             const newName = input.value.trim();
             if (newName) await renameChat(chatId, newName);
             close();
@@ -785,10 +791,10 @@
                 close();
             }
         };
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
-    // ========== ПАПКИ ==========
+    // ========== ПАПКИ (без изменений) ==========
     async function createFolder(name, desc, icon, color) {
         const id = Date.now().toString();
         const folder = {
@@ -846,22 +852,18 @@
         }
     }
 
-    // ========== УНИФИЦИРОВАННЫЕ МОДАЛКИ ПАПОК ==========
     function showFolderEditModal(folder = null) {
         const isEdit = folder !== null;
-        const overlay = document.createElement('div');
-        overlay.className = 'diamond-modal-overlay';
-        overlay.innerHTML = `
-            <div class="diamond-modal" style="max-width: 500px;">
-                <div class="diamond-modal-header">
-                    <h3><i class="fas ${isEdit ? 'fa-edit' : 'fa-plus-circle'}"></i> ${isEdit ? t('editFolder') : t('createFolderTitle')}</h3>
-                    <button class="diamond-modal-close"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="diamond-modal-body">
-                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px; color: var(--text-secondary);">${t('folderName')}</label><input type="text" id="folder-name" placeholder="${t('folderName')}" value="${isEdit ? escapeHtml(folder.name) : ''}" style="width:100%; padding:12px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:16px; color:var(--text-primary);"></div>
-                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px; color: var(--text-secondary);">${t('folderDesc')}</label><textarea id="folder-description" rows="2" placeholder="${t('folderDesc')}" style="width:100%; padding:12px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:16px; color:var(--text-primary);">${isEdit ? escapeHtml(folder.description || '') : ''}</textarea></div>
-                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px; color: var(--text-secondary);">${t('folderIcon')}</label><div class="icon-selector" id="icon-selector" style="display:grid; grid-template-columns:repeat(6,1fr); gap:8px; background:var(--bg-tertiary); padding:12px; border-radius:16px;"></div></div>
-                    <div class="form-group"><label style="display:block; margin-bottom:6px; color: var(--text-secondary);">${t('folderColor')}</label><div class="color-selector" id="color-selector" style="display:flex; gap:12px; flex-wrap:wrap;">
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-container" style="max-width: 500px;">
+                <div class="modal-header"><h3><i class="fas ${isEdit ? 'fa-edit' : 'fa-plus-circle'}"></i> ${isEdit ? t('editFolder') : t('createFolderTitle')}</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-body">
+                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px;">${t('folderName')}</label><input type="text" id="folder-name" placeholder="${t('folderName')}" value="${isEdit ? escapeHtml(folder.name) : ''}" style="width:100%; padding:12px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:16px; color:white;"></div>
+                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px;">${t('folderDesc')}</label><textarea id="folder-description" rows="2" placeholder="${t('folderDesc')}" style="width:100%; padding:12px; background:var(--bg-tertiary); border:1px solid var(--border-color); border-radius:16px; color:white;">${isEdit ? escapeHtml(folder.description || '') : ''}</textarea></div>
+                    <div class="form-group" style="margin-bottom: 16px;"><label style="display:block; margin-bottom:6px;">${t('folderIcon')}</label><div class="icon-selector" id="icon-selector" style="display:grid; grid-template-columns:repeat(6,1fr); gap:8px; background:var(--bg-tertiary); padding:12px; border-radius:16px;"></div></div>
+                    <div class="form-group"><label style="display:block; margin-bottom:6px;">${t('folderColor')}</label><div class="color-selector" id="color-selector" style="display:flex; gap:12px; flex-wrap:wrap;">
                         <div class="color-option" data-color="#e74c3c" style="background:#e74c3c; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
                         <div class="color-option" data-color="#f39c12" style="background:#f39c12; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
                         <div class="color-option" data-color="#2ecc71" style="background:#2ecc71; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
@@ -872,15 +874,12 @@
                         <div class="color-option" data-color="#95a5a6" style="background:#95a5a6; width:36px; height:36px; border-radius:50%; cursor:pointer;"></div>
                     </div></div>
                 </div>
-                <div class="diamond-modal-footer">
-                    <button id="save-folder-btn" class="btn btn-primary"><i class="fas fa-check"></i> ${t('save')}</button>
-                    <button class="btn btn-secondary diamond-modal-close">${t('cancel')}</button>
-                </div>
+                <div class="modal-footer"><button id="save-folder-btn" class="btn btn-primary"><i class="fas fa-check"></i> ${t('save')}</button><button class="btn btn-secondary close-modal"><i class="fas fa-times"></i> ${t('cancel')}</button></div>
             </div>
         `;
-        document.body.appendChild(overlay);
+        document.body.appendChild(modal);
         const icons = ['fa-folder', 'fa-folder-open', 'fa-book', 'fa-graduation-cap', 'fa-code', 'fa-music', 'fa-image', 'fa-video', 'fa-gamepad', 'fa-heart', 'fa-star', 'fa-rocket', 'fa-brain', 'fa-chart-line', 'fa-users', 'fa-calendar'];
-        const iconSelector = overlay.querySelector('#icon-selector');
+        const iconSelector = modal.querySelector('#icon-selector');
         iconSelector.innerHTML = icons.map(icon => `<div class="icon-option" data-icon="${icon}" style="display:flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:12px; cursor:pointer; background:var(--bg-secondary);"><i class="fas ${icon}"></i></div>`).join('');
         let selectedIcon = isEdit ? folder.icon : 'fa-folder';
         let selectedColor = isEdit ? folder.color : '#95a5a6';
@@ -892,37 +891,34 @@
                 selectedIcon = opt.dataset.icon;
             };
         });
-        overlay.querySelectorAll('.color-option').forEach(opt => {
-            if (opt.dataset.color === selectedColor) opt.style.border = '2px solid var(--text-primary)';
+        modal.querySelectorAll('.color-option').forEach(opt => {
+            if (opt.dataset.color === selectedColor) opt.style.border = '2px solid white';
             opt.onclick = () => {
-                overlay.querySelectorAll('.color-option').forEach(o => o.style.border = 'none');
-                opt.style.border = '2px solid var(--text-primary)';
+                modal.querySelectorAll('.color-option').forEach(o => o.style.border = 'none');
+                opt.style.border = '2px solid white';
                 selectedColor = opt.dataset.color;
             };
         });
-        const close = () => overlay.remove();
-        overlay.querySelectorAll('.diamond-modal-close').forEach(btn => btn.addEventListener('click', close));
-        overlay.querySelector('#save-folder-btn').onclick = async () => {
-            const name = overlay.querySelector('#folder-name').value.trim();
+        const close = () => modal.remove();
+        modal.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', close));
+        modal.querySelector('#save-folder-btn').onclick = async () => {
+            const name = modal.querySelector('#folder-name').value.trim();
             if (!name) { showToast('Ошибка', 'Введите название', 'warning'); return; }
-            const desc = overlay.querySelector('#folder-description').value;
+            const desc = modal.querySelector('#folder-description').value;
             if (isEdit) await updateFolder(folder.id, name, desc, selectedIcon, selectedColor);
             else await createFolder(name, desc, selectedIcon, selectedColor);
             close();
         };
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
     function showFolderSelectModal(chatId) {
-        const overlay = document.createElement('div');
-        overlay.className = 'diamond-modal-overlay';
-        overlay.innerHTML = `
-            <div class="diamond-modal" style="max-width: 400px;">
-                <div class="diamond-modal-header">
-                    <h3><i class="fas fa-folder-open"></i> ${t('moveToFolder')}</h3>
-                    <button class="diamond-modal-close"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="diamond-modal-body">
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-container" style="max-width: 400px;">
+                <div class="modal-header"><h3><i class="fas fa-folder-open"></i> ${t('moveToFolder')}</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-body">
                     <div class="folder-chats-list" id="folder-options-list">
                         <div class="folder-chat-item" data-id="" style="padding:12px; background:var(--bg-tertiary); border-radius:16px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:10px;">
                             <i class="fas fa-times-circle"></i><span>Без папки</span>
@@ -934,33 +930,28 @@
                         `).join('')}
                     </div>
                 </div>
-                <div class="diamond-modal-footer">
-                    <button class="btn btn-secondary diamond-modal-close">${t('cancel')}</button>
-                </div>
+                <div class="modal-footer"><button class="btn btn-secondary close-modal"><i class="fas fa-arrow-left"></i> ${t('back')}</button></div>
             </div>
         `;
-        document.body.appendChild(overlay);
-        const close = () => overlay.remove();
-        overlay.querySelectorAll('.diamond-modal-close').forEach(btn => btn.addEventListener('click', close));
-        overlay.querySelectorAll('.folder-chat-item').forEach(item => {
+        document.body.appendChild(modal);
+        const close = () => modal.remove();
+        modal.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', close));
+        modal.querySelectorAll('.folder-chat-item').forEach(item => {
             item.onclick = () => { moveChatToFolder(chatId, item.dataset.id || null); close(); };
         });
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
     function showAddChatToFolderModal(folderId) {
         const folder = folders.find(f => f.id === folderId);
         if (!folder) return;
         const availableChats = chats.filter(c => c.folder_id !== folderId && !(c.id && c.id.startsWith('tool_')));
-        const overlay = document.createElement('div');
-        overlay.className = 'diamond-modal-overlay';
-        overlay.innerHTML = `
-            <div class="diamond-modal" style="max-width: 500px;">
-                <div class="diamond-modal-header">
-                    <h3><i class="fas ${folder.icon}" style="color:${folder.color}"></i> ${t('addChatToFolder')} «${escapeHtml(folder.name)}»</h3>
-                    <button class="diamond-modal-close"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="diamond-modal-body" style="max-height: 60vh; overflow-y: auto;">
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-container" style="max-width: 500px;">
+                <div class="modal-header"><h3><i class="fas ${folder.icon}" style="color:${folder.color}"></i> ${t('addChatToFolder')} «${escapeHtml(folder.name)}»</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-body" style="max-height: 60vh; overflow-y: auto;">
                     ${availableChats.length === 0 ? `<p style="text-align:center; padding:20px;">${t('noAvailableChats')}</p>` : 
                     availableChats.map(c => `
                         <div class="add-chat-item" data-chat-id="${c.id}" style="padding:12px; background:var(--bg-tertiary); border-radius:16px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:10px;">
@@ -968,31 +959,66 @@
                         </div>
                     `).join('')}
                 </div>
-                <div class="diamond-modal-footer">
-                    <button class="btn btn-secondary diamond-modal-close">${t('cancel')}</button>
-                </div>
+                <div class="modal-footer"><button class="btn btn-secondary close-modal"><i class="fas fa-arrow-left"></i> ${t('back')}</button></div>
             </div>
         `;
-        document.body.appendChild(overlay);
-        const close = () => overlay.remove();
-        overlay.querySelectorAll('.diamond-modal-close').forEach(btn => btn.addEventListener('click', close));
-        overlay.querySelectorAll('.add-chat-item').forEach(item => {
+        document.body.appendChild(modal);
+        const close = () => modal.remove();
+        modal.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', close));
+        modal.querySelectorAll('.add-chat-item').forEach(item => {
             item.addEventListener('click', async () => { const chatId = item.dataset.chatId; await moveChatToFolder(chatId, folderId); close(); });
         });
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
+    }
+
+    function renderFoldersPage() {
+        const container = document.getElementById('foldersPage');
+        if (!container) return;
+        container.innerHTML = `
+            <div class="folders-page-header"><h1><i class="fas fa-folder"></i> ${t('folders')}</h1><p>Организуйте чаты по папкам</p></div>
+            <div class="folders-list-container" id="foldersListContainer"></div>
+            <div class="folders-page-footer">
+                <button id="create-folder-page-btn" class="btn btn-primary"><i class="fas fa-plus-circle"></i> ${t('createFolder')}</button>
+                <button id="back-to-chat-from-folders" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> ${t('backToChat')}</button>
+            </div>
+        `;
+        document.getElementById('create-folder-page-btn').addEventListener('click', () => { currentEditingFolderId = null; showFolderEditModal(null); });
+        document.getElementById('back-to-chat-from-folders').addEventListener('click', switchToChatView);
+        const listContainer = document.getElementById('foldersListContainer');
+        if (folders.length === 0) { listContainer.innerHTML = `<div class="folder-empty">${t('folderEmpty')}</div>`; return; }
+        listContainer.innerHTML = folders.map(f => {
+            const count = chats.filter(c => c.folder_id === f.id).length;
+            return `
+            <div class="folder-card" data-id="${f.id}">
+                <div class="folder-icon" style="background:${f.color}20; color:${f.color}"><i class="fas ${f.icon}"></i></div>
+                <div class="folder-info">
+                    <div class="folder-name"><span style="color:${f.color}">${escapeHtml(f.name)}</span></div>
+                    <div class="folder-description">${escapeHtml(f.description) || 'Нет описания'}</div>
+                    <div class="folder-stats">${count} чатов</div>
+                </div>
+                <div class="folder-actions">
+                    <button class="add-chat-to-folder" data-id="${f.id}" title="${t('addChatToFolder')}"><i class="fas fa-plus"></i></button>
+                    <button class="view-folder-chats" data-id="${f.id}" title="${t('viewFolderChats')}"><i class="fas fa-comments"></i></button>
+                    <button class="edit-folder" data-id="${f.id}" title="${t('editFolder')}"><i class="fas fa-edit"></i></button>
+                    <button class="delete-folder" data-id="${f.id}" title="${t('deleteChat')}"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+            `;
+        }).join('');
+        document.querySelectorAll('.add-chat-to-folder').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); showAddChatToFolderModal(btn.dataset.id); }; });
+        document.querySelectorAll('.view-folder-chats').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); const folderId = btn.dataset.id; const folder = folders.find(f => f.id === folderId); if (folder) showFolderChatsModal(folder); }; });
+        document.querySelectorAll('.edit-folder').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); currentEditingFolderId = btn.dataset.id; const f = folders.find(f => f.id === currentEditingFolderId); showFolderEditModal(f); }; });
+        document.querySelectorAll('.delete-folder').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); deleteFolder(btn.dataset.id); }; });
     }
 
     function showFolderChatsModal(folder) {
         const chatsInFolder = chats.filter(c => c.folder_id === folder.id);
-        const overlay = document.createElement('div');
-        overlay.className = 'diamond-modal-overlay';
-        overlay.innerHTML = `
-            <div class="diamond-modal" style="max-width: 500px;">
-                <div class="diamond-modal-header">
-                    <h3><i class="fas ${folder.icon}" style="color:${folder.color}"></i> ${t('folderChats')} «${escapeHtml(folder.name)}»</h3>
-                    <button class="diamond-modal-close"><i class="fas fa-times"></i></button>
-                </div>
-                <div class="diamond-modal-body">
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal-container" style="max-width: 500px;">
+                <div class="modal-header"><h3><i class="fas ${folder.icon}" style="color:${folder.color}"></i> ${t('folderChats')} «${escapeHtml(folder.name)}»</h3><button class="close-modal"><i class="fas fa-times"></i></button></div>
+                <div class="modal-body">
                     <div class="folder-chats-list">
                         ${chatsInFolder.length ? chatsInFolder.map(c => `
                             <div class="folder-chat-item" data-chat-id="${c.id}" style="padding:12px; background:var(--bg-tertiary); border-radius:16px; margin-bottom:8px; cursor:pointer; display:flex; align-items:center; gap:10px;">
@@ -1001,18 +1027,16 @@
                         `).join('') : `<div style="text-align:center; padding:20px; color:var(--text-secondary);">${t('noFolderChats')}</div>`}
                     </div>
                 </div>
-                <div class="diamond-modal-footer">
-                    <button class="btn btn-secondary diamond-modal-close">${t('cancel')}</button>
-                </div>
+                <div class="modal-footer"><button class="btn btn-secondary close-modal"><i class="fas fa-arrow-left"></i> ${t('back')}</button></div>
             </div>
         `;
-        document.body.appendChild(overlay);
-        const close = () => overlay.remove();
-        overlay.querySelectorAll('.diamond-modal-close').forEach(btn => btn.addEventListener('click', close));
-        overlay.querySelectorAll('.folder-chat-item').forEach(item => {
+        document.body.appendChild(modal);
+        const close = () => modal.remove();
+        modal.querySelectorAll('.close-modal').forEach(btn => btn.addEventListener('click', close));
+        modal.querySelectorAll('.folder-chat-item').forEach(item => {
             item.onclick = () => { switchChat(item.dataset.chatId); switchToChatView(); close(); };
         });
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+        modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
     // ========== МАСТЕРСКАЯ ==========
@@ -1290,7 +1314,7 @@
         return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент' };
     }
 
-    // ========== РЕНДЕР ЧАТА ==========
+    // ========== РЕНДЕР ЧАТА (с Mermaid и вложениями) ==========
     function renderChat() {
         const chat = chats.find(c => c.id === currentChatId);
         const headerEl = document.getElementById('chatHeader');
@@ -1427,10 +1451,21 @@
                 await saveChatToSupabase(chat);
             }
         }
-        renderChat(); return messageId;
+        renderChat();
+        // Плавное появление нового сообщения
+        setTimeout(() => {
+            const lastMsg = document.querySelector('.messages-container .message:last-child .message-content');
+            if (lastMsg && role === 'assistant') {
+                lastMsg.classList.add('typing-text');
+                requestAnimationFrame(() => {
+                    lastMsg.classList.add('show');
+                });
+            }
+        }, 10);
+        return messageId;
     }
 
-    // ========== ПРИКРЕПЛЕНИЕ ФАЙЛОВ ==========
+    // ========== ПРИКРЕПЛЕНИЕ ФАЙЛОВ (с привязкой к чату) ==========
     function setupFileAttachment() {
         const inputWrapper = document.querySelector('.input-wrapper');
         if (!inputWrapper || fileInputEl) return;
@@ -1500,6 +1535,7 @@
             content: content
         };
 
+        // Привязываем к текущему чату
         if (currentChatId) {
             chatAttachments[currentChatId] = attachment;
         }
@@ -1601,7 +1637,7 @@
         });
     }
 
-    // ========== УЛУЧШЕННЫЙ OCR ==========
+    // ========== УЛУЧШЕННЫЙ OCR (Tesseract.js v2 + canvas-препроцессинг) ==========
     async function performOCR(file) {
         if (typeof Tesseract === 'undefined') {
             showToast(t('fileError'), 'Библиотека распознавания не загружена', 'error');
@@ -1669,7 +1705,7 @@
         return result.value || '';
     }
 
-    // ========== ОТПРАВКА СООБЩЕНИЯ ==========
+    // ========== ОТПРАВКА СООБЩЕНИЯ (с вложением чата) ==========
     async function sendMessage() {
         const text = document.getElementById('user-input').value.trim();
         const attachment = currentChatId ? chatAttachments[currentChatId] : null;
@@ -1799,12 +1835,22 @@
             if (nameSpan) nameSpan.textContent = t('profile');
             if (avatarImg) avatarImg.src = '';
         }
+
+        // Мигание кнопки настроек, если обучение не пройдено
+        const settingsBtn = document.getElementById('settingsBtn');
+        if (settingsBtn) {
+            if (!tutorialCompleted) {
+                settingsBtn.classList.add('blink');
+            } else {
+                settingsBtn.classList.remove('blink');
+            }
+        }
     }
 
     async function refreshUserProfile() {
         if (!currentUser) return;
         try {
-            const { data, error } = await supabaseClient.from('users').select('name, avatar, description, fa_icon').eq('login', currentUser.login).maybeSingle();
+            const { data, error } = await supabaseClient.from('users').select('name, avatar, description, fa_icon, obuchenie_check').eq('login', currentUser.login).maybeSingle();
             if (error) throw error;
             if (data) {
                 let changed = false;
@@ -1812,6 +1858,8 @@
                 if (data.avatar !== currentUser.avatar) { currentUser.avatar = data.avatar; changed = true; }
                 if (data.description !== currentUser.description) { currentUser.description = data.description; changed = true; }
                 if (data.fa_icon !== currentUser.fa_icon) { currentUser.fa_icon = data.fa_icon; changed = true; }
+                // Загружаем флаг обучения
+                tutorialCompleted = data.obuchenie_check === true;
                 if (changed) { localStorage.setItem('diamond_user', JSON.stringify(currentUser)); updateUserPanel(); }
             }
         } catch (e) { console.warn('[PROFILE] Ошибка синхронизации:', e); }
@@ -1833,6 +1881,7 @@
             if (!user.secret_word) { const sw = generateFastSecret(); await supabaseClient.from('users').update({ secret_word: sw }).eq('login', user.login); user.secret_word = sw; }
             currentUser = { login: user.login, email: user.email || (user.login+'@diamkey.local'), secretWord: user.secret_word, name: user.name||'', avatar: user.avatar||'', description: user.description||'', fa_icon: user.fa_icon||'', role: user.role||'user' };
             localStorage.setItem('diamond_user', JSON.stringify(currentUser));
+            tutorialCompleted = user.obuchenie_check === true;
             await loadChatsAndFolders(); await refreshUserProfile(); await loadForumMessages();
             document.getElementById('choiceScreen').style.display = 'none';
             document.getElementById('mainUI').style.display = 'flex';
@@ -1858,10 +1907,11 @@
             const secretWord = generateFastSecret();
             const email = loginInput + '@diamkey.local';
             const token = generateToken();
-            const { error } = await supabaseClient.from('users').insert([{ login: loginInput, email, password, token, secret_word: secretWord, name:'', avatar:'', description:'', fa_icon:'', role:'user', is_admin:false }]);
+            const { error } = await supabaseClient.from('users').insert([{ login: loginInput, email, password, token, secret_word: secretWord, name:'', avatar:'', description:'', fa_icon:'', role:'user', is_admin:false, obuchenie_check: false }]);
             if (error) { showToast(t('errorRegister'), error.message, 'error'); return; }
             currentUser = { login: loginInput, email, secretWord, name:'', avatar:'', description:'', fa_icon:'', role:'user' };
             localStorage.setItem('diamond_user', JSON.stringify(currentUser));
+            tutorialCompleted = false;
             await loadChatsAndFolders(); await loadForumMessages();
             document.getElementById('choiceScreen').style.display = 'none';
             document.getElementById('mainUI').style.display = 'flex';
@@ -1949,7 +1999,7 @@
 
     function sendMessageFromEmpty(text) { document.getElementById('user-input').value = text; sendMessage(); const emptyInput=document.getElementById('empty-input'); if(emptyInput) emptyInput.value=''; }
 
-    // ========== НОВАЯ МОДАЛКА НАСТРОЕК ==========
+    // ========== НОВАЯ МОДАЛКА НАСТРОЕК (с DiamKey) ==========
     function showSettingsModal() {
         if (settingsModalOpen) return;
         settingsModalOpen = true;
@@ -1958,6 +2008,7 @@
         const sections = [
             { id: 'general', icon: 'fa-cog', title: t('settingsSectionGeneral') },
             { id: 'diamkey', icon: 'fa-key', title: t('settingsDiamKey') },
+            { id: 'diamondai', icon: 'fa-gem', title: t('settingsDiamondAI') },
             { id: 'tutorial', icon: 'fa-question-circle', title: t('settingsTutorial') },
             { id: 'privacy', icon: 'fa-shield-alt', title: t('settingsSectionPrivacy') },
             { id: 'about', icon: 'fa-user', title: t('settingsSectionAbout') },
@@ -1975,20 +2026,45 @@
                             <button class="settings-lang-btn ${currentLanguage === 'ru' ? 'active' : ''}" data-lang="ru">Русский</button>
                             <button class="settings-lang-btn ${currentLanguage === 'en' ? 'active' : ''}" data-lang="en">English</button>
                         </div>
+                        <p style="font-size:12px; color:var(--text-secondary); margin-top:8px;">${t('languageHint')}</p>
                     </div>
                     <div class="settings-section" id="section-diamkey">
                         <h2><i class="fas fa-key"></i> ${t('settingsDiamKey')}</h2>
-                        <div class="settings-avatar-wrapper" id="settingsAvatarWrapper">
-                            <img src="${currentUser?.avatar || ''}" alt="avatar" style="${currentUser?.avatar ? '' : 'display:none;'}">
-                            <div class="settings-avatar-edit-icon"><i class="fas fa-pencil-alt"></i></div>
+                        <p>${t('settingsDiamKeyDesc')}</p>
+                        <div class="diamkey-avatar-wrapper" id="diamkeyAvatarWrapper">
+                            <img src="${currentUser?.avatar || ''}" alt="Avatar" id="diamkeyAvatarImg" onerror="this.style.display='none'">
+                            <div class="diamkey-avatar-overlay"><i class="fas fa-pencil-alt"></i></div>
                         </div>
-                        <input type="file" id="settingsAvatarInput" accept="image/*" style="display:none;">
-                        <button class="settings-link-btn" id="changeNickBtn"><i class="fas fa-user-edit"></i> ${t('changeNick')}</button>
-                        <button class="settings-link-btn" id="changePasswordBtn"><i class="fas fa-lock"></i> ${t('changePassword')}</button>
+                        <div class="diamkey-profile-stats">
+                            <div class="diamkey-stat-box">
+                                <div class="diamkey-stat-number" id="diamkeyTotalChats">0</div>
+                                <div class="diamkey-stat-label">${t('diamkeyTotalChats')}</div>
+                            </div>
+                            <div class="diamkey-stat-box">
+                                <div class="diamkey-stat-number" id="diamkeyTotalMessages">0</div>
+                                <div class="diamkey-stat-label">${t('diamkeyTotalMessages')}</div>
+                            </div>
+                        </div>
+                        <div class="diamkey-input-group">
+                            <label>${t('diamkeyNickname')}</label>
+                            <input type="text" id="diamkeyNicknameInput" value="${escapeHtml(currentUser?.name || currentUser?.login || '')}">
+                        </div>
+                        <div class="diamkey-input-group">
+                            <label>${t('diamkeyPassword')}</label>
+                            <input type="password" id="diamkeyPasswordInput" placeholder="${t('diamkeyPassword')}">
+                        </div>
+                        <button class="btn btn-primary diamkey-save-btn" id="diamkeySaveBtn"><i class="fas fa-check"></i> ${t('diamkeySave')}</button>
+                    </div>
+                    <div class="settings-section" id="section-diamondai">
+                        <h2><i class="fas fa-gem"></i> ${t('settingsDiamondAI')}</h2>
+                        <p>${t('settingsDiamondAIDesc')}</p>
+                        <a class="settings-link-btn" href="https://diamond-ai.ru" target="_blank"><i class="fas fa-globe"></i> ${t('settingsMainSite')}</a>
                     </div>
                     <div class="settings-section" id="section-tutorial">
                         <h2><i class="fas fa-question-circle"></i> ${t('settingsTutorial')}</h2>
                         <button class="settings-link-btn" id="settings-tutorial-btn"><i class="fas fa-play"></i> ${t('tutorial')}</button>
+                        <p style="font-size:12px; color:var(--text-secondary); margin-top:8px;">${t('tutorialHint')}</p>
+                        ${!tutorialCompleted ? `<p style="font-size:12px; color:var(--blink-color); margin-top:4px; animation: softBlink 2s infinite;">${t('tutorialNotCompletedHint')}</p>` : ''}
                     </div>
                     <div class="settings-section" id="section-privacy">
                         <h2><i class="fas fa-shield-alt"></i> ${t('settingsSectionPrivacy')}</h2>
@@ -2026,6 +2102,7 @@
             if (e.target === overlay) closeModal();
         });
 
+        // Переключение разделов
         overlay.querySelectorAll('.settings-left-panel button').forEach(btn => {
             btn.addEventListener('click', () => {
                 overlay.querySelectorAll('.settings-left-panel button').forEach(b => b.classList.remove('active'));
@@ -2036,69 +2113,75 @@
             });
         });
 
+        // Кнопки языка
         overlay.querySelectorAll('.settings-lang-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const lang = btn.dataset.lang;
                 if (lang === currentLanguage) return;
                 setLanguage(lang);
+                overlay.querySelectorAll('.settings-lang-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
                 overlay.remove();
                 settingsModalOpen = false;
                 showSettingsModal();
             });
         });
 
-        // Вкладка DiamKey: смена аватара, ника, пароля
-        const avatarWrapper = overlay.querySelector('#settingsAvatarWrapper');
-        const avatarInput = overlay.querySelector('#settingsAvatarInput');
+        // DiamKey: смена аватарки
+        const avatarWrapper = document.getElementById('diamkeyAvatarWrapper');
         if (avatarWrapper) {
-            avatarWrapper.addEventListener('click', () => avatarInput.click());
-            avatarInput.addEventListener('change', async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = async (ev) => {
-                    const avatarData = ev.target.result;
-                    currentUser.avatar = avatarData;
-                    localStorage.setItem('diamond_user', JSON.stringify(currentUser));
-                    await supabaseClient.from('users').update({ avatar: avatarData }).eq('login', currentUser.login);
-                    updateUserPanel();
-                    // обновить аватар в модалке
-                    const img = overlay.querySelector('.settings-avatar-wrapper img');
-                    if (img) { img.src = avatarData; img.style.display = ''; }
-                    showToast(t('avatarChanged'), '', 'success');
+            avatarWrapper.addEventListener('click', () => {
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = 'image/*';
+                fileInput.onchange = async (ev) => {
+                    const file = ev.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        const avatarData = e.target.result;
+                        // Обновляем в Supabase
+                        await supabaseClient.from('users').update({ avatar: avatarData }).eq('login', currentUser.login);
+                        currentUser.avatar = avatarData;
+                        localStorage.setItem('diamond_user', JSON.stringify(currentUser));
+                        document.getElementById('diamkeyAvatarImg').src = avatarData;
+                        document.getElementById('diamkeyAvatarImg').style.display = 'block';
+                        updateUserPanel();
+                        showToast('Аватар обновлён', '', 'success');
+                    };
+                    reader.readAsDataURL(file);
                 };
-                reader.readAsDataURL(file);
+                fileInput.click();
             });
         }
 
-        overlay.querySelector('#changeNickBtn')?.addEventListener('click', () => {
-            const newNick = prompt(t('newNick'), currentUser.name || currentUser.login);
-            if (newNick && newNick.trim()) {
-                currentUser.name = newNick.trim();
-                localStorage.setItem('diamond_user', JSON.stringify(currentUser));
-                supabaseClient.from('users').update({ name: currentUser.name }).eq('login', currentUser.login);
-                updateUserPanel();
-                showToast(t('nickChanged'), '', 'success');
-            }
+        // DiamKey: сохранение ника и пароля
+        document.getElementById('diamkeySaveBtn').addEventListener('click', async () => {
+            const newName = document.getElementById('diamkeyNicknameInput').value.trim();
+            const newPass = document.getElementById('diamkeyPasswordInput').value.trim();
+            if (!newName) return showToast('Ошибка', 'Никнейм не может быть пустым', 'warning');
+            const updates = { name: newName };
+            if (newPass) updates.password = newPass;
+            await supabaseClient.from('users').update(updates).eq('login', currentUser.login);
+            currentUser.name = newName;
+            localStorage.setItem('diamond_user', JSON.stringify(currentUser));
+            updateUserPanel();
+            showToast('Профиль обновлён', '', 'success');
         });
 
-        overlay.querySelector('#changePasswordBtn')?.addEventListener('click', () => {
-            const newPass = prompt(t('newPassword'), '');
-            if (newPass && newPass.length >= 6) {
-                const confirmPass = prompt(t('confirmPassword'), '');
-                if (newPass === confirmPass) {
-                    supabaseClient.from('users').update({ password: newPass }).eq('login', currentUser.login);
-                    showToast(t('passwordChanged'), '', 'success');
-                } else {
-                    showToast(t('passwordsNotMatch'), '', 'error');
-                }
-            } else if (newPass) {
-                showToast(t('errorRegister'), 'Минимум 6 символов', 'warning');
-            }
-        });
+        // Загрузка статистики для DiamKey
+        (async () => {
+            try {
+                const { data: chatsData } = await supabaseClient.from('diamond_chats').select('id,messages').eq('user_login', currentUser.login);
+                const totalChats = chatsData ? chatsData.length : 0;
+                const totalMessages = chatsData ? chatsData.reduce((sum, c) => sum + (c.messages ? c.messages.length : 0), 0) : 0;
+                document.getElementById('diamkeyTotalChats').textContent = totalChats;
+                document.getElementById('diamkeyTotalMessages').textContent = totalMessages;
+            } catch(e) {}
+        })();
 
-        overlay.querySelector('#settings-tutorial-btn')?.addEventListener('click', () => { closeModal(); startTutorial(); });
-        overlay.querySelector('#settings-logout-btn')?.addEventListener('click', () => { closeModal(); logout(); });
+        document.getElementById('settings-tutorial-btn')?.addEventListener('click', () => { closeModal(); startTutorial(); });
+        document.getElementById('settings-logout-btn')?.addEventListener('click', () => { closeModal(); logout(); });
     }
 
     // ========== ОБУЧЕНИЕ ==========
@@ -2113,7 +2196,7 @@
         { title: 'Готово!', html: `<p>Теперь ты знаешь основы Diamond AI. Вот короткий итог:</p><ul style="padding-left:20px; margin:10px 0;"><li><strong>Чат</strong> — общайся с ИИ</li><li><strong>Папки</strong> — наводи порядок</li><li><strong>Мастерская</strong> — включай инструменты</li><li><strong>Поиск</strong> — быстрый доступ</li><li><strong>Настройки</strong> — язык и обучение</li></ul><p>Если что-то забудешь — просто нажми <strong style="color:var(--accent)">шестерёнку</strong> возле ника и выбери «Обучение»!</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-check-circle" style="color:#2ecc71;"></i><div><strong>Ты молодец!</strong><br><span style="color:var(--text-secondary)">Всё получится!</span></div></div>`, interactive: false }
     ];
 
-    function startTutorial() {
+    async function startTutorial() {
         if (tutorialActive) return;
         tutorialActive = true;
         tutorialStep = 0;
@@ -2122,9 +2205,21 @@
         showTutorialStep();
     }
 
-    function closeTutorial() {
+    async function closeTutorial() {
         tutorialActive = false;
         document.getElementById('tutorialOverlay').style.display = 'none';
+        // Помечаем обучение пройденным в Supabase
+        if (currentUser) {
+            await supabaseClient.from('users').update({ obuchenie_check: true }).eq('login', currentUser.login);
+            tutorialCompleted = true;
+            updateUserPanel();
+            if (settingsModalOpen) {
+                const existing = document.querySelector('.settings-modal-overlay');
+                if (existing) existing.remove();
+                settingsModalOpen = false;
+                showSettingsModal();
+            }
+        }
     }
 
     function nextTutorialStep() {
@@ -2198,51 +2293,11 @@
         document.getElementById('send-btn')?.addEventListener('click', sendMessage);
         document.getElementById('history-search')?.addEventListener('input', renderHistory);
         document.getElementById('settingsBtn')?.addEventListener('click', showSettingsModal);
-        document.getElementById('themeToggleBtn')?.addEventListener('click', toggleTheme);
         document.getElementById('tabLogin')?.addEventListener('click', ()=>{ document.getElementById('tabLogin').classList.add('active'); document.getElementById('tabRegister').classList.remove('active'); document.getElementById('loginForm').style.display='block'; document.getElementById('registerForm').style.display='none'; });
         document.getElementById('tabRegister')?.addEventListener('click', ()=>{ document.getElementById('tabRegister').classList.add('active'); document.getElementById('tabLogin').classList.remove('active'); document.getElementById('registerForm').style.display='block'; document.getElementById('loginForm').style.display='none'; });
         document.getElementById('doLoginBtn')?.addEventListener('click', login);
         document.getElementById('doRegisterBtn')?.addEventListener('click', register);
     }
-
-    // ========== ИНИЦИАЛИЗАЦИЯ ==========
-    (async function() {
-        log('Загрузка...');
-        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
-        const savedLang = localStorage.getItem('diamond_language');
-        if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
-        const savedTheme = localStorage.getItem('diamond_theme');
-        if (savedTheme === 'light' || savedTheme === 'dark') currentTheme = savedTheme;
-        applyTheme();
-        loadWorkshopToolsState();
-        await fetchMistralKey();
-        const savedUser = localStorage.getItem('diamond_user');
-        if (savedUser) {
-            currentUser = JSON.parse(savedUser);
-            await loadChatsAndFolders();
-            await refreshUserProfile();
-            await loadForumMessages();
-            if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
-        }
-        await showLoadingScreen();
-        if (currentUser) {
-            document.getElementById('choiceScreen').style.display = 'none';
-            document.getElementById('mainUI').style.display = 'flex';
-            setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
-            updateUserPanel();
-            setupFileAttachment();
-            if (chats.length === 0) renderEmptyState(); else renderChat();
-        } else {
-            document.getElementById('choiceScreen').style.display = 'flex';
-        }
-        setupEventListeners();
-        updateUILanguage();
-        updateUserPanel();
-        updateSendButtonState();
-        if (chats.length) renderHistory();
-        document.documentElement.style.setProperty('--collapsed-left-offset', '85px');
-        log('Готово');
-    })();
 
     // ========== ДИНАМИЧЕСКАЯ ЗАГРУЗКА ТЯЖЁЛЫХ БИБЛИОТЕК ==========
     const libsLoaded = { tesseract: false, mammoth: false, mermaid: false };
@@ -2297,4 +2352,40 @@
         await ensureMermaid();
         return __renderMermaidBlocks(container);
     };
+
+    // ========== ИНИЦИАЛИЗАЦИЯ ==========
+    (async function() {
+        log('Загрузка...');
+        if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+        const savedLang = localStorage.getItem('diamond_language');
+        if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
+        loadWorkshopToolsState();
+        await fetchMistralKey();
+        const savedUser = localStorage.getItem('diamond_user');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            await loadChatsAndFolders();
+            await refreshUserProfile();
+            await loadForumMessages();
+            if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
+        }
+        await showLoadingScreen();
+        if (currentUser) {
+            document.getElementById('choiceScreen').style.display = 'none';
+            document.getElementById('mainUI').style.display = 'flex';
+            setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
+            updateUserPanel();
+            setupFileAttachment();
+            if (chats.length === 0) renderEmptyState(); else renderChat();
+        } else {
+            document.getElementById('choiceScreen').style.display = 'flex';
+        }
+        setupEventListeners();
+        updateUILanguage();
+        updateUserPanel();
+        updateSendButtonState();
+        if (chats.length) renderHistory();
+        document.documentElement.style.setProperty('--collapsed-left-offset', '85px');
+        log('Готово');
+    })();
 })();
