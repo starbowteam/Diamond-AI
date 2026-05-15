@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v41 — ПОЛНОЕ ИСПРАВЛЕНИЕ АНИМАЦИЙ, МАТЕМАТИКИ, ОБУЧЕНИЯ ====================
+// ==================== DIAMOND AI v41.1 — ИСПРАВЛЕНИЕ ИСЧЕЗАЮЩЕЙ РАМКИ БОТА ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -1295,7 +1295,7 @@
         return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент' };
     }
 
-    // ========== РЕНДЕР ЧАТА (с анимациями) ==========
+    // ========== РЕНДЕР ЧАТА (исправлен) ==========
     function renderChat() {
         const chat = chats.find(c => c.id === currentChatId);
         const headerEl = document.getElementById('chatHeader');
@@ -1340,9 +1340,6 @@
             }
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
-            if (msg.fresh && msg.role === 'assistant') {
-                contentDiv.classList.add('typing-text');
-            }
             contentDiv.innerHTML = msg.isTyping ? t('thinking') + '...' : contentHtml;
 
             const wrapper = document.createElement('div');
@@ -1431,7 +1428,6 @@
             if (chat) {
                 if (!chat.messages) chat.messages = [];
                 const msg = { id: messageId, role, content, timestamp, isTyping: false, attachment };
-                if (role === 'assistant') msg.fresh = true; // пометим для анимации
                 chat.messages.push(msg);
                 chat.last_activity = timestamp;
                 if (role === 'user' && !chat.id.startsWith('tool_') && chat.messages.filter(m => m.role === 'user').length === 1) {
@@ -1446,16 +1442,7 @@
                 await saveChatToSupabase(chat);
             }
         }
-        renderChat();
-        // Плавное появление текста для последнего сообщения ассистента
-        if (role === 'assistant') {
-            const lastMsgContent = document.querySelector('.messages-container .message.assistant:last-child .message-content.typing-text');
-            if (lastMsgContent) {
-                requestAnimationFrame(() => {
-                    lastMsgContent.classList.add('show');
-                });
-            }
-        }
+        renderChat(); // перерисовываем чат, чтобы новое сообщение появилось сразу
         return messageId;
     }
 
@@ -1735,7 +1722,7 @@
 
         isWaitingForResponse = true;
         updateSendButtonState();
-        startThinkingAnimation(); // только индикатор, без сообщения
+        startThinkingAnimation(); // только индикатор
 
         let systemPrompt = (chat.id && chat.id.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[chat.id.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
         let userMessageForAI = userText;
@@ -1969,7 +1956,7 @@
 
     function sendMessageFromEmpty(text) { document.getElementById('user-input').value = text; sendMessage(); const emptyInput=document.getElementById('empty-input'); if(emptyInput) emptyInput.value=''; }
 
-    // ========== НОВАЯ МОДАЛКА НАСТРОЕК (с DiamKey) ==========
+    // ========== НОВАЯ МОДАЛКА НАСТРОЕК ==========
     function showSettingsModal() {
         if (settingsModalOpen) return;
         settingsModalOpen = true;
@@ -2072,7 +2059,6 @@
             if (e.target === overlay) closeModal();
         });
 
-        // Переключение разделов
         overlay.querySelectorAll('.settings-left-panel button').forEach(btn => {
             btn.addEventListener('click', () => {
                 overlay.querySelectorAll('.settings-left-panel button').forEach(b => b.classList.remove('active'));
@@ -2083,7 +2069,6 @@
             });
         });
 
-        // Кнопки языка
         overlay.querySelectorAll('.settings-lang-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 const lang = btn.dataset.lang;
@@ -2097,7 +2082,6 @@
             });
         });
 
-        // DiamKey: смена аватарки
         const avatarWrapper = document.getElementById('diamkeyAvatarWrapper');
         if (avatarWrapper) {
             avatarWrapper.addEventListener('click', () => {
@@ -2124,7 +2108,6 @@
             });
         }
 
-        // DiamKey: сохранение ника и пароля
         document.getElementById('diamkeySaveBtn').addEventListener('click', async () => {
             const newName = document.getElementById('diamkeyNicknameInput').value.trim();
             const newPass = document.getElementById('diamkeyPasswordInput').value.trim();
@@ -2138,7 +2121,6 @@
             showToast('Профиль обновлён', '', 'success');
         });
 
-        // Загрузка статистики
         (async () => {
             try {
                 const { data: chatsData } = await supabaseClient.from('diamond_chats').select('id,messages').eq('user_login', currentUser.login);
@@ -2153,7 +2135,7 @@
         document.getElementById('settings-logout-btn')?.addEventListener('click', () => { closeModal(); logout(); });
     }
 
-    // ========== ОБУЧЕНИЕ (расширенные описания) ==========
+    // ========== ОБУЧЕНИЕ ==========
     const tutorialSteps = [
         { title: 'Добро пожаловать в Diamond AI!', html: `<p>Перед вами <strong style="color:var(--accent)">Diamond AI</strong> — ваш личный интеллектуальный помощник, работающий на передовой нейросети. Он способен отвечать на вопросы, решать задачи по математике, физике, химии, программированию, а также вести непринуждённую беседу. Все ваши чаты сохраняются в облаке и синхронизируются через DiamKey, поэтому вы не потеряете ни строчки даже при смене устройства.</p><p>В этом небольшом обучении я покажу основные элементы интерфейса и научу пользоваться главными функциями. Это займёт меньше минуты. Нажимайте <strong>«Далее»</strong>, чтобы продолжить.</p>`, demo: '', interactive: false },
         { title: 'Главный чат', html: `<p>Центральная часть экрана — это <strong style="color:var(--accent)">область диалога</strong>. Здесь отображаются ваши сообщения и ответы ИИ. Под диалогом находится поле ввода — просто начните печатать вопрос и нажмите кнопку отправки (стрелка вверх). ИИ мгновенно приступит к генерации ответа, а вы увидите индикатор печати.</p><p>Когда чат пуст, в поле ввода отображаются примеры запросов — попробуйте нажать на один из них, чтобы быстро начать разговор.</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-comment"></i><div><strong>Пример:</strong><br><span style="color:var(--text-secondary)">«Расскажи про теорему Пифагора»</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" id="tutorialFocusInput"><i class="fas fa-hand-pointer"></i> Нажми сюда, чтобы попробовать ввод</div>` },
