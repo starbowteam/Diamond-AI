@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v41.3 — ПУЛЬСАЦИЯ НАСТРОЕК И ОБУЧЕНИЯ, СБРОС ВЫСОТЫ ПОЛЯ ====================
+// ==================== DIAMOND AI v41.2 — АВАТАРКА У ИНДИКАТОРА, ПЛАВНОЕ ПОЯВЛЕНИЕ РАМКИ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -727,9 +727,6 @@
         } else {
             removeAttachmentPreview();
         }
-        // Сброс высоты поля ввода при переключении чата
-        const input = document.getElementById('user-input');
-        if (input) input.style.height = '';
     }
 
     async function togglePin(id) {
@@ -1739,9 +1736,7 @@
         const userText = text || '';
         const attachmentData = attachment ? { type: attachment.type, name: attachment.name, size: attachment.size } : null;
         await addMessageToDOM('user', userText, true, attachmentData);
-        const input = document.getElementById('user-input');
-        input.value = '';
-        input.style.height = '';  // сброс высоты поля
+        document.getElementById('user-input').value = '';
         updateSendButtonState();
 
         removeAttachmentPreview();
@@ -1826,10 +1821,8 @@
         if (settingsBtn) {
             if (!tutorialCompleted) {
                 settingsBtn.classList.add('blink');
-                settingsBtn.classList.add('scale-pulse'); // пульсация масштаба
             } else {
                 settingsBtn.classList.remove('blink');
-                settingsBtn.classList.remove('scale-pulse');
             }
         }
     }
@@ -1977,30 +1970,13 @@
             if (placeholderInterval) clearInterval(placeholderInterval);
             let idx = 0; emptyInput.placeholder = placeholderTexts[0];
             placeholderInterval = setInterval(() => { if(document.activeElement!==emptyInput){emptyInput.style.opacity='0.5';setTimeout(()=>{idx=(idx+1)%placeholderTexts.length;emptyInput.placeholder=placeholderTexts[idx];emptyInput.style.opacity='1';},200);} }, 3000);
-            emptyInput.oninput = function() {
-                emptySendBtn.disabled = !this.value.trim();
-                if (this.value.trim() === '') {
-                    this.style.height = '';
-                } else {
-                    this.style.height = 'auto';
-                    this.style.height = Math.min(this.scrollHeight, 160) + 'px';
-                }
-            };
+            emptyInput.oninput = function() { emptySendBtn.disabled = !this.value.trim(); this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,160)+'px'; };
             emptyInput.onkeydown = e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault(); if(emptySendBtn&&!emptySendBtn.disabled) sendMessageFromEmpty(emptyInput.value);} };
             emptySendBtn.onclick = () => { if(emptyInput.value.trim()) sendMessageFromEmpty(emptyInput.value); };
         }
     }
 
-    function sendMessageFromEmpty(text) {
-        const input = document.getElementById('user-input');
-        input.value = text;
-        sendMessage();
-        const emptyInput = document.getElementById('empty-input');
-        if (emptyInput) {
-            emptyInput.value = '';
-            emptyInput.style.height = '';
-        }
-    }
+    function sendMessageFromEmpty(text) { document.getElementById('user-input').value = text; sendMessage(); const emptyInput=document.getElementById('empty-input'); if(emptyInput) emptyInput.value=''; }
 
     // ========== НОВАЯ МОДАЛКА НАСТРОЕК ==========
     function showSettingsModal() {
@@ -2020,13 +1996,7 @@
         overlay.innerHTML = `
             <div class="settings-modal">
                 <div class="settings-left-panel">
-                    ${sections.map(s => {
-                        let extraClass = '';
-                        if (s.id === 'tutorial' && !tutorialCompleted) {
-                            extraClass = 'tutorial-tab-highlight';
-                        }
-                        return `<button data-section="${s.id}" class="${s.id === 'general' ? 'active' : ''} ${extraClass}"><i class="fas ${s.icon}"></i> ${s.title}</button>`;
-                    }).join('')}
+                    ${sections.map(s => `<button data-section="${s.id}" class="${s.id === 'general' ? 'active' : ''}"><i class="fas ${s.icon}"></i> ${s.title}</button>`).join('')}
                 </div>
                 <div class="settings-right-content">
                     <div class="settings-section active" id="section-general">
@@ -2290,15 +2260,7 @@
         document.getElementById('collapsedNewChat')?.addEventListener('click', createNewChat);
         document.getElementById('collapsedFolders')?.addEventListener('click', switchToFoldersView);
         document.getElementById('collapsedWorkshop')?.addEventListener('click', switchToWorkshopView);
-        document.getElementById('user-input')?.addEventListener('input', function() {
-            if (this.value.trim() === '') {
-                this.style.height = '';
-            } else {
-                this.style.height = 'auto';
-                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
-            }
-            updateSendButtonState();
-        });
+        document.getElementById('user-input')?.addEventListener('input', function(){ this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,120)+'px'; updateSendButtonState(); });
         document.getElementById('user-input')?.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} });
         document.getElementById('send-btn')?.addEventListener('click', sendMessage);
         document.getElementById('history-search')?.addEventListener('input', renderHistory);
