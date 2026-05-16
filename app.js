@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v44 — ПЛАШКА «ДУМАЮ», РЕГЕНЕРАЦИЯ, ВАРИАНТЫ ====================
+// ==================== DIAMOND AI v45 — ДИСКЛЕЙМЕР, ОТМЕНА, РЕГЕНЕРАЦИЯ, АВАТАР ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -146,7 +146,9 @@
             languageHint: 'Выберите язык интерфейса',
             tutorialHint: 'Пройдите обучение, чтобы узнать все возможности Diamond AI',
             tutorialNotCompletedHint: 'Нажмите, чтобы пройти обучение',
-            disclaimerTooltip: 'ИИ может ошибаться. Только для справки.',
+            disclaimerTitle: 'Diamond AI',
+            disclaimerText: 'Искусственный интеллект может ошибаться. Используйте его как справочный инструмент. Модель обучается и обновляется каждую неделю.',
+            disclaimerClose: 'Понятно',
             generatedIn: 'Сгенерировано за',
             sec: 'с',
             copyAction: 'Копировать',
@@ -267,7 +269,9 @@
             languageHint: 'Select interface language',
             tutorialHint: 'Take the tutorial to learn all Diamond AI features',
             tutorialNotCompletedHint: 'Click to take the tutorial',
-            disclaimerTooltip: 'AI can make mistakes. For reference only.',
+            disclaimerTitle: 'Diamond AI',
+            disclaimerText: 'Artificial intelligence can make mistakes. Use it as a reference tool. The model is trained and updated weekly.',
+            disclaimerClose: 'Got it',
             generatedIn: 'Generated in',
             sec: 'sec',
             copyAction: 'Copy',
@@ -400,7 +404,7 @@
         if (container) container.scrollTop = container.scrollHeight;
     }
 
-    // ========== ПЛАШКА «ДУМАЮ» (6 состояний, таймер) ==========
+    // ========== ПЛАШКА «ДУМАЮ» (6 состояний, таймер, кнопка отмены) ==========
     function createThinkingCard() {
         const container = document.getElementById('messages-container');
         if (!container) return null;
@@ -413,8 +417,18 @@
                 <div class="thinking-card-text">Думаю…</div>
                 <div class="thinking-card-timer">0.0 с</div>
             </div>
+            <button class="thinking-cancel-btn" id="thinking-cancel-btn" title="Отменить генерацию"><i class="fas fa-times"></i></button>
         `;
         container.appendChild(card);
+        // Кнопка отмены
+        card.querySelector('#thinking-cancel-btn').addEventListener('click', () => {
+            if (currentAbortController) {
+                currentAbortController.abort();
+                stopThinkingAnimation(card, null); // передаём card напрямую, чтобы убрать
+                isWaitingForResponse = false;
+                updateSendButtonState();
+            }
+        });
         scrollToBottom();
         return card;
     }
@@ -454,13 +468,46 @@
     }
 
     function stopThinkingAnimation(card, anim) {
-        clearInterval(anim.timerInterval);
-        clearInterval(anim.stateInterval);
+        if (anim) {
+            clearInterval(anim.timerInterval);
+            clearInterval(anim.stateInterval);
+        }
         if (card) {
             card.style.opacity = '0';
-            setTimeout(() => card.remove(), 300);
+            card.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                if (card.parentNode) card.remove();
+            }, 300);
         }
-        return ((Date.now() - anim.startTime) / 1000).toFixed(1);
+        if (anim) {
+            return ((Date.now() - anim.startTime) / 1000).toFixed(1);
+        }
+        return '0.0';
+    }
+
+    // ========== МОДАЛКА ДИСКЛЕЙМЕРА ==========
+    function showDisclaimerModal() {
+        const overlay = document.createElement('div');
+        overlay.className = 'disclaimer-modal-overlay';
+        overlay.innerHTML = `
+            <div class="disclaimer-modal">
+                <div class="disclaimer-modal-icon"><i class="fas fa-robot"></i></div>
+                <h3>${t('disclaimerTitle')}</h3>
+                <p>${t('disclaimerText')}</p>
+                <button class="btn btn-primary" id="disclaimer-close-btn">${t('disclaimerClose')}</button>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        const closeModal = () => {
+            overlay.style.opacity = '0';
+            setTimeout(() => overlay.remove(), 300);
+        };
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) closeModal();
+        });
+        document.getElementById('disclaimer-close-btn').addEventListener('click', closeModal);
     }
 
     // ========== LaTeX РЕНДЕР ==========
@@ -803,7 +850,7 @@
         modal.addEventListener('click', (e) => { if (e.target === modal) close(); });
     }
 
-    // ========== ПАПКИ ==========
+    // ========== ПАПКИ (без изменений) ==========
     async function createFolder(name, desc, icon, color) {
         const id = Date.now().toString();
         const folder = {
@@ -1352,7 +1399,7 @@
         container.innerHTML = '';
         let lastDate = null;
         chat.messages.forEach((msg, idx) => {
-            if (msg.isTyping) return; // пропускаем служебные
+            if (msg.isTyping) return;
             const date = new Date(msg.timestamp || chat.created_at).toDateString();
             if (date !== lastDate) {
                 container.innerHTML += `<div class="date-divider"><span>${formatDateHeader(msg.timestamp || chat.created_at)}</span></div>`;
@@ -1374,7 +1421,7 @@
             wrapper.className = 'message-content-wrapper';
             wrapper.appendChild(contentDiv);
 
-            // Футер сообщения для ассистента
+            // Футер для ассистента
             if (msg.role === 'assistant' && msg.generationTime) {
                 const footerDiv = document.createElement('div');
                 footerDiv.className = 'message-footer';
@@ -1382,7 +1429,7 @@
                 const currentVariant = msg.currentVariant || 0;
 
                 footerDiv.innerHTML = `
-                    <span class="disclaimer">Diamond AI<span class="disclaimer-tooltip">${t('disclaimerTooltip')}</span></span>
+                    <span class="disclaimer">Diamond AI</span>
                     <span class="separator">·</span>
                     ${hasVariants ? `
                         <span class="variant-switcher">
@@ -1398,6 +1445,9 @@
                     <span class="separator">·</span>
                     <span class="regen-action">${t('regenAction')}</span>
                 `;
+
+                // Дисклеймер
+                footerDiv.querySelector('.disclaimer').addEventListener('click', showDisclaimerModal);
 
                 // Копировать
                 footerDiv.querySelector('.copy-action').addEventListener('click', () => {
@@ -1801,7 +1851,6 @@
         isWaitingForResponse = true;
         updateSendButtonState();
 
-        // Показываем плашку «Думаю»
         const card = createThinkingCard();
         const anim = startThinkingAnimation(card);
         scrollToBottom();
@@ -1836,7 +1885,7 @@
             });
             if (resp.ok) { const data = await resp.json(); assistantMessage = data.choices[0].message.content; success = true; }
             else console.error('Mistral API error:', resp.status);
-        } catch (e) { if (e.name === 'AbortError') console.log('Request aborted'); else console.warn('Mistral error:', e); }
+        } catch (e) { if (e.name === 'AbortError') { console.log('Request aborted'); isWaitingForResponse = false; updateSendButtonState(); return; } else console.warn('Mistral error:', e); }
 
         const generationTime = stopThinkingAnimation(card, anim);
 
@@ -1848,29 +1897,40 @@
         isWaitingForResponse = false; currentAbortController = null; updateSendButtonState(); renderChat(); scrollToBottom();
     }
 
-    function stopGeneration() { if (currentAbortController) { currentAbortController.abort(); hideThinkingOverlay(); showToast('Генерация остановлена', '', 'info'); } }
-
-    // ========== РЕГЕНЕРАЦИЯ (без повторной отправки) ==========
+    // ========== РЕГЕНЕРАЦИЯ (без дублирования сообщения) ==========
     async function regenerateResponseFromMsg(msg, idx) {
         const chat = chats.find(c => c.id === currentChatId);
         if (!chat || isWaitingForResponse) return;
 
-        // Находим последнее сообщение пользователя в этом чате
-        const userMsgs = chat.messages.filter(m => m.role === 'user' && !m.isTyping);
-        if (userMsgs.length === 0) return;
-        const lastUserMsg = userMsgs[userMsgs.length - 1];
-        const prompt = lastUserMsg.content;
+        // Запоминаем позицию сообщения, чтобы потом вставить на то же место
+        const msgIndex = chat.messages.indexOf(msg);
+        if (msgIndex === -1) return;
+
+        // Временно удаляем сообщение из массива и из DOM
+        chat.messages.splice(msgIndex, 1);
+        await saveChatToSupabase(chat);
+        renderChat(); // перерисовываем, чтобы сообщение исчезло
 
         isWaitingForResponse = true;
         updateSendButtonState();
 
-        // Показываем плашку «Думаю»
         const card = createThinkingCard();
         const anim = startThinkingAnimation(card);
         scrollToBottom();
 
+        // Ищем последнее сообщение пользователя
+        const userMsgs = chat.messages.filter(m => m.role === 'user' && !m.isTyping);
+        if (userMsgs.length === 0) {
+            stopThinkingAnimation(card, anim);
+            isWaitingForResponse = false;
+            updateSendButtonState();
+            return;
+        }
+        const lastUserMsg = userMsgs[userMsgs.length - 1];
+        const prompt = lastUserMsg.content;
+
         let systemPrompt = (chat.id && chat.id.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[chat.id.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
-        const contextMessages = chat.messages.filter(m => !m.isTyping && m !== msg).slice(-15);
+        const contextMessages = chat.messages.filter(m => !m.isTyping).slice(-15);
         const messagesForAI = [
             systemPrompt,
             ...contextMessages.map(m => ({ role: m.role, content: m.content })),
@@ -1888,7 +1948,7 @@
             });
             if (resp.ok) { const data = await resp.json(); newAnswer = data.choices[0].message.content; success = true; }
             else console.error('Mistral API error:', resp.status);
-        } catch (e) { if (e.name === 'AbortError') console.log('Request aborted'); else console.warn('Mistral error:', e); }
+        } catch (e) { if (e.name === 'AbortError') { console.log('Request aborted'); isWaitingForResponse = false; updateSendButtonState(); return; } else console.warn('Mistral error:', e); }
 
         const generationTime = stopThinkingAnimation(card, anim);
 
@@ -1900,11 +1960,15 @@
             msg.currentVariant = variants.length - 1;
             msg.content = newAnswer;
             msg.generationTime = generationTime;
-            await saveChatToSupabase(chat);
+            // Вставляем обратно на то же место
+            chat.messages.splice(msgIndex, 0, msg);
         } else {
+            // В случае ошибки возвращаем исходное сообщение
+            chat.messages.splice(msgIndex, 0, msg);
             showToast('Ошибка', 'Не удалось регенерировать ответ', 'error');
         }
 
+        await saveChatToSupabase(chat);
         isWaitingForResponse = false; currentAbortController = null; updateSendButtonState();
         renderChat();
         scrollToBottom();
@@ -1914,7 +1978,6 @@
     function getBotAvatarHTML() { return `<img src="bots.png" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`; }
     function getUserAvatarHTML() {
         if (currentUser && currentUser.avatar) return `<img src="${currentUser.avatar}" style="width:100%; height:100%; object-fit:cover; border-radius:50%;">`;
-        if (currentUser && currentUser.fa_icon) return `<i class="${currentUser.fa_icon}"></i>`;
         return '<i class="fas fa-user"></i>';
     }
 
@@ -1924,19 +1987,39 @@
         if (currentUser) {
             const icon = currentUser.fa_icon ? `<i class="${currentUser.fa_icon}" style="margin-right:6px;"></i>` : '';
             if (nameSpan) nameSpan.innerHTML = `${icon}${currentUser.name || currentUser.login}`;
-            if (avatarImg) avatarImg.src = currentUser.avatar || '';
+            if (avatarImg) {
+                if (currentUser.avatar) {
+                    avatarImg.src = currentUser.avatar;
+                    avatarImg.style.display = '';
+                } else {
+                    avatarImg.style.display = 'none';
+                }
+            }
         } else {
             if (nameSpan) nameSpan.textContent = t('profile');
-            if (avatarImg) avatarImg.src = '';
+            if (avatarImg) { avatarImg.src = ''; avatarImg.style.display = 'none'; }
+        }
+        // Показываем fa-user в .user-avatar, если нет картинки
+        const userAvatarDiv = document.querySelector('.user-avatar');
+        if (userAvatarDiv) {
+            if (!currentUser || !currentUser.avatar) {
+                if (!userAvatarDiv.querySelector('i.fa-user')) {
+                    const img = userAvatarDiv.querySelector('img');
+                    if (img) img.style.display = 'none';
+                    const icon = document.createElement('i');
+                    icon.className = 'fas fa-user';
+                    icon.style.fontSize = '24px';
+                    icon.style.color = 'var(--text-primary)';
+                    userAvatarDiv.appendChild(icon);
+                }
+            }
         }
         const settingsBtn = document.getElementById('settingsBtn');
         if (settingsBtn) {
             if (!tutorialCompleted) {
-                settingsBtn.classList.add('blink');
-                settingsBtn.classList.add('scale-pulse');
+                settingsBtn.classList.add('blink', 'scale-pulse');
             } else {
-                settingsBtn.classList.remove('blink');
-                settingsBtn.classList.remove('scale-pulse');
+                settingsBtn.classList.remove('blink', 'scale-pulse');
             }
         }
     }
@@ -2148,7 +2231,7 @@
                         <h2><i class="fas fa-key"></i> ${t('settingsDiamKey')}</h2>
                         <p>${t('settingsDiamKeyDesc')}</p>
                         <div class="diamkey-avatar-wrapper" id="diamkeyAvatarWrapper">
-                            <img src="${currentUser?.avatar || ''}" alt="Avatar" id="diamkeyAvatarImg" onerror="this.style.display='none'">
+                            ${currentUser?.avatar ? `<img src="${currentUser.avatar}" alt="Avatar" id="diamkeyAvatarImg">` : '<i class="fas fa-user" style="font-size:50px; color:var(--text-primary);"></i>'}
                             <div class="diamkey-avatar-overlay"><i class="fas fa-pencil-alt"></i></div>
                         </div>
                         <div class="diamkey-profile-stats">
@@ -2256,8 +2339,12 @@
                         await supabaseClient.from('users').update({ avatar: avatarData }).eq('login', currentUser.login);
                         currentUser.avatar = avatarData;
                         localStorage.setItem('diamond_user', JSON.stringify(currentUser));
-                        document.getElementById('diamkeyAvatarImg').src = avatarData;
-                        document.getElementById('diamkeyAvatarImg').style.display = 'block';
+                        // Обновляем отображение
+                        const imgEl = document.getElementById('diamkeyAvatarImg');
+                        if (imgEl) {
+                            imgEl.src = avatarData;
+                            imgEl.style.display = '';
+                        }
                         updateUserPanel();
                         showToast('Аватар обновлён', '', 'success');
                     };
@@ -2294,16 +2381,16 @@
         document.getElementById('settings-logout-btn')?.addEventListener('click', () => { closeModal(); logout(); });
     }
 
-    // ========== ОБУЧЕНИЕ ==========
+    // ========== ОБУЧЕНИЕ (без крестика и интерактивных кнопок) ==========
     const tutorialSteps = [
-        { title: 'Добро пожаловать в Diamond AI!', html: `<p>Перед вами <strong style="color:var(--accent)">Diamond AI</strong> — ваш личный интеллектуальный помощник, работающий на передовой нейросети. Он способен отвечать на вопросы, решать задачи по математике, физике, химии, программированию, а также вести непринуждённую беседу. Все ваши чаты сохраняются в облаке и синхронизируются через DiamKey, поэтому вы не потеряете ни строчки даже при смене устройства.</p><p>В этом небольшом обучении я покажу основные элементы интерфейса и научу пользоваться главными функциями. Это займёт меньше минуты. Нажимайте <strong>«Далее»</strong>, чтобы продолжить.</p>`, demo: '', interactive: false },
-        { title: 'Главный чат', html: `<p>Центральная часть экрана — это <strong style="color:var(--accent)">область диалога</strong>. Здесь отображаются ваши сообщения и ответы ИИ. Под диалогом находится поле ввода — просто начните печатать вопрос и нажмите кнопку отправки (стрелка вверх). ИИ мгновенно приступит к генерации ответа, а вы увидите индикатор печати.</p><p>Когда чат пуст, в поле ввода отображаются примеры запросов — попробуйте нажать на один из них, чтобы быстро начать разговор.</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-comment"></i><div><strong>Пример:</strong><br><span style="color:var(--text-secondary)">«Расскажи про теорему Пифагора»</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" id="tutorialFocusInput"><i class="fas fa-hand-pointer"></i> Нажми сюда, чтобы попробовать ввод</div>` },
-        { title: 'Создание нового чата', html: `<p>Хотите обсудить новую тему, не смешивая её с предыдущими? Нажмите кнопку <strong style="color:var(--accent)">«Новый чат»</strong> (<i class="fas fa-feather-alt"></i>) в левом сайдбаре. Создастся пустой диалог, а после первого сообщения ИИ автоматически придумает для него название. Все чаты сохраняются в вашей учётной записи и будут доступны с любого устройства, где вы войдёте в DiamKey.</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-feather-alt"></i><div><strong>Кнопка «Новый чат»</strong><br><span style="color:var(--text-secondary)">Находится в сайдбаре слева</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" id="tutorialNewChat"><i class="fas fa-hand-pointer"></i> Нажмите, чтобы создать новый чат</div>` },
-        { title: 'Папки для порядка', html: `<p>Когда чатов становится много, их удобно <strong style="color:var(--accent)">группировать по папкам</strong>. Перейдите на вкладку «Папки» (<i class="fas fa-folder"></i>) в сайдбаре. Там вы можете создавать папки, задавать им иконки и цвета, а затем переносить в них чаты. Например, можно сделать папки «Учёба», «Работа», «Код» и быстро находить нужные диалоги. Папки тоже синхронизируются через DiamKey.</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-folder"></i><div><strong>Пример папки:</strong><br><span style="color:var(--text-secondary)">«Учёба», «Работа», «Код»</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" id="tutorialOpenFolders"><i class="fas fa-hand-pointer"></i> Открыть папки</div>` },
-        { title: 'Мастерская', html: `<p>Раздел <strong style="color:var(--accent)">«Мастерская»</strong> (<i class="fas fa-wrench"></i>) содержит специальные инструменты, расширяющие возможности ИИ. Сейчас там доступен инструмент <strong>«Распознать ИИ»</strong> — он анализирует текст и определяет, написан он человеком или сгенерирован другой нейросетью (GPT, Mistral и др.). В будущем появятся новые инструменты, такие как Code Review и Переводчик.</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-wrench"></i><div><strong>Инструмент:</strong><br><span style="color:var(--text-secondary)">«Распознать ИИ» — анализ текста</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" id="tutorialOpenWorkshop"><i class="fas fa-hand-pointer"></i> Открыть мастерскую</div>` },
-        { title: 'Твой профиль', html: `<p>В нижней части сайдбара расположена <strong style="color:var(--accent)">панель пользователя</strong>. Здесь отображаются ваш никнейм и аватар. Рядом — кнопка <strong style="color:var(--accent)">шестерёнки</strong> (<i class="fas fa-cog"></i>), открывающая настройки. В настройках можно сменить язык интерфейса, изменить данные профиля DiamKey (аватар, ник, пароль), запустить обучение заново или выйти из аккаунта.</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-user-circle"></i><div><strong>Панель пользователя</strong><br><span style="color:var(--text-secondary)">Внизу сайдбара</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" id="tutorialOpenSettings"><i class="fas fa-hand-pointer"></i> Открыть настройки</div>` },
-        { title: 'Поиск по истории', html: `<p>Если чатов накопилось очень много, воспользуйтесь <strong style="color:var(--accent)">поиском</strong> (<i class="fas fa-search"></i>) в верхней части сайдбара. Он ищет не только по названиям чатов, но и внутри самих сообщений, мгновенно фильтруя список. Найденный текст подсвечивается в диалоге.</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-search"></i><div><strong>Поиск чатов</strong><br><span style="color:var(--text-secondary)">Мгновенная фильтрация</span></div></div>`, interactive: `<div class="tutorial-demo-interactive" id="tutorialFocusSearch"><i class="fas fa-hand-pointer"></i> Попробовать поиск</div>` },
-        { title: 'Готово!', html: `<p>Отлично! Теперь вы знаете основы Diamond AI. Коротко повторим:</p><ul style="padding-left:20px; margin:10px 0;"><li><strong>Чат</strong> — общайтесь с ИИ, задавайте вопросы, решайте задачи</li><li><strong>Папки</strong> — наводите порядок, группируя диалоги</li><li><strong>Мастерская</strong> — включайте дополнительные инструменты</li><li><strong>Поиск</strong> — быстро находите нужные чаты</li><li><strong>Настройки</strong> — управляйте языком, профилем и обучением</li></ul><p>Если что-то забудете, просто нажмите на <strong style="color:var(--accent)">шестерёнку</strong> возле ника и выберите «Обучение». Приятного использования!</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-check-circle" style="color:#2ecc71;"></i><div><strong>Вы молодец!</strong><br><span style="color:var(--text-secondary)">Всё получится!</span></div></div>`, interactive: false }
+        { title: 'Добро пожаловать в Diamond AI!', html: `<p>Перед вами <strong style="color:var(--accent)">Diamond AI</strong> — ваш личный интеллектуальный помощник, работающий на передовой нейросети. Он способен отвечать на вопросы, решать задачи по математике, физике, химии, программированию, а также вести непринуждённую беседу. Все ваши чаты сохраняются в облаке и синхронизируются через DiamKey, поэтому вы не потеряете ни строчки даже при смене устройства.</p><p>В этом небольшом обучении я покажу основные элементы интерфейса и научу пользоваться главными функциями. Это займёт меньше минуты. Нажимайте <strong>«Далее»</strong>, чтобы продолжить.</p>` },
+        { title: 'Главный чат', html: `<p>Центральная часть экрана — это <strong style="color:var(--accent)">область диалога</strong>. Здесь отображаются ваши сообщения и ответы ИИ. Под диалогом находится поле ввода — просто начните печатать вопрос и нажмите кнопку отправки (стрелка вверх). ИИ мгновенно приступит к генерации ответа, а вы увидите индикатор печати.</p><p>Когда чат пуст, в поле ввода отображаются примеры запросов — попробуйте нажать на один из них, чтобы быстро начать разговор.</p>` },
+        { title: 'Создание нового чата', html: `<p>Хотите обсудить новую тему, не смешивая её с предыдущими? Нажмите кнопку <strong style="color:var(--accent)">«Новый чат»</strong> (<i class="fas fa-feather-alt"></i>) в левом сайдбаре. Создастся пустой диалог, а после первого сообщения ИИ автоматически придумает для него название. Все чаты сохраняются в вашей учётной записи и будут доступны с любого устройства, где вы войдёте в DiamKey.</p>` },
+        { title: 'Папки для порядка', html: `<p>Когда чатов становится много, их удобно <strong style="color:var(--accent)">группировать по папкам</strong>. Перейдите на вкладку «Папки» (<i class="fas fa-folder"></i>) в сайдбаре. Там вы можете создавать папки, задавать им иконки и цвета, а затем переносить в них чаты. Например, можно сделать папки «Учёба», «Работа», «Код» и быстро находить нужные диалоги. Папки тоже синхронизируются через DiamKey.</p>` },
+        { title: 'Мастерская', html: `<p>Раздел <strong style="color:var(--accent)">«Мастерская»</strong> (<i class="fas fa-wrench"></i>) содержит специальные инструменты, расширяющие возможности ИИ. Сейчас там доступен инструмент <strong>«Распознать ИИ»</strong> — он анализирует текст и определяет, написан он человеком или сгенерирован другой нейросетью (GPT, Mistral и др.). В будущем появятся новые инструменты, такие как Code Review и Переводчик.</p>` },
+        { title: 'Твой профиль', html: `<p>В нижней части сайдбара расположена <strong style="color:var(--accent)">панель пользователя</strong>. Здесь отображаются ваш никнейм и аватар. Рядом — кнопка <strong style="color:var(--accent)">шестерёнки</strong> (<i class="fas fa-cog"></i>), открывающая настройки. В настройках можно сменить язык интерфейса, изменить данные профиля DiamKey (аватар, ник, пароль), запустить обучение заново или выйти из аккаунта.</p>` },
+        { title: 'Поиск по истории', html: `<p>Если чатов накопилось очень много, воспользуйтесь <strong style="color:var(--accent)">поиском</strong> (<i class="fas fa-search"></i>) в верхней части сайдбара. Он ищет не только по названиям чатов, но и внутри самих сообщений, мгновенно фильтруя список. Найденный текст подсвечивается в диалоге.</p>` },
+        { title: 'Готово!', html: `<p>Отлично! Теперь вы знаете основы Diamond AI. Коротко повторим:</p><ul style="padding-left:20px; margin:10px 0;"><li><strong>Чат</strong> — общайтесь с ИИ, задавайте вопросы, решайте задачи</li><li><strong>Папки</strong> — наводите порядок, группируя диалоги</li><li><strong>Мастерская</strong> — включайте дополнительные инструменты</li><li><strong>Поиск</strong> — быстро находите нужные чаты</li><li><strong>Настройки</strong> — управляйте языком, профилем и обучением</li></ul><p>Если что-то забудете, просто нажмите на <strong style="color:var(--accent)">шестерёнку</strong> возле ника и выберите «Обучение». Приятного использования!</p>` }
     ];
 
     async function startTutorial() {
@@ -2353,12 +2440,10 @@
         const modal = document.createElement('div');
         modal.className = 'tutorial-modal';
         modal.innerHTML = `
-            <div class="tutorial-header"><h2>${step.title}</h2><button class="tutorial-btn skip" id="tutorialSkip"><i class="fas fa-times"></i></button></div>
+            <div class="tutorial-header"><h2>${step.title}</h2></div>
             <div class="tutorial-step-indicator">${dots}</div>
             <div class="tutorial-body">
-                <div id="tutorialContent" class="tutorial-fade-text"></div>
-                ${step.demo ? step.demo : ''}
-                ${step.interactive ? step.interactive : ''}
+                <div id="tutorialContent" class="tutorial-fade-text">${step.html}</div>
             </div>
             <div class="tutorial-footer">
                 <button class="tutorial-btn" id="tutorialPrev" ${tutorialStep === 0 ? 'style="visibility:hidden"' : ''}><i class="fas fa-arrow-left"></i> ${t('tutorialPrev')}</button>
@@ -2370,22 +2455,12 @@
         overlay.appendChild(modal);
         const contentEl = document.getElementById('tutorialContent');
         if (contentEl) {
-            contentEl.innerHTML = step.html;
             requestAnimationFrame(() => {
                 contentEl.classList.add('show');
             });
         }
-        document.getElementById('tutorialSkip').addEventListener('click', closeTutorial);
         document.getElementById('tutorialNext').addEventListener('click', nextTutorialStep);
         document.getElementById('tutorialPrev').addEventListener('click', prevTutorialStep);
-        setTimeout(() => {
-            document.getElementById('tutorialFocusInput')?.addEventListener('click', () => { closeTutorial(); document.getElementById('user-input')?.focus(); });
-            document.getElementById('tutorialNewChat')?.addEventListener('click', () => { closeTutorial(); createNewChat(); });
-            document.getElementById('tutorialOpenFolders')?.addEventListener('click', () => { closeTutorial(); switchToFoldersView(); });
-            document.getElementById('tutorialOpenWorkshop')?.addEventListener('click', () => { closeTutorial(); switchToWorkshopView(); });
-            document.getElementById('tutorialOpenSettings')?.addEventListener('click', () => { closeTutorial(); showSettingsModal(); });
-            document.getElementById('tutorialFocusSearch')?.addEventListener('click', () => { closeTutorial(); document.getElementById('history-search')?.focus(); });
-        }, 100);
     }
 
     // ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
