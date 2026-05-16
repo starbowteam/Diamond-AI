@@ -14,7 +14,7 @@
     --accent: #a0a0b0;
     --accent-glow: rgba(160, 160, 176, 0.15);
     --tutorial-bg: #1e1e1e;
-    --blink-color: #b39ddb; /* фиолетовый для мигания */
+    --blink-color: #b39ddb;
 }
 
 * {
@@ -245,13 +245,20 @@ body {
 }
 .settings-btn:hover { color: var(--accent); transform: rotate(30deg); }
 
-/* Мигание кнопки настроек (пока не пройдено обучение) */
+/* Пульсация кнопки настроек (если обучение не пройдено) */
 .settings-btn.blink {
     animation: softBlink 2s infinite;
+}
+.settings-btn.scale-pulse {
+    animation: scalePulse 2s infinite ease-in-out;
 }
 @keyframes softBlink {
     0%, 100% { color: var(--text-secondary); }
     50% { color: var(--blink-color); }
+}
+@keyframes scalePulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
 }
 
 /* ========== СООБЩЕНИЯ ========== */
@@ -279,15 +286,6 @@ body {
 }
 .action-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 
-/* Плавное появление текста внутри сообщения */
-.message-content.typing-text {
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-.message-content.typing-text.show {
-    opacity: 1;
-}
-
 /* Подсветка найденного текста */
 .search-highlight {
     background: rgba(160, 160, 176, 0.3); color: white; border-radius: 4px; padding: 0 2px;
@@ -305,7 +303,7 @@ body {
     font-size: 11px; color: var(--text-secondary); border: 1px solid var(--border-color);
 }
 
-/* ========== ЗАГОЛОВОК ЧАТА (стилизованная рамка-кнопка) ========== */
+/* ========== ЗАГОЛОВОК ЧАТА ========== */
 .chat-header {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     padding: 4px 12px; border-radius: 16px; border: 1px solid var(--border-color);
@@ -660,6 +658,12 @@ textarea::placeholder { color: #6a6a6a; }
     border-left: 3px solid var(--accent);
     padding-left: 21px;
 }
+/* Подсветка вкладки обучения, если не пройдено */
+.settings-left-panel button.tutorial-tab-highlight {
+    background: rgba(179, 157, 219, 0.2);
+    animation: softBlink 2s infinite;
+    border-left: 3px solid var(--blink-color);
+}
 .settings-right-content {
     flex: 1;
     padding: 30px;
@@ -966,30 +970,45 @@ textarea::placeholder { color: #6a6a6a; }
     height: auto;
 }
 
-/* ========== АНИМАЦИЯ "ДУМАЕТ..." (плавная) ========== */
-.thinking-indicator {
+/* ========== НОВАЯ МОДАЛКА "ДУМАЮ" (ЗАТЕМНЕНИЕ + АНИМАЦИЯ ПЕРА) ========== */
+.thinking-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 6000;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 12px 16px;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    max-width: fit-content;
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
 }
-.thinking-indicator.show {
-    opacity: 1;
+.thinking-modal {
+    text-align: center;
+    color: var(--text-primary);
 }
-.thinking-indicator i {
-    font-size: 18px;
+.thinking-pen {
+    font-size: 64px;
     color: var(--accent);
+    margin-bottom: 20px;
+    animation: penWrite 0.8s ease-in-out infinite alternate;
 }
-.thinking-text {
-    font-size: 15px;
-    color: var(--text-secondary);
-    transition: opacity 0.3s ease;
+@keyframes penWrite {
+    0% { transform: translateY(0) rotate(-10deg); }
+    100% { transform: translateY(-10px) rotate(10deg); }
+}
+.thinking-phrase {
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    opacity: 0;
+    animation: phraseFade 2s ease-in-out infinite;
+}
+@keyframes phraseFade {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 1; }
 }
 
 /* ========== АДАПТИВ ========== */
