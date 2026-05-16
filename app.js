@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v41.2 — АВАТАРКА У ИНДИКАТОРА, ПЛАВНОЕ ПОЯВЛЕНИЕ РАМКИ ====================
+// ==================== DIAMOND AI v42 — НОВАЯ МОДАЛКА «ДУМАЮ», ИСПРАВЛЕННЫЕ ФОРМУЛЫ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -16,8 +16,6 @@
     let currentEditingFolderId = null;
     let currentView = 'chat';
     let placeholderInterval = null;
-    let thinkingTimer = null;
-    let thinkingDots = 0;
     let workshopTools = {};
     let forumMessages = [];
     let forumLoaded = false;
@@ -30,6 +28,11 @@
     let chatAttachments = {};
     let fileInputEl = null;
     let tutorialCompleted = true;
+
+    // Таймер для минимального времени показа модалки «Думаю»
+    let thinkingStartTime = 0;
+    let thinkingOverlayEl = null;
+    let thinkingPhraseInterval = null;
 
     // ========== ЛОКАЛИЗАЦИЯ ==========
     const locales = {
@@ -351,7 +354,7 @@
 
 ВАЖНО: Если пользователь прикрепил файл, ты получишь его содержимое в тексте запроса. Анализируй его, отвечай по содержимому. Никогда не говори, что ты не можешь просматривать файлы или изображения — текст уже перед тобой.
 
-ОФОРМЛЕНИЕ ФОРМУЛ: Все математические, физические, химические формулы и уравнения обязательно заключай в двойные доллары $$...$$. Никаких квадратных скобок или обратных слешей без долларов. Это нужно для корректного отображения.
+ОФОРМЛЕНИЕ ФОРМУЛ: ВСЕ математические, физические и химические формулы выводи СТРОГО в формате $$...$$ или $...$. Запрещено использовать \\(...\\) и \\[...\\]. Дроби, степени, корни, интегралы должны быть внутри $$. Химические формулы оформляй через \\ce{...} внутри $$. Пример: $$\\ce{H2O}$$, $$\\frac{a}{b}$$, $$\\sqrt{x}$$, $$\\int_0^\\infty$$. Это критически важно для корректного отображения.
 
 Я Сегодня: ${currentDateStr}.`
     };
@@ -398,54 +401,68 @@
         if (container) container.scrollTop = container.scrollHeight;
     }
 
-    // ========== ИСПРАВЛЕННАЯ АНИМАЦИЯ "ДУМАЕТ..." С АВАТАРКОЙ ==========
-    function startThinkingAnimation() {
-        if (thinkingTimer) clearInterval(thinkingTimer);
-        const container = document.getElementById('messages-container');
-        if (!container) return;
+    // ========== НОВАЯ МОДАЛКА «ДУМАЮ» (ЗАТЕМНЕНИЕ + АНИМАЦИЯ) ==========
+    function showThinkingOverlay() {
+        // Убираем старый индикатор, если есть
+        const oldIndicator = document.getElementById('thinking-indicator');
+        if (oldIndicator) oldIndicator.remove();
 
-        const indicator = document.createElement('div');
-        indicator.className = 'message assistant thinking';
-        indicator.id = 'thinking-indicator';
-        indicator.innerHTML = `
-            <div class="avatar">${getBotAvatarHTML()}</div>
-            <div class="message-content-wrapper">
-                <div class="thinking-indicator-content">
-                    <span class="thinking-text">${t('thinking')}</span>
-                </div>
+        // Создаём overlay
+        thinkingOverlayEl = document.createElement('div');
+        thinkingOverlayEl.className = 'thinking-overlay';
+        thinkingOverlayEl.id = 'thinking-overlay';
+        thinkingOverlayEl.innerHTML = `
+            <div class="thinking-modal">
+                <i class="fas fa-pen-nib thinking-pen"></i>
+                <div class="thinking-phrase" id="thinking-phrase">${t('thinking')}</div>
             </div>
         `;
-        container.appendChild(indicator);
-        requestAnimationFrame(() => {
-            indicator.style.opacity = '1';
-        });
-        scrollToBottom();
+        document.body.appendChild(thinkingOverlayEl);
 
+        // Запускаем смену фраз
         const phrases = [t('thinking'), t('thinkingPreparing'), t('thinkingTyping')];
         let phraseIndex = 0;
-        thinkingTimer = setInterval(() => {
+        const phraseEl = document.getElementById('thinking-phrase');
+
+        thinkingPhraseInterval = setInterval(() => {
             phraseIndex = (phraseIndex + 1) % phrases.length;
-            const textEl = indicator.querySelector('.thinking-text');
-            if (textEl) {
-                textEl.style.opacity = '0';
+            if (phraseEl) {
+                phraseEl.style.opacity = '0';
                 setTimeout(() => {
-                    textEl.textContent = phrases[phraseIndex];
-                    textEl.style.opacity = '1';
+                    phraseEl.textContent = phrases[phraseIndex];
+                    phraseEl.style.opacity = '1';
                 }, 300);
             }
         }, 2000);
+
+        thinkingStartTime = Date.now();
     }
 
-    function stopThinkingAnimation() {
-        if (thinkingTimer) { clearInterval(thinkingTimer); thinkingTimer = null; }
-        const indicator = document.getElementById('thinking-indicator');
-        if (indicator) {
-            indicator.style.opacity = '0';
-            setTimeout(() => indicator.remove(), 300);
+    async function hideThinkingOverlay() {
+        // Гарантируем минимум 2 секунды показа
+        const elapsed = Date.now() - thinkingStartTime;
+        const minDuration = 2000;
+        if (elapsed < minDuration) {
+            await new Promise(resolve => setTimeout(resolve, minDuration - elapsed));
+        }
+
+        // Очищаем интервал смены фраз
+        if (thinkingPhraseInterval) {
+            clearInterval(thinkingPhraseInterval);
+            thinkingPhraseInterval = null;
+        }
+
+        // Плавно убираем overlay
+        if (thinkingOverlayEl) {
+            thinkingOverlayEl.style.transition = 'opacity 0.3s ease';
+            thinkingOverlayEl.style.opacity = '0';
+            await new Promise(resolve => setTimeout(resolve, 300));
+            thinkingOverlayEl.remove();
+            thinkingOverlayEl = null;
         }
     }
 
-    // ========== LaTeX РЕНДЕР ==========
+    // ========== LaTeX РЕНДЕР (расширенный) ==========
     function renderMathInElementWithMhchem(element) {
         if (!element || typeof renderMathInElement === 'undefined') return;
         try {
@@ -457,7 +474,8 @@
                     {left: '\\[', right: '\\]', display: true}
                 ],
                 throwOnError: false,
-                macros: { "\\ce": "\\ce" }
+                macros: { "\\ce": "\\ce" },
+                strict: false
             });
         } catch(e) { console.warn('Math render error:', e); }
     }
@@ -727,6 +745,8 @@
         } else {
             removeAttachmentPreview();
         }
+        const input = document.getElementById('user-input');
+        if (input) input.style.height = '';
     }
 
     async function togglePin(id) {
@@ -1302,7 +1322,7 @@
         return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент' };
     }
 
-    // ========== РЕНДЕР ЧАТА (сообщения всегда видны) ==========
+    // ========== РЕНДЕР ЧАТА ==========
     function renderChat() {
         const chat = chats.find(c => c.id === currentChatId);
         const headerEl = document.getElementById('chatHeader');
@@ -1427,7 +1447,6 @@
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
-    // ========== ИСПРАВЛЕННОЕ ДОБАВЛЕНИЕ СООБЩЕНИЯ (плавное появление) ==========
     async function addMessageToDOM(role, content, save = true, attachment = null) {
         const timestamp = Date.now();
         const messageId = timestamp + Math.random();
@@ -1451,7 +1470,6 @@
             }
         }
         renderChat();
-        // Добавляем плавное появление для последнего сообщения ассистента
         if (role === 'assistant') {
             const container = document.getElementById('messages-container');
             if (container) {
@@ -1700,7 +1718,7 @@
         return result.value || '';
     }
 
-    // ========== ОТПРАВКА СООБЩЕНИЯ (убрано дублирование индикатора) ==========
+    // ========== ОТПРАВКА СООБЩЕНИЯ (с новой модалкой) ==========
     async function sendMessage() {
         const text = document.getElementById('user-input').value.trim();
         const attachment = currentChatId ? chatAttachments[currentChatId] : null;
@@ -1736,7 +1754,9 @@
         const userText = text || '';
         const attachmentData = attachment ? { type: attachment.type, name: attachment.name, size: attachment.size } : null;
         await addMessageToDOM('user', userText, true, attachmentData);
-        document.getElementById('user-input').value = '';
+        const input = document.getElementById('user-input');
+        input.value = '';
+        input.style.height = '';
         updateSendButtonState();
 
         removeAttachmentPreview();
@@ -1744,7 +1764,9 @@
 
         isWaitingForResponse = true;
         updateSendButtonState();
-        startThinkingAnimation(); // только индикатор
+
+        // Показываем затемнение с анимацией пера
+        showThinkingOverlay();
 
         let systemPrompt = (chat.id && chat.id.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[chat.id.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
         let userMessageForAI = userText;
@@ -1777,7 +1799,9 @@
             if (resp.ok) { const data = await resp.json(); assistantMessage = data.choices[0].message.content; success = true; }
             else console.error('Mistral API error:', resp.status);
         } catch (e) { if (e.name === 'AbortError') console.log('Request aborted'); else console.warn('Mistral error:', e); }
-        stopThinkingAnimation();
+
+        // Убираем затемнение (с задержкой до минимальных 2 секунд)
+        await hideThinkingOverlay();
 
         if (success && assistantMessage) {
             await addMessageToDOM('assistant', assistantMessage, true);
@@ -1787,7 +1811,7 @@
         isWaitingForResponse = false; currentAbortController = null; updateSendButtonState(); renderChat(); scrollToBottom();
     }
 
-    function stopGeneration() { if (currentAbortController) { currentAbortController.abort(); stopThinkingAnimation(); showToast('Генерация остановлена', '', 'info'); } }
+    function stopGeneration() { if (currentAbortController) { currentAbortController.abort(); hideThinkingOverlay(); showToast('Генерация остановлена', '', 'info'); } }
 
     async function regenerateResponse(msg) {
         const chat = chats.find(c => c.id === currentChatId);
@@ -1821,8 +1845,10 @@
         if (settingsBtn) {
             if (!tutorialCompleted) {
                 settingsBtn.classList.add('blink');
+                settingsBtn.classList.add('scale-pulse');
             } else {
                 settingsBtn.classList.remove('blink');
+                settingsBtn.classList.remove('scale-pulse');
             }
         }
     }
@@ -1970,13 +1996,30 @@
             if (placeholderInterval) clearInterval(placeholderInterval);
             let idx = 0; emptyInput.placeholder = placeholderTexts[0];
             placeholderInterval = setInterval(() => { if(document.activeElement!==emptyInput){emptyInput.style.opacity='0.5';setTimeout(()=>{idx=(idx+1)%placeholderTexts.length;emptyInput.placeholder=placeholderTexts[idx];emptyInput.style.opacity='1';},200);} }, 3000);
-            emptyInput.oninput = function() { emptySendBtn.disabled = !this.value.trim(); this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,160)+'px'; };
+            emptyInput.oninput = function() {
+                emptySendBtn.disabled = !this.value.trim();
+                if (this.value.trim() === '') {
+                    this.style.height = '';
+                } else {
+                    this.style.height = 'auto';
+                    this.style.height = Math.min(this.scrollHeight, 160) + 'px';
+                }
+            };
             emptyInput.onkeydown = e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault(); if(emptySendBtn&&!emptySendBtn.disabled) sendMessageFromEmpty(emptyInput.value);} };
             emptySendBtn.onclick = () => { if(emptyInput.value.trim()) sendMessageFromEmpty(emptyInput.value); };
         }
     }
 
-    function sendMessageFromEmpty(text) { document.getElementById('user-input').value = text; sendMessage(); const emptyInput=document.getElementById('empty-input'); if(emptyInput) emptyInput.value=''; }
+    function sendMessageFromEmpty(text) {
+        const input = document.getElementById('user-input');
+        input.value = text;
+        sendMessage();
+        const emptyInput = document.getElementById('empty-input');
+        if (emptyInput) {
+            emptyInput.value = '';
+            emptyInput.style.height = '';
+        }
+    }
 
     // ========== НОВАЯ МОДАЛКА НАСТРОЕК ==========
     function showSettingsModal() {
@@ -1996,7 +2039,13 @@
         overlay.innerHTML = `
             <div class="settings-modal">
                 <div class="settings-left-panel">
-                    ${sections.map(s => `<button data-section="${s.id}" class="${s.id === 'general' ? 'active' : ''}"><i class="fas ${s.icon}"></i> ${s.title}</button>`).join('')}
+                    ${sections.map(s => {
+                        let extraClass = '';
+                        if (s.id === 'tutorial' && !tutorialCompleted) {
+                            extraClass = 'tutorial-tab-highlight';
+                        }
+                        return `<button data-section="${s.id}" class="${s.id === 'general' ? 'active' : ''} ${extraClass}"><i class="fas ${s.icon}"></i> ${s.title}</button>`;
+                    }).join('')}
                 </div>
                 <div class="settings-right-content">
                     <div class="settings-section active" id="section-general">
@@ -2260,7 +2309,15 @@
         document.getElementById('collapsedNewChat')?.addEventListener('click', createNewChat);
         document.getElementById('collapsedFolders')?.addEventListener('click', switchToFoldersView);
         document.getElementById('collapsedWorkshop')?.addEventListener('click', switchToWorkshopView);
-        document.getElementById('user-input')?.addEventListener('input', function(){ this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,120)+'px'; updateSendButtonState(); });
+        document.getElementById('user-input')?.addEventListener('input', function() {
+            if (this.value.trim() === '') {
+                this.style.height = '';
+            } else {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            }
+            updateSendButtonState();
+        });
         document.getElementById('user-input')?.addEventListener('keydown', e => { if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();} });
         document.getElementById('send-btn')?.addEventListener('click', sendMessage);
         document.getElementById('history-search')?.addEventListener('input', renderHistory);
