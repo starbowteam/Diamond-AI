@@ -258,7 +258,7 @@ body {
 }
 @keyframes scalePulse {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(8.15); }
+    50% { transform: scale(1.15); }
 }
 
 /* ========== СООБЩЕНИЯ ========== */
@@ -278,13 +278,6 @@ body {
 }
 .message.user .message-content { background: #2d2d2d; border-color: #3a3a3a; color: white; }
 .message-time { font-size: 10px; color: var(--text-secondary); padding: 0 6px; text-align: right; margin-top: 2px; }
-.message-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px; }
-.action-btn {
-    background: transparent; border: none; color: var(--text-secondary); cursor: pointer;
-    padding: 4px; border-radius: 50%; width: 28px; height: 28px;
-    display: inline-flex; align-items: center; justify-content: center; transition: var(--transition);
-}
-.action-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 
 /* Подсветка найденного текста */
 .search-highlight {
@@ -970,29 +963,24 @@ textarea::placeholder { color: #6a6a6a; }
     height: auto;
 }
 
-/* ========== ИНДИКАТОР ГЕНЕРАЦИИ В ЧАТЕ ========== */
-.generation-indicator {
+/* ========== НОВАЯ ПЛАШКА «ДУМАЮ» ========== */
+.thinking-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 16px 24px;
+    width: 100%;
+    margin: 0 auto;
+    transition: opacity 0.3s ease;
+}
+.thinking-card-content {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 16px 24px;
-    margin: 0 24px;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 20px;
-    opacity: 0;
-    transform: translateY(10px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
+    gap: 14px;
 }
-.generation-indicator-content {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: var(--text-secondary);
-    font-size: 15px;
-}
-.generation-icon {
-    font-size: 20px;
+.thinking-card-icon i {
+    font-size: 22px;
     color: var(--accent);
     animation: penWrite 0.8s ease-in-out infinite alternate;
 }
@@ -1000,16 +988,101 @@ textarea::placeholder { color: #6a6a6a; }
     0% { transform: translateY(0) rotate(-10deg); }
     100% { transform: translateY(-4px) rotate(10deg); }
 }
-.generation-text {
+.thinking-card-text {
+    font-size: 16px;
     font-weight: 500;
+    color: var(--text-primary);
+    transition: opacity 0.3s ease;
 }
-.generation-timer {
-    font-size: 12px;
+.thinking-card-timer {
+    font-size: 13px;
+    color: var(--text-secondary);
     opacity: 0.7;
     margin-left: auto;
 }
 
-/* ========== МЕТКА ВРЕМЕНИ ГЕНЕРАЦИИ ПОД СООБЩЕНИЕМ ========== */
+/* ========== ФУТЕР СООБЩЕНИЯ (ОДНА СТРОКА) ========== */
+.message-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0.8;
+    padding: 0 6px;
+    white-space: nowrap;
+}
+.message-footer > span, .message-footer > .variant-switcher {
+    flex-shrink: 0;
+}
+.message-footer span {
+    cursor: pointer;
+    transition: color 0.25s;
+}
+.message-footer span:hover {
+    color: var(--text-primary);
+}
+.message-footer .disclaimer {
+    position: relative;
+    opacity: 0.7;
+    cursor: help;
+    border-bottom: 1px dotted var(--text-secondary);
+}
+.message-footer .separator {
+    opacity: 0.3;
+    cursor: default;
+}
+.generation-time-label {
+    cursor: default;
+}
+.disclaimer-tooltip {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2a2a2a;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    z-index: 100;
+    pointer-events: none;
+}
+.disclaimer:hover .disclaimer-tooltip {
+    display: block;
+}
+
+/* ========== ПЕРЕКЛЮЧАТЕЛЬ ВАРИАНТОВ ========== */
+.variant-switcher {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+.variant-switcher button {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: all 0.25s;
+}
+.variant-switcher button:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+.variant-counter {
+    cursor: default;
+}
+
+/* ========== МЕТКА ВРЕМЕНИ ГЕНЕРАЦИИ (под сообщением) ========== */
 .generation-time-label {
     font-size: 10px;
     color: var(--text-secondary);
@@ -1044,7 +1117,6 @@ textarea::placeholder { color: #6a6a6a; }
     .message-content { font-size: 16px; padding: 12px 16px 10px 21px; border-radius: 24px; }
     .avatar { width: 44px; height: 44px; }
     .message-time { font-size: 12px; }
-    .action-btn { width: 32px; height: 32px; }
     .input-area { padding: 0 20px 24px; }
     .input-wrapper { padding: 10px 16px; border-radius: 36px; }
     textarea { font-size: 16px; }
