@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v43 — ИНДИКАТОР ГЕНЕРАЦИИ В ЧАТЕ + ТАЙМЕР ====================
+// ==================== DIAMOND AI v44 — ПЛАШКА «ДУМАЮ», РЕГЕНЕРАЦИЯ, ВАРИАНТЫ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -29,11 +29,6 @@
     let fileInputEl = null;
     let tutorialCompleted = true;
 
-    // Таймер генерации
-    let generationStartTime = 0;
-    let generationTimerInterval = null;
-    let generationIndicatorEl = null;
-
     // ========== ЛОКАЛИЗАЦИЯ ==========
     const locales = {
         ru: {
@@ -56,9 +51,6 @@
             logout: 'Выйти',
             emptyChat: 'Чем могу помочь?',
             inputPlaceholder: 'Введите свой запрос...',
-            generating: 'Генерирую ответ',
-            generatedIn: 'Сгенерировано за',
-            sec: 'сек',
             copy: 'Скопировано',
             renameChat: 'Переименовать чат',
             pinChat: 'Закрепить',
@@ -153,7 +145,12 @@
             diamkeyTotalChats: 'Всего чатов',
             languageHint: 'Выберите язык интерфейса',
             tutorialHint: 'Пройдите обучение, чтобы узнать все возможности Diamond AI',
-            tutorialNotCompletedHint: 'Нажмите, чтобы пройти обучение'
+            tutorialNotCompletedHint: 'Нажмите, чтобы пройти обучение',
+            disclaimerTooltip: 'ИИ может ошибаться. Только для справки.',
+            generatedIn: 'Сгенерировано за',
+            sec: 'с',
+            copyAction: 'Копировать',
+            regenAction: 'Регенерировать'
         },
         en: {
             welcome: 'Welcome to Diamond AI!',
@@ -175,9 +172,6 @@
             logout: 'Logout',
             emptyChat: 'How can I help?',
             inputPlaceholder: 'Type your message...',
-            generating: 'Generating response',
-            generatedIn: 'Generated in',
-            sec: 'sec',
             copy: 'Copied',
             renameChat: 'Rename Chat',
             pinChat: 'Pin',
@@ -272,7 +266,12 @@
             diamkeyTotalChats: 'Total chats',
             languageHint: 'Select interface language',
             tutorialHint: 'Take the tutorial to learn all Diamond AI features',
-            tutorialNotCompletedHint: 'Click to take the tutorial'
+            tutorialNotCompletedHint: 'Click to take the tutorial',
+            disclaimerTooltip: 'AI can make mistakes. For reference only.',
+            generatedIn: 'Generated in',
+            sec: 'sec',
+            copyAction: 'Copy',
+            regenAction: 'Regenerate'
         }
     };
 
@@ -401,66 +400,67 @@
         if (container) container.scrollTop = container.scrollHeight;
     }
 
-    // ========== ИНДИКАТОР ГЕНЕРАЦИИ В ЧАТЕ ==========
-    function showGenerationIndicator() {
+    // ========== ПЛАШКА «ДУМАЮ» (6 состояний, таймер) ==========
+    function createThinkingCard() {
         const container = document.getElementById('messages-container');
-        if (!container) return;
-
-        // Убираем старый индикатор, если есть
-        if (generationIndicatorEl) {
-            generationIndicatorEl.remove();
-        }
-
-        generationIndicatorEl = document.createElement('div');
-        generationIndicatorEl.className = 'generation-indicator';
-        generationIndicatorEl.id = 'generation-indicator';
-        generationIndicatorEl.innerHTML = `
-            <div class="generation-indicator-content">
-                <i class="fas fa-feather-alt generation-icon"></i>
-                <span class="generation-text">${t('generating')}</span>
-                <span class="generation-timer" id="generation-timer">0.0 ${t('sec')}</span>
+        if (!container) return null;
+        const card = document.createElement('div');
+        card.className = 'thinking-card';
+        card.id = 'thinking-card';
+        card.innerHTML = `
+            <div class="thinking-card-content">
+                <div class="thinking-card-icon"><i class="fas fa-feather-alt"></i></div>
+                <div class="thinking-card-text">Думаю…</div>
+                <div class="thinking-card-timer">0.0 с</div>
             </div>
         `;
-        container.appendChild(generationIndicatorEl);
-
-        // Запускаем таймер
-        generationStartTime = Date.now();
-        const timerEl = document.getElementById('generation-timer');
-        generationTimerInterval = setInterval(() => {
-            const elapsed = ((Date.now() - generationStartTime) / 1000).toFixed(1);
-            if (timerEl) timerEl.textContent = `${elapsed} ${t('sec')}`;
-        }, 100);
-
-        // Анимация появления
-        requestAnimationFrame(() => {
-            generationIndicatorEl.style.opacity = '1';
-            generationIndicatorEl.style.transform = 'translateY(0)';
-        });
+        container.appendChild(card);
         scrollToBottom();
+        return card;
     }
 
-    function hideGenerationIndicator() {
-        // Останавливаем таймер
-        if (generationTimerInterval) {
-            clearInterval(generationTimerInterval);
-            generationTimerInterval = null;
-        }
+    function startThinkingAnimation(card) {
+        const states = [
+            { icon: 'fa-feather-alt', text: 'Думаю…' },
+            { icon: 'fa-brain', text: 'Анализирую…' },
+            { icon: 'fa-pen', text: 'Генерирую ответ…' },
+            { icon: 'fa-spinner', text: 'Проверяю факты…' },
+            { icon: 'fa-cog', text: 'Форматирую…' },
+            { icon: 'fa-comment-dots', text: 'Почти готово…' }
+        ];
+        let stateIndex = 0;
+        const startTime = Date.now();
+        const timerEl = card.querySelector('.thinking-card-timer');
+        const iconEl = card.querySelector('.thinking-card-icon i');
+        const textEl = card.querySelector('.thinking-card-text');
 
-        const elapsed = ((Date.now() - generationStartTime) / 1000).toFixed(1);
+        const timerInterval = setInterval(() => {
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            timerEl.textContent = elapsed + ' ' + t('sec');
+        }, 100);
 
-        // Убираем индикатор
-        if (generationIndicatorEl) {
-            generationIndicatorEl.style.opacity = '0';
-            generationIndicatorEl.style.transform = 'translateY(-10px)';
+        const stateInterval = setInterval(() => {
+            stateIndex = (stateIndex + 1) % states.length;
+            const state = states[stateIndex];
+            iconEl.className = 'fas ' + state.icon;
+            textEl.style.opacity = '0';
             setTimeout(() => {
-                if (generationIndicatorEl) {
-                    generationIndicatorEl.remove();
-                    generationIndicatorEl = null;
-                }
-            }, 300);
-        }
+                textEl.textContent = state.text;
+                textEl.style.opacity = '1';
+            }, 200);
+        }, 1500);
 
-        return elapsed;
+        return { timerInterval, stateInterval, startTime };
+    }
+
+    function stopThinkingAnimation(card, anim) {
+        clearInterval(anim.timerInterval);
+        clearInterval(anim.stateInterval);
+        if (card) {
+            card.style.opacity = '0';
+            setTimeout(() => card.remove(), 300);
+        }
+        return ((Date.now() - anim.startTime) / 1000).toFixed(1);
     }
 
     // ========== LaTeX РЕНДЕР ==========
@@ -1323,7 +1323,7 @@
         return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент' };
     }
 
-    // ========== РЕНДЕР ЧАТА (с меткой времени генерации) ==========
+    // ========== РЕНДЕР ЧАТА ==========
     function renderChat() {
         const chat = chats.find(c => c.id === currentChatId);
         const headerEl = document.getElementById('chatHeader');
@@ -1352,6 +1352,7 @@
         container.innerHTML = '';
         let lastDate = null;
         chat.messages.forEach((msg, idx) => {
+            if (msg.isTyping) return; // пропускаем служебные
             const date = new Date(msg.timestamp || chat.created_at).toDateString();
             if (date !== lastDate) {
                 container.innerHTML += `<div class="date-divider"><span>${formatDateHeader(msg.timestamp || chat.created_at)}</span></div>`;
@@ -1359,7 +1360,6 @@
             }
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${msg.role}`;
-            if (msg.isTyping) messageDiv.classList.add('typing');
             const avatarHTML = msg.role === 'user' ? getUserAvatarHTML() : getBotAvatarHTML();
             let contentHtml = msg.role === 'assistant' ? marked.parse(msg.content) : escapeHtml(msg.content);
             if (searchHighlightTerm) {
@@ -1368,34 +1368,71 @@
             }
             const contentDiv = document.createElement('div');
             contentDiv.className = 'message-content';
-            contentDiv.innerHTML = msg.isTyping ? t('generating') + '...' : contentHtml;
+            contentDiv.innerHTML = contentHtml;
 
             const wrapper = document.createElement('div');
             wrapper.className = 'message-content-wrapper';
             wrapper.appendChild(contentDiv);
 
-            const timeDiv = document.createElement('div');
-            timeDiv.className = 'message-time';
-            timeDiv.textContent = formatTime(msg.timestamp || Date.now());
-            wrapper.appendChild(timeDiv);
-
-            // Добавляем метку времени генерации для последнего ответа ассистента
+            // Футер сообщения для ассистента
             if (msg.role === 'assistant' && msg.generationTime) {
-                const genTimeDiv = document.createElement('div');
-                genTimeDiv.className = 'generation-time-label';
-                genTimeDiv.textContent = `${t('generatedIn')} ${msg.generationTime} ${t('sec')}`;
-                wrapper.appendChild(genTimeDiv);
+                const footerDiv = document.createElement('div');
+                footerDiv.className = 'message-footer';
+                const hasVariants = msg.variants && msg.variants.length > 1;
+                const currentVariant = msg.currentVariant || 0;
+
+                footerDiv.innerHTML = `
+                    <span class="disclaimer">Diamond AI<span class="disclaimer-tooltip">${t('disclaimerTooltip')}</span></span>
+                    <span class="separator">·</span>
+                    ${hasVariants ? `
+                        <span class="variant-switcher">
+                            <button class="prev-variant"><i class="fas fa-chevron-left"></i></button>
+                            <span class="variant-counter">${currentVariant + 1}/${msg.variants.length}</span>
+                            <button class="next-variant"><i class="fas fa-chevron-right"></i></button>
+                        </span>
+                        <span class="separator">·</span>
+                    ` : ''}
+                    <span class="generation-time-label">${t('generatedIn')} ${msg.generationTime} ${t('sec')}</span>
+                    <span class="separator">·</span>
+                    <span class="copy-action">${t('copyAction')}</span>
+                    <span class="separator">·</span>
+                    <span class="regen-action">${t('regenAction')}</span>
+                `;
+
+                // Копировать
+                footerDiv.querySelector('.copy-action').addEventListener('click', () => {
+                    navigator.clipboard.writeText(msg.content);
+                    showToast(t('copy'), '', 'success', 1500);
+                });
+
+                // Регенерировать
+                footerDiv.querySelector('.regen-action').addEventListener('click', () => {
+                    regenerateResponseFromMsg(msg, idx);
+                });
+
+                // Переключатели вариантов
+                if (hasVariants) {
+                    let localIdx = currentVariant;
+                    const update = (newIdx) => {
+                        localIdx = newIdx;
+                        contentDiv.innerHTML = marked.parse(msg.variants[newIdx]);
+                        const ctr = footerDiv.querySelector('.variant-counter');
+                        if (ctr) ctr.textContent = `${newIdx + 1}/${msg.variants.length}`;
+                        msg.currentVariant = newIdx;
+                        msg.content = msg.variants[newIdx];
+                        saveChatToSupabase(chat);
+                    };
+                    footerDiv.querySelector('.prev-variant').addEventListener('click', () => {
+                        update((localIdx - 1 + msg.variants.length) % msg.variants.length);
+                    });
+                    footerDiv.querySelector('.next-variant').addEventListener('click', () => {
+                        update((localIdx + 1) % msg.variants.length);
+                    });
+                }
+
+                wrapper.appendChild(footerDiv);
             }
 
-            messageDiv.innerHTML = `<div class="avatar">${avatarHTML}</div>`;
-            messageDiv.appendChild(wrapper);
-
-            if (msg.role === 'assistant' && !msg.isTyping) {
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'message-actions';
-                actionsDiv.innerHTML = `<button class="action-btn copy-msg-btn" data-msg-idx="${idx}"><i class="fas fa-copy"></i></button><button class="action-btn regen-msg-btn" data-msg-idx="${idx}"><i class="fas fa-sync-alt"></i></button>`;
-                wrapper.appendChild(actionsDiv);
-            }
             if (msg.attachment) {
                 const attachDiv = document.createElement('div');
                 attachDiv.className = 'attachment-card';
@@ -1415,22 +1452,12 @@
                 `;
                 wrapper.appendChild(attachDiv);
             }
+
+            messageDiv.innerHTML = `<div class="avatar">${avatarHTML}</div>`;
+            messageDiv.appendChild(wrapper);
             container.appendChild(messageDiv);
         });
-        container.querySelectorAll('.copy-msg-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const idx = parseInt(btn.dataset.msgIdx);
-                const msg = chat.messages[idx];
-                if (msg && msg.content) { navigator.clipboard.writeText(msg.content); showToast(t('copy'), '', 'success', 1500); }
-            });
-        });
-        container.querySelectorAll('.regen-msg-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const idx = parseInt(btn.dataset.msgIdx);
-                const msg = chat.messages[idx];
-                if (msg && msg.role === 'assistant') regenerateResponse(msg);
-            });
-        });
+
         setTimeout(() => {
             renderMathInElementWithMhchem(container);
             enhanceCodeBlocks(container);
@@ -1728,7 +1755,7 @@
         return result.value || '';
     }
 
-    // ========== ОТПРАВКА СООБЩЕНИЯ (с индикатором в чате и таймером) ==========
+    // ========== ОТПРАВКА СООБЩЕНИЯ ==========
     async function sendMessage() {
         const text = document.getElementById('user-input').value.trim();
         const attachment = currentChatId ? chatAttachments[currentChatId] : null;
@@ -1768,15 +1795,16 @@
         input.value = '';
         input.style.height = '';
         updateSendButtonState();
-
         removeAttachmentPreview();
         delete chatAttachments[currentChatId];
 
         isWaitingForResponse = true;
         updateSendButtonState();
 
-        // Показываем индикатор генерации в чате
-        showGenerationIndicator();
+        // Показываем плашку «Думаю»
+        const card = createThinkingCard();
+        const anim = startThinkingAnimation(card);
+        scrollToBottom();
 
         let systemPrompt = (chat.id && chat.id.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[chat.id.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
         let userMessageForAI = userText;
@@ -1810,8 +1838,7 @@
             else console.error('Mistral API error:', resp.status);
         } catch (e) { if (e.name === 'AbortError') console.log('Request aborted'); else console.warn('Mistral error:', e); }
 
-        // Убираем индикатор и получаем время генерации
-        const generationTime = hideGenerationIndicator();
+        const generationTime = stopThinkingAnimation(card, anim);
 
         if (success && assistantMessage) {
             await addMessageToDOM('assistant', assistantMessage, true, null, generationTime);
@@ -1821,15 +1848,66 @@
         isWaitingForResponse = false; currentAbortController = null; updateSendButtonState(); renderChat(); scrollToBottom();
     }
 
-    function stopGeneration() { if (currentAbortController) { currentAbortController.abort(); hideGenerationIndicator(); showToast('Генерация остановлена', '', 'info'); } }
+    function stopGeneration() { if (currentAbortController) { currentAbortController.abort(); hideThinkingOverlay(); showToast('Генерация остановлена', '', 'info'); } }
 
-    async function regenerateResponse(msg) {
+    // ========== РЕГЕНЕРАЦИЯ (без повторной отправки) ==========
+    async function regenerateResponseFromMsg(msg, idx) {
         const chat = chats.find(c => c.id === currentChatId);
-        if (!chat) return;
-        const idx = chat.messages.findIndex(m => m === msg);
-        if (idx !== -1) { chat.messages.splice(idx, 1); await saveChatToSupabase(chat); renderChat(); }
-        const lastUser = [...chat.messages].reverse().find(m => m.role === 'user');
-        if (lastUser) { document.getElementById('user-input').value = lastUser.content; sendMessage(); }
+        if (!chat || isWaitingForResponse) return;
+
+        // Находим последнее сообщение пользователя в этом чате
+        const userMsgs = chat.messages.filter(m => m.role === 'user' && !m.isTyping);
+        if (userMsgs.length === 0) return;
+        const lastUserMsg = userMsgs[userMsgs.length - 1];
+        const prompt = lastUserMsg.content;
+
+        isWaitingForResponse = true;
+        updateSendButtonState();
+
+        // Показываем плашку «Думаю»
+        const card = createThinkingCard();
+        const anim = startThinkingAnimation(card);
+        scrollToBottom();
+
+        let systemPrompt = (chat.id && chat.id.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[chat.id.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
+        const contextMessages = chat.messages.filter(m => !m.isTyping && m !== msg).slice(-15);
+        const messagesForAI = [
+            systemPrompt,
+            ...contextMessages.map(m => ({ role: m.role, content: m.content })),
+            { role: 'user', content: prompt }
+        ];
+
+        const controller = new AbortController(); currentAbortController = controller;
+        let success = false, newAnswer = '';
+        try {
+            const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
+                body: JSON.stringify({ model: AI_MODEL, messages: messagesForAI, temperature: 0.3, max_tokens: 1500 }),
+                signal: controller.signal
+            });
+            if (resp.ok) { const data = await resp.json(); newAnswer = data.choices[0].message.content; success = true; }
+            else console.error('Mistral API error:', resp.status);
+        } catch (e) { if (e.name === 'AbortError') console.log('Request aborted'); else console.warn('Mistral error:', e); }
+
+        const generationTime = stopThinkingAnimation(card, anim);
+
+        if (success && newAnswer) {
+            // Собираем варианты
+            let variants = msg.variants || [msg.content];
+            variants.push(newAnswer);
+            msg.variants = variants;
+            msg.currentVariant = variants.length - 1;
+            msg.content = newAnswer;
+            msg.generationTime = generationTime;
+            await saveChatToSupabase(chat);
+        } else {
+            showToast('Ошибка', 'Не удалось регенерировать ответ', 'error');
+        }
+
+        isWaitingForResponse = false; currentAbortController = null; updateSendButtonState();
+        renderChat();
+        scrollToBottom();
     }
 
     // ========== АВАТАРЫ И ПАНЕЛЬ ==========
