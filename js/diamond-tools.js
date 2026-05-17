@@ -86,7 +86,7 @@ function renderWorkshopPage() {
             <div class="workshop-tool-card ${knowledgeRagActive ? 'active' : ''}">
                 <div class="workshop-tool-header">
                     <div class="workshop-tool-icon"><i class="fas fa-book"></i></div>
-                    <div class="workshop-tool-info"><h3>База знаний</h3><p>Поиск по вашим загруженным документам. Загружайте файлы и задавайте вопросы — ИИ найдёт ответ в документах.</p></div>
+                    <div class="workshop-tool-info"><h3>Документы</h3><p>Поиск по вашим загруженным документам. Загружайте файлы и задавайте вопросы — ИИ найдёт ответ в документах.</p></div>
                 </div>
                 <div class="workshop-tool-toggle">
                     <span>${knowledgeRagActive ? t('toolActive') : t('toolInactive')}</span>
