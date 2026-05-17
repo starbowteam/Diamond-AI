@@ -1107,7 +1107,7 @@ async function showLoadingScreen() {
     const savedLang = localStorage.getItem('diamond_language');
     if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
     loadWorkshopToolsState();
-    await fetchMistralKey();
+    await fetchApiKeys(); // ← здесь было fetchMistralKey()
     const savedUser = localStorage.getItem('diamond_user');
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
