@@ -28,7 +28,7 @@ function renderHistory() {
         } else orphanChats.push(c);
     });
     let html = '';
-    if (toolChats.length > 0 && workshopTools.ai_detect) {
+      if (toolChats.length > 0) {
         html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-wrench"></i> ${t('master')}</div>`;
         toolChats.forEach(c => html += buildToolHistoryItem(c, getToolInfo(c.id.replace('tool_',''))));
         html += '</div>';
