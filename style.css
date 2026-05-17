@@ -907,6 +907,13 @@ textarea::placeholder { color: #6a6a6a; }
     text-align: right; margin-top: 2px; padding: 0 6px;
 }
 
+/* Синяя глитч-полоска для чата "Документы" */
+.history-item.tool-chat[data-tool-id="knowledge_rag"]::before {
+    background: repeating-linear-gradient(0deg, transparent 0px, transparent 18px,
+        rgba(52, 152, 219, 0.15) 18px, rgba(52, 152, 219, 0.15) 20px);
+}
+
+
 /* ========== АДАПТИВ ========== */
 @media (max-width: 768px) {
     body { font-size: 18px; }
