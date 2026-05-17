@@ -381,9 +381,10 @@ const TOOL_SYSTEM_PROMPTS = {
     },
     knowledge_rag: {
         role: 'system',
-        content: `Ты — ассистент по базе знаний. Твоя задача: отвечать на вопросы пользователя, ИСПОЛЬЗУЯ ТОЛЬКО информацию из загруженных документов. Если пользователь прикрепил файл, его содержимое будет в тексте запроса. Всегда ищи ответ в предоставленных документах. Если информации недостаточно, скажи: "В моих документах нет данных по этому вопросу. Уточните запрос или загрузите дополнительные файлы." Никогда не используй свои общие знания — только содержимое загруженных документов.`
+        content: `Ты — ассистент по документам. Твоя задача: отвечать на вопросы пользователя, ИСПОЛЬЗУЯ ТОЛЬКО информацию из загруженных документов. Если пользователь прикрепил файл, его содержимое будет в тексте запроса. Всегда ищи ответ в предоставленных документах. Если информации недостаточно, скажи: "В моих документах нет данных по этому вопросу. Уточните запрос или загрузите дополнительные файлы." Никогда не используй свои общие знания — только содержимое загруженных документов.`
     }
 };
+
 // ========== УТИЛИТЫ ==========
 function log(msg) { console.log(`[DIAMOND] ${msg}`); }
 function escapeHtml(str) {
@@ -463,12 +464,22 @@ function generateFastSecret() { return Math.random().toString(36).substring(2,15
 function generateToken() { const adj=['golden','silver','mystic','shadow','prime','crystal','onyx','brave','frost'], nouns=['falcon','tiger','phoenix','dragon','wolf','spark','nexus','core','vault','key']; return `diamkey_${adj[Math.floor(Math.random()*adj.length)]}_${nouns[Math.floor(Math.random()*nouns.length)]}_${nouns[Math.floor(Math.random()*nouns.length)]}_${Math.floor(1000+Math.random()*9000)}`; }
 
 let mistralApiKey = '';
-async function fetchMistralKey() {
+let newsapiKey = '';
+let apifyGoogleNewsKey = '';
+let latestNewsMcpKey = '';
+
+async function fetchApiKeys() {
     try {
         const resp = await fetch(`${SUPABASE_URL}/rest/v1/service_config?id=eq.1`, { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } });
         if (!resp.ok) return false;
         const data = await resp.json();
-        if (data && data.length > 0) { mistralApiKey = data[0].mistral_api_key; return true; }
+        if (data && data.length > 0) {
+            mistralApiKey = data[0].mistral_api_key || '';
+            newsapiKey = data[0].newsapi_key || '';
+            apifyGoogleNewsKey = data[0].apify_google_news_key || '';
+            latestNewsMcpKey = data[0].latest_news_mcp_key || '';
+            return true;
+        }
         return false;
-    } catch (e) { console.error('Ошибка загрузки API-ключа:', e); return false; }
+    } catch (e) { console.error('Ошибка загрузки API-ключей:', e); return false; }
 }
