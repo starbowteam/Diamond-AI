@@ -563,7 +563,7 @@ function showDisclaimerModal() {
     overlay.className = 'disclaimer-modal-overlay';
     overlay.innerHTML = `
         <div class="disclaimer-modal">
-            <div class="disclaimer-modal-icon"><i class="fas fa-robot"></i></div>
+            <div class="disclaimer-modal-icon"><img src="assets/logo.png" style="width: 48px; height: 48px; border-radius: 12px;"></div>
             <h3>${t('disclaimerTitle')}</h3>
             <p>${t('disclaimerText')}</p>
             <button>${t('disclaimerClose')}</button>
