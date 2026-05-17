@@ -259,7 +259,7 @@ body {
 }
 @keyframes scalePulse {
     0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.15); }
+    50% { transform: scale(4.15); }
 }
 
 /* ========== СООБЩЕНИЯ ========== */
