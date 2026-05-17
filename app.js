@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v45 — ФИНАЛЬНЫЕ ПРАВКИ ====================
+// ==================== DIAMOND AI v46 — ПОЛНЫЙ ФУНКЦИОНАЛ С РЕДАКТИРОВАНИЕМ, ПЛАВНЫМИ АНИМАЦИЯМИ, ОТМЕНОЙ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -152,7 +152,10 @@
             generatedIn: 'Сгенерировано за',
             sec: 'с',
             copyAction: 'Копировать',
-            regenAction: 'Регенерировать'
+            regenAction: 'Регенерировать',
+            editAction: 'Редактировать',
+            cancelEdit: 'Отмена',
+            saveEdit: 'Сохранить'
         },
         en: {
             welcome: 'Welcome to Diamond AI!',
@@ -275,7 +278,10 @@
             generatedIn: 'Generated in',
             sec: 'sec',
             copyAction: 'Copy',
-            regenAction: 'Regenerate'
+            regenAction: 'Regenerate',
+            editAction: 'Edit',
+            cancelEdit: 'Cancel',
+            saveEdit: 'Save'
         }
     };
 
@@ -498,7 +504,7 @@
 
     // ========== АВАТАР ПО УМОЛЧАНИЮ ==========
     function getBotAvatarHTML() {
-        return `<img src="bots.png" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-robot\\'></i>'">`;
+        return `<img src="logo.png" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-robot\\'></i>'">`;
     }
 
     function getUserAvatarHTML() {
@@ -1450,13 +1456,33 @@
                 contentHtml = contentHtml.replace(regex, '<span class="search-highlight">$1</span>');
             }
             const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content';
+            contentDiv.className = 'message-content visible'; // плавное появление
             contentDiv.innerHTML = contentHtml;
 
             const wrapper = document.createElement('div');
             wrapper.className = 'message-content-wrapper';
             wrapper.appendChild(contentDiv);
 
+            // Действия пользователя
+            if (msg.role === 'user') {
+                const userActionsDiv = document.createElement('div');
+                userActionsDiv.className = 'user-message-actions';
+                userActionsDiv.innerHTML = `
+                    <span class="copy-user-action">${t('copyAction')}</span>
+                    <span class="separator">·</span>
+                    <span class="edit-user-action">${t('editAction')}</span>
+                `;
+                userActionsDiv.querySelector('.copy-user-action').addEventListener('click', () => {
+                    navigator.clipboard.writeText(msg.content);
+                    showToast(t('copy'), '', 'success', 1500);
+                });
+                userActionsDiv.querySelector('.edit-user-action').addEventListener('click', () => {
+                    enterEditMode(messageDiv, msg, idx);
+                });
+                wrapper.appendChild(userActionsDiv);
+            }
+
+            // Футер с дисклеймером и действиями
             if (msg.role === 'assistant' && msg.generationTime) {
                 const footerDiv = document.createElement('div');
                 footerDiv.className = 'message-footer';
@@ -1559,6 +1585,68 @@
         if (bytes < 1024) return bytes + ' B';
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    }
+
+    // ========== РЕДАКТИРОВАНИЕ СООБЩЕНИЯ ПОЛЬЗОВАТЕЛЯ ==========
+    function enterEditMode(messageDiv, msg, idx) {
+        const wrapper = messageDiv.querySelector('.message-content-wrapper');
+        const origContent = wrapper.querySelector('.message-content');
+        const origActions = wrapper.querySelector('.user-message-actions');
+        
+        // Скрываем оригинальный контент и действия
+        origContent.style.display = 'none';
+        if (origActions) origActions.style.display = 'none';
+
+        // Создаём поле редактирования
+        const textarea = document.createElement('textarea');
+        textarea.className = 'edit-textarea';
+        textarea.value = msg.content;
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'edit-actions';
+        actionsDiv.innerHTML = `
+            <button class="btn btn-secondary cancel-edit-btn"><i class="fas fa-times"></i> ${t('cancelEdit')}</button>
+            <button class="btn btn-primary save-edit-btn"><i class="fas fa-check"></i> ${t('saveEdit')}</button>
+        `;
+        wrapper.appendChild(textarea);
+        wrapper.appendChild(actionsDiv);
+        textarea.focus();
+
+        // Отмена
+        actionsDiv.querySelector('.cancel-edit-btn').addEventListener('click', () => {
+            textarea.remove();
+            actionsDiv.remove();
+            origContent.style.display = 'block';
+            if (origActions) origActions.style.display = 'flex';
+        });
+
+        // Сохранить
+        actionsDiv.querySelector('.save-edit-btn').addEventListener('click', async () => {
+            const newText = textarea.value.trim();
+            if (!newText) return;
+            
+            // Удаляем поле и кнопки
+            textarea.remove();
+            actionsDiv.remove();
+            
+            // Обновляем текст в DOM
+            origContent.style.display = 'block';
+            if (origActions) origActions.style.display = 'flex';
+            origContent.textContent = newText;
+            msg.content = newText;
+            
+            // Удаляем все сообщения после этого
+            const chat = chats.find(c => c.id === currentChatId);
+            if (chat) {
+                const msgIdx = chat.messages.indexOf(msg);
+                if (msgIdx !== -1) {
+                    chat.messages = chat.messages.slice(0, msgIdx + 1);
+                    await saveChatToSupabase(chat);
+                }
+            }
+            
+            // Отправляем новый запрос
+            await sendRequest(newText);
+        });
     }
 
     async function addMessageToDOM(role, content, save = true, attachment = null, generationTime = null) {
@@ -1834,6 +1922,52 @@
     }
 
     // ========== ОТПРАВКА СООБЩЕНИЯ ==========
+    async function sendRequest(prompt) {
+        if (!mistralApiKey || isWaitingForResponse) return;
+        isWaitingForResponse = true;
+        updateSendButtonState();
+
+        const card = createThinkingCard();
+        const anim = startThinkingAnimation(card);
+        scrollToBottom();
+
+        let systemPrompt = (chat.id && chat.id.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[chat.id.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
+        const contextMessages = chat.messages.filter(m => !m.isTyping).slice(-15);
+        const messagesForAI = [
+            systemPrompt,
+            ...contextMessages.map(m => ({ role: m.role, content: m.content })),
+            { role: 'user', content: prompt }
+        ];
+
+        const controller = new AbortController(); currentAbortController = controller;
+        let success = false, assistantMessage = '';
+        try {
+            const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
+                body: JSON.stringify({ model: AI_MODEL, messages: messagesForAI, temperature: 0.3, max_tokens: 1500 }),
+                signal: controller.signal
+            });
+            if (resp.ok) { const data = await resp.json(); assistantMessage = data.choices[0].message.content; success = true; }
+            else console.error('Mistral API error:', resp.status);
+        } catch (e) {
+            if (e.name === 'AbortError') {
+                console.log('Request aborted');
+            } else {
+                console.warn('Mistral error:', e);
+            }
+        }
+
+        const generationTime = stopThinkingAnimation(card, anim);
+
+        if (success && assistantMessage) {
+            await addMessageToDOM('assistant', assistantMessage, true, null, generationTime);
+        } else if (!success && e?.name !== 'AbortError') {
+            await addMessageToDOM('assistant', '❌ Не удалось получить ответ. Попробуйте позже.', true, null, generationTime);
+        }
+        isWaitingForResponse = false; currentAbortController = null; updateSendButtonState(); renderChat(); scrollToBottom();
+    }
+
     async function sendMessage() {
         const text = document.getElementById('user-input').value.trim();
         const attachment = currentChatId ? chatAttachments[currentChatId] : null;
@@ -1876,60 +2010,7 @@
         removeAttachmentPreview();
         delete chatAttachments[currentChatId];
 
-        isWaitingForResponse = true;
-        updateSendButtonState();
-
-        const card = createThinkingCard();
-        const anim = startThinkingAnimation(card);
-        scrollToBottom();
-
-        let systemPrompt = (chat.id && chat.id.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[chat.id.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
-        let userMessageForAI = userText;
-        if (attachment) {
-            const fileContent = attachment.content || '';
-            if (!fileContent) showToast(t('ocrEmpty'), 'Текст не распознан', 'warning');
-            userMessageForAI = `[Файл: ${attachment.name}]\nСодержимое:\n${fileContent}\n\nЗапрос пользователя: ${userText || 'Проанализируй содержимое файла'}`;
-            systemPrompt = {
-                ...systemPrompt,
-                content: systemPrompt.content + '\n\nВАЖНО: Ты получил содержимое файла выше. Анализируй его и ответь.'
-            };
-        }
-
-        const contextMessages = chat.messages.filter(m => !m.isTyping).slice(-15);
-        const messagesForAI = [
-            systemPrompt,
-            ...contextMessages.map(m => ({ role: m.role, content: m.content })),
-            { role: 'user', content: userMessageForAI }
-        ];
-
-        const controller = new AbortController(); currentAbortController = controller;
-        let success = false, assistantMessage = '';
-        try {
-            const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
-                method: 'POST',
-                headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
-                body: JSON.stringify({ model: AI_MODEL, messages: messagesForAI, temperature: 0.3, max_tokens: 1500 }),
-                signal: controller.signal
-            });
-            if (resp.ok) { const data = await resp.json(); assistantMessage = data.choices[0].message.content; success = true; }
-            else console.error('Mistral API error:', resp.status);
-        } catch (e) {
-            if (e.name === 'AbortError') {
-                console.log('Request aborted');
-            } else {
-                console.warn('Mistral error:', e);
-            }
-        }
-
-        const generationTime = stopThinkingAnimation(card, anim);
-
-        if (success && assistantMessage) {
-            await addMessageToDOM('assistant', assistantMessage, true, null, generationTime);
-        } else if (!success && e?.name !== 'AbortError') {
-            await addMessageToDOM('assistant', '❌ Не удалось получить ответ. Попробуйте позже.', true, null, generationTime);
-        }
-        // Если отмена — ничего не добавляем
-        isWaitingForResponse = false; currentAbortController = null; updateSendButtonState(); renderChat(); scrollToBottom();
+        await sendRequest(userText);
     }
 
     function stopGeneration() { if (currentAbortController) { currentAbortController.abort(); showToast('Генерация остановлена', '', 'info'); } }
@@ -2005,9 +2086,6 @@
         renderChat();
         scrollToBottom();
     }
-
-    // ========== АВАТАРЫ И ПАНЕЛЬ ==========
-    // (уже определены выше)
 
     async function refreshUserProfile() {
         if (!currentUser) return;
