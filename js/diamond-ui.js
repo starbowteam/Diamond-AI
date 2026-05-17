@@ -101,8 +101,9 @@ function buildHistoryItem(chat, folder) {
 function buildToolHistoryItem(chat, toolInfo) {
     const isActive = chat.id === currentChatId;
     const color = toolInfo.color || 'var(--accent)';
+    const toolId = chat.id.replace('tool_', '');
     return `
-        <div class="history-item tool-chat ${isActive ? 'active' : ''}" data-id="${chat.id}" style="border-left: 3px solid ${color}; padding-left: 9px;">
+        <div class="history-item tool-chat ${isActive ? 'active' : ''}" data-id="${chat.id}" data-tool-id="${toolId}" style="border-left: 3px solid ${color}; padding-left: 9px;">
             <i class="fas ${toolInfo.icon}" style="color: ${color}; margin-right: 8px; font-size: 14px;"></i>
             <span class="chat-title" style="z-index:1;">${escapeHtml(chat.title)}</span>
         </div>
