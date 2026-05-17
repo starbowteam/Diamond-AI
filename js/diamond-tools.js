@@ -1,11 +1,9 @@
 // ==================== DIAMOND AI v46 — МАСТЕРСКАЯ, ИНСТРУМЕНТЫ, ФОРУМ, OCR ====================
 
-// ========== ИНСТРУМЕНТЫ МАСТЕРСКОЙ ==========
-
 function getToolInfo(toolId) {
     const tools = {
         ai_detect: { icon: 'fa-search', title: t('aiDetect'), color: 'var(--accent)' },
-        knowledge_rag: { icon: 'fa-database', title: 'База знаний', color: '#3498db' }
+        knowledge_rag: { icon: 'fa-book', title: 'База знаний', color: '#3498db' }
     };
     return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент', color: 'var(--accent)' };
 }
@@ -61,7 +59,6 @@ async function toggleWorkshopTool(toolId) {
     renderWorkshopPage(); renderHistory(); renderChat();
 }
 
-// ========== РЕНДЕР СТРАНИЦЫ МАСТЕРСКОЙ ==========
 function renderWorkshopPage() {
     const container = document.getElementById('workshopPage');
     if (!container) return;
@@ -88,7 +85,7 @@ function renderWorkshopPage() {
             </div>
             <div class="workshop-tool-card ${knowledgeRagActive ? 'active' : ''}">
                 <div class="workshop-tool-header">
-                    <div class="workshop-tool-icon"><i class="fas fa-database"></i></div>
+                    <div class="workshop-tool-icon"><i class="fas fa-book"></i></div>
                     <div class="workshop-tool-info"><h3>База знаний</h3><p>Поиск по вашим загруженным документам. Загружайте файлы и задавайте вопросы — ИИ найдёт ответ в документах.</p></div>
                 </div>
                 <div class="workshop-tool-toggle">
