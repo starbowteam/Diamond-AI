@@ -31,8 +31,6 @@ body {
     color: var(--text-primary);
     touch-action: pan-y;
     -webkit-overflow-scrolling: touch;
-    -webkit-user-select: none;
-    user-select: none;
 }
 
 ::-webkit-scrollbar { width: 0; background: transparent; }
@@ -276,6 +274,12 @@ body {
     background: var(--bg-tertiary); padding: 8px 14px 6px 21px; border-radius: 20px;
     line-height: 1.45; font-size: 15px; border: 1px solid var(--border-color);
     color: var(--text-primary); word-break: break-word; white-space: pre-wrap;
+    /* плавное появление */
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.message-content.visible {
+    opacity: 1;
 }
 .message.user .message-content { background: #2d2d2d; border-color: #3a3a3a; color: white; }
 .message-time { font-size: 10px; color: var(--text-secondary); padding: 0 6px; text-align: right; margin-top: 2px; }
@@ -692,7 +696,7 @@ textarea::placeholder { color: #6a6a6a; }
 }
 .settings-close-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 
-/* ========== ВКЛАДКА DIAMKEY (в настройках) ========== */
+/* ========== ВКЛАДКА DIAMKEY ========== */
 .diamkey-avatar-wrapper {
     position: relative; width: 100px; height: 100px;
     margin: 0 auto 24px; border-radius: 50%; overflow: hidden;
@@ -726,7 +730,7 @@ textarea::placeholder { color: #6a6a6a; }
 .diamkey-input-group input:focus { border-color: #5a5a5a; }
 .diamkey-save-btn { width: 100%; margin-top: 8px; }
 
-/* ========== КАРТОЧКА ПРИКРЕПЛЕННОГО ФАЙЛА (без фона) ========== */
+/* ========== КАРТОЧКА ПРИКРЕПЛЕННОГО ФАЙЛА ========== */
 .attachment-preview-container {
     padding: 0 24px 12px; display: flex; flex-wrap: wrap;
     gap: 10px; justify-content: flex-end;
@@ -802,7 +806,6 @@ textarea::placeholder { color: #6a6a6a; }
 .thinking-card-timer {
     font-size: 13px; color: var(--text-secondary); opacity: 0.7; margin-left: auto;
 }
-/* Кнопка отмены в плашке «Думаю» */
 .thinking-card-cancel {
     background: transparent; border: none; color: var(--text-secondary);
     cursor: pointer; width: 32px; height: 32px; border-radius: 50%;
@@ -865,13 +868,46 @@ textarea::placeholder { color: #6a6a6a; }
 .variant-switcher button:hover { background: var(--bg-hover); color: var(--text-primary); }
 .variant-counter { cursor: default; }
 
+/* ========== РЕДАКТИРОВАНИЕ ПОЛЬЗОВАТЕЛЯ ========== */
+.user-message-actions {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 2px; font-size: 11px; color: var(--text-secondary);
+    opacity: 0.7; padding: 0 6px;
+}
+.user-message-actions span {
+    cursor: pointer; transition: color 0.25s;
+}
+.user-message-actions span:hover {
+    color: var(--text-primary);
+}
+.user-message-actions .separator {
+    opacity: 0.3; cursor: default;
+}
+.edit-textarea {
+    width: 100%;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--accent);
+    border-radius: 16px;
+    padding: 10px 16px;
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--text-primary);
+    resize: none;
+    font-family: inherit;
+    outline: none;
+    min-height: 60px;
+}
+.edit-actions {
+    display: flex; gap: 8px; margin-top: 6px; justify-content: flex-end;
+}
+
 /* ========== МЕТКА ВРЕМЕНИ ГЕНЕРАЦИИ ========== */
 .generation-time-label {
     font-size: 10px; color: var(--text-secondary); opacity: 0.5;
     text-align: right; margin-top: 2px; padding: 0 6px;
 }
 
-/* ========== АДАПТИВ (увеличено на 20-30% для мобилок) ========== */
+/* ========== АДАПТИВ ========== */
 @media (max-width: 768px) {
     body { font-size: 18px; }
     .title-bar { height: 64px; padding: 0 16px; }
