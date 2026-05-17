@@ -154,8 +154,8 @@
             copyAction: 'Копировать',
             regenAction: 'Регенерировать',
             editAction: 'Редактировать',
-            cancelEdit: 'Отмена',
-            saveEdit: 'Сохранить'
+            saveEdit: 'Сохранить',
+            cancelEdit: 'Отмена'
         },
         en: {
             welcome: 'Welcome to Diamond AI!',
@@ -280,8 +280,8 @@
             copyAction: 'Copy',
             regenAction: 'Regenerate',
             editAction: 'Edit',
-            cancelEdit: 'Cancel',
-            saveEdit: 'Save'
+            saveEdit: 'Save',
+            cancelEdit: 'Cancel'
         }
     };
 
@@ -821,9 +821,7 @@
     }
 
     async function switchChat(id) {
-        if (currentChatId && chatAttachments[currentChatId]) {
-            // already saved
-        }
+        if (currentChatId && chatAttachments[currentChatId]) {}
         currentChatId = id;
         switchToChatView();
         renderChat();
@@ -1456,31 +1454,12 @@
                 contentHtml = contentHtml.replace(regex, '<span class="search-highlight">$1</span>');
             }
             const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content visible'; // плавное появление
+            contentDiv.className = 'message-content visible';
             contentDiv.innerHTML = contentHtml;
 
             const wrapper = document.createElement('div');
             wrapper.className = 'message-content-wrapper';
             wrapper.appendChild(contentDiv);
-
-            // Действия пользователя
-            if (msg.role === 'user') {
-                const userActionsDiv = document.createElement('div');
-                userActionsDiv.className = 'user-message-actions';
-                userActionsDiv.innerHTML = `
-                    <span class="copy-user-action">${t('copyAction')}</span>
-                    <span class="separator">·</span>
-                    <span class="edit-user-action">${t('editAction')}</span>
-                `;
-                userActionsDiv.querySelector('.copy-user-action').addEventListener('click', () => {
-                    navigator.clipboard.writeText(msg.content);
-                    showToast(t('copy'), '', 'success', 1500);
-                });
-                userActionsDiv.querySelector('.edit-user-action').addEventListener('click', () => {
-                    enterEditMode(messageDiv, msg, idx);
-                });
-                wrapper.appendChild(userActionsDiv);
-            }
 
             // Футер с дисклеймером и действиями
             if (msg.role === 'assistant' && msg.generationTime) {
@@ -1538,6 +1517,25 @@
                 wrapper.appendChild(footerDiv);
             }
 
+            // Действия пользователя
+            if (msg.role === 'user') {
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'user-message-actions';
+                actionsDiv.innerHTML = `
+                    <span class="copy-user-action">${t('copyAction')}</span>
+                    <span class="separator">·</span>
+                    <span class="edit-user-action">${t('editAction')}</span>
+                `;
+                actionsDiv.querySelector('.copy-user-action').addEventListener('click', () => {
+                    navigator.clipboard.writeText(msg.content);
+                    showToast(t('copy'), '', 'success', 1500);
+                });
+                actionsDiv.querySelector('.edit-user-action').addEventListener('click', () => {
+                    enterEditMode(messageDiv, msg.content);
+                });
+                wrapper.appendChild(actionsDiv);
+            }
+
             if (msg.attachment) {
                 const attachDiv = document.createElement('div');
                 attachDiv.className = 'attachment-card';
@@ -1587,68 +1585,6 @@
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
-    // ========== РЕДАКТИРОВАНИЕ СООБЩЕНИЯ ПОЛЬЗОВАТЕЛЯ ==========
-    function enterEditMode(messageDiv, msg, idx) {
-        const wrapper = messageDiv.querySelector('.message-content-wrapper');
-        const origContent = wrapper.querySelector('.message-content');
-        const origActions = wrapper.querySelector('.user-message-actions');
-        
-        // Скрываем оригинальный контент и действия
-        origContent.style.display = 'none';
-        if (origActions) origActions.style.display = 'none';
-
-        // Создаём поле редактирования
-        const textarea = document.createElement('textarea');
-        textarea.className = 'edit-textarea';
-        textarea.value = msg.content;
-        const actionsDiv = document.createElement('div');
-        actionsDiv.className = 'edit-actions';
-        actionsDiv.innerHTML = `
-            <button class="btn btn-secondary cancel-edit-btn"><i class="fas fa-times"></i> ${t('cancelEdit')}</button>
-            <button class="btn btn-primary save-edit-btn"><i class="fas fa-check"></i> ${t('saveEdit')}</button>
-        `;
-        wrapper.appendChild(textarea);
-        wrapper.appendChild(actionsDiv);
-        textarea.focus();
-
-        // Отмена
-        actionsDiv.querySelector('.cancel-edit-btn').addEventListener('click', () => {
-            textarea.remove();
-            actionsDiv.remove();
-            origContent.style.display = 'block';
-            if (origActions) origActions.style.display = 'flex';
-        });
-
-        // Сохранить
-        actionsDiv.querySelector('.save-edit-btn').addEventListener('click', async () => {
-            const newText = textarea.value.trim();
-            if (!newText) return;
-            
-            // Удаляем поле и кнопки
-            textarea.remove();
-            actionsDiv.remove();
-            
-            // Обновляем текст в DOM
-            origContent.style.display = 'block';
-            if (origActions) origActions.style.display = 'flex';
-            origContent.textContent = newText;
-            msg.content = newText;
-            
-            // Удаляем все сообщения после этого
-            const chat = chats.find(c => c.id === currentChatId);
-            if (chat) {
-                const msgIdx = chat.messages.indexOf(msg);
-                if (msgIdx !== -1) {
-                    chat.messages = chat.messages.slice(0, msgIdx + 1);
-                    await saveChatToSupabase(chat);
-                }
-            }
-            
-            // Отправляем новый запрос
-            await sendRequest(newText);
-        });
-    }
-
     async function addMessageToDOM(role, content, save = true, attachment = null, generationTime = null) {
         const timestamp = Date.now();
         const messageId = timestamp + Math.random();
@@ -1681,12 +1617,67 @@
                     lastMsgContent.style.opacity = '0';
                     requestAnimationFrame(() => {
                         lastMsgContent.style.opacity = '1';
-                        lastMsgContent.style.transition = 'opacity 0.3s ease';
+                        lastMsgContent.classList.add('visible');
                     });
                 }
             }
         }
         return messageId;
+    }
+
+    // ========== РЕДАКТИРОВАНИЕ СООБЩЕНИЯ ПОЛЬЗОВАТЕЛЯ ==========
+    function enterEditMode(msgElement, oldText) {
+        const wrapper = msgElement.querySelector('.message-content-wrapper');
+        const origContent = wrapper.querySelector('.message-content');
+        const origActions = wrapper.querySelector('.user-message-actions');
+
+        // Скрываем оригинальный контент и действия
+        origContent.style.display = 'none';
+        if (origActions) origActions.style.display = 'none';
+
+        // Создаём поле редактирования
+        const textarea = document.createElement('textarea');
+        textarea.className = 'edit-textarea';
+        textarea.value = oldText;
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'edit-actions';
+        actionsDiv.innerHTML = `
+            <button class="btn btn-secondary cancel-edit-btn"><i class="fas fa-times"></i> ${t('cancelEdit')}</button>
+            <button class="btn btn-primary save-edit-btn"><i class="fas fa-check"></i> ${t('saveEdit')}</button>
+        `;
+        wrapper.appendChild(textarea);
+        wrapper.appendChild(actionsDiv);
+        textarea.focus();
+
+        // Отмена
+        actionsDiv.querySelector('.cancel-edit-btn').addEventListener('click', () => {
+            textarea.remove();
+            actionsDiv.remove();
+            origContent.style.display = 'block';
+            if (origActions) origActions.style.display = 'flex';
+        });
+
+        // Сохранить
+        actionsDiv.querySelector('.save-edit-btn').addEventListener('click', async () => {
+            const newText = textarea.value.trim();
+            if (!newText) return;
+            textarea.remove();
+            actionsDiv.remove();
+            origContent.style.display = 'block';
+            if (origActions) origActions.style.display = 'flex';
+            origContent.textContent = newText;
+
+            // Удаляем все ответы ниже
+            let next = msgElement.nextElementSibling;
+            while (next) {
+                const toRemove = next;
+                next = next.nextElementSibling;
+                toRemove.remove();
+            }
+
+            // Отправляем новый запрос
+            await sendMessageInternal(newText, null);
+        });
     }
 
     // ========== ПРИКРЕПЛЕНИЕ ФАЙЛОВ ==========
@@ -1921,9 +1912,41 @@
         return result.value || '';
     }
 
-    // ========== ОТПРАВКА СООБЩЕНИЯ ==========
-    async function sendRequest(prompt) {
-        if (!mistralApiKey || isWaitingForResponse) return;
+    // ========== ОТПРАВКА СООБЩЕНИЯ (ВСЯ ЛОГИКА ВНУТРИ, БЕЗ ВНЕШНИХ ФУНКЦИЙ) ==========
+    async function sendMessageInternal(promptText, attachmentParam) {
+        if (isWaitingForResponse) return;
+        if (!mistralApiKey) { showToast(t('errorApiKey'), '', 'error'); return; }
+
+        let chat = chats.find(c => c.id === currentChatId);
+        if (!chat || chat.messages.length === 0) {
+            const now = Date.now();
+            chat = {
+                id: now.toString(),
+                title: generateChatTitle(promptText || (attachmentParam ? attachmentParam.name : '')),
+                messages: [],
+                created_at: now,
+                last_activity: now,
+                pinned: false,
+                folder_id: null,
+                isTool: false
+            };
+            chats.unshift(chat);
+            currentChatId = chat.id;
+            if (attachmentParam) chatAttachments[currentChatId] = attachmentParam;
+            await saveChatToSupabase(chat);
+            renderHistory();
+            document.getElementById('inputArea').style.display = 'flex';
+        }
+
+        const userText = promptText || '';
+        const attachment = attachmentParam || (currentChatId ? chatAttachments[currentChatId] : null);
+        const attachmentData = attachment ? { type: attachment.type, name: attachment.name, size: attachment.size } : null;
+
+        await addMessageToDOM('user', userText, true, attachmentData);
+        if (!attachmentParam) {
+            delete chatAttachments[currentChatId];
+        }
+
         isWaitingForResponse = true;
         updateSendButtonState();
 
@@ -1932,11 +1955,22 @@
         scrollToBottom();
 
         let systemPrompt = (chat.id && chat.id.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[chat.id.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
+        let userMessageForAI = userText;
+        if (attachment) {
+            const fileContent = attachment.content || '';
+            if (!fileContent) showToast(t('ocrEmpty'), 'Текст не распознан', 'warning');
+            userMessageForAI = `[Файл: ${attachment.name}]\nСодержимое:\n${fileContent}\n\nЗапрос пользователя: ${userText || 'Проанализируй содержимое файла'}`;
+            systemPrompt = {
+                ...systemPrompt,
+                content: systemPrompt.content + '\n\nВАЖНО: Ты получил содержимое файла выше. Анализируй его и ответь.'
+            };
+        }
+
         const contextMessages = chat.messages.filter(m => !m.isTyping).slice(-15);
         const messagesForAI = [
             systemPrompt,
             ...contextMessages.map(m => ({ role: m.role, content: m.content })),
-            { role: 'user', content: prompt }
+            { role: 'user', content: userMessageForAI }
         ];
 
         const controller = new AbortController(); currentAbortController = controller;
@@ -1945,7 +1979,7 @@
             const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
                 method: 'POST',
                 headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
-                body: JSON.stringify({ model: AI_MODEL, messages: messagesForAI, temperature: 0.3, max_tokens: 1500 }),
+                body: JSON.stringify({ model: AI_MODEL, messages: messagesForAI, temperature: 0.3, max_tokens: 800 }),
                 signal: controller.signal
             });
             if (resp.ok) { const data = await resp.json(); assistantMessage = data.choices[0].message.content; success = true; }
@@ -1962,9 +1996,10 @@
 
         if (success && assistantMessage) {
             await addMessageToDOM('assistant', assistantMessage, true, null, generationTime);
-        } else if (!success && e?.name !== 'AbortError') {
+        } else if (!success && !(e && e.name === 'AbortError')) {
             await addMessageToDOM('assistant', '❌ Не удалось получить ответ. Попробуйте позже.', true, null, generationTime);
         }
+
         isWaitingForResponse = false; currentAbortController = null; updateSendButtonState(); renderChat(); scrollToBottom();
     }
 
@@ -1972,55 +2007,19 @@
         const text = document.getElementById('user-input').value.trim();
         const attachment = currentChatId ? chatAttachments[currentChatId] : null;
         if ((!text && !attachment) || isWaitingForResponse) return;
-        if (!mistralApiKey) { showToast(t('errorApiKey'), '', 'error'); return; }
-        let chat = chats.find(c => c.id === currentChatId);
-        if (!chat || chat.messages.length === 0) {
-            const now = Date.now();
-            const isTool = currentChatId && currentChatId.startsWith('tool_');
-            if (isTool) {
-                chat = chats.find(c => c.id === currentChatId);
-                if (!chat) { showToast('Ошибка', 'Инструментальный чат не найден', 'error'); return; }
-            } else {
-                chat = {
-                    id: now.toString(),
-                    title: generateChatTitle(text || (attachment ? attachment.name : '')),
-                    messages: [],
-                    created_at: now,
-                    last_activity: now,
-                    pinned: false,
-                    folder_id: null,
-                    isTool: false
-                };
-                chats.unshift(chat);
-                currentChatId = chat.id;
-                if (attachment) chatAttachments[currentChatId] = attachment;
-                await saveChatToSupabase(chat);
-                renderHistory();
-                document.getElementById('inputArea').style.display = 'flex';
-            }
-        }
-
-        const userText = text || '';
-        const attachmentData = attachment ? { type: attachment.type, name: attachment.name, size: attachment.size } : null;
-        await addMessageToDOM('user', userText, true, attachmentData);
+        document.getElementById('user-input').value = '';
         const input = document.getElementById('user-input');
-        input.value = '';
         input.style.height = '';
         updateSendButtonState();
         removeAttachmentPreview();
-        delete chatAttachments[currentChatId];
-
-        await sendRequest(userText);
+        await sendMessageInternal(text, attachment);
     }
-
-    function stopGeneration() { if (currentAbortController) { currentAbortController.abort(); showToast('Генерация остановлена', '', 'info'); } }
 
     // ========== РЕГЕНЕРАЦИЯ (без дублирования, с анимацией) ==========
     async function regenerateResponseFromMsg(msg, idx) {
         const chat = chats.find(c => c.id === currentChatId);
         if (!chat || isWaitingForResponse) return;
 
-        // Скрываем исходное сообщение на время регенерации (анимированно)
         const msgElement = document.querySelector(`.message.assistant:nth-child(${idx + 1})`);
         if (msgElement) {
             msgElement.style.transition = 'opacity 0.3s ease';
@@ -2053,7 +2052,7 @@
             const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
                 method: 'POST',
                 headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
-                body: JSON.stringify({ model: AI_MODEL, messages: messagesForAI, temperature: 0.3, max_tokens: 1500 }),
+                body: JSON.stringify({ model: AI_MODEL, messages: messagesForAI, temperature: 0.3, max_tokens: 800 }),
                 signal: controller.signal
             });
             if (resp.ok) { const data = await resp.json(); newAnswer = data.choices[0].message.content; success = true; }
@@ -2065,7 +2064,6 @@
 
         const generationTime = stopThinkingAnimation(card, anim);
 
-        // Возвращаем видимость исходному сообщению
         if (msgElement) {
             msgElement.style.opacity = '1';
         }
@@ -2078,7 +2076,7 @@
             msg.content = newAnswer;
             msg.generationTime = generationTime;
             await saveChatToSupabase(chat);
-        } else if (!success && e?.name !== 'AbortError') {
+        } else if (!success && !(e && e.name === 'AbortError')) {
             showToast('Ошибка', 'Не удалось регенерировать ответ', 'error');
         }
 
@@ -2086,6 +2084,11 @@
         renderChat();
         scrollToBottom();
     }
+
+    function stopGeneration() { if (currentAbortController) { currentAbortController.abort(); showToast('Генерация остановлена', '', 'info'); } }
+
+    // ========== АВАТАРЫ И ПАНЕЛЬ ==========
+    // (функции getBotAvatarHTML, getUserAvatarHTML, updateUserPanel уже определены выше)
 
     async function refreshUserProfile() {
         if (!currentUser) return;
