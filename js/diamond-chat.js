@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ ====================
+// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (с обучением) ====================
 
 async function loadChatsAndFolders() {
     if (!currentUser) return;
@@ -134,7 +134,6 @@ async function deleteChat(id) {
 
 async function switchChat(id) {
     if (currentChatId && chatAttachments[currentChatId]) {
-        // already saved
     }
     currentChatId = id;
     switchToChatView();
@@ -231,6 +230,29 @@ async function deleteFolder(id) {
 
 // ========== ОТПРАВКА СООБЩЕНИЙ ==========
 
+// НОВОЕ: Поиск по базе знаний перед отправкой
+async function searchKnowledgeBase(query) {
+    if (!currentUser) return '';
+    try {
+        const { data, error } = await supabaseClient.rpc('search_knowledge', {
+            user_query: query,
+            login: currentUser.login
+        });
+        if (error || !data || data.length === 0) return '';
+        return 'ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ ИЗ БАЗЫ ЗНАНИЙ:\n' + data.map(d => `[Источник: ${d.source}] ${d.title}: ${d.content}`).join('\n');
+    } catch(e) {
+        console.warn('Ошибка поиска в базе знаний:', e);
+        return '';
+    }
+}
+
+// НОВОЕ: Получение краткой истории чатов
+function getChatHistorySummary() {
+    if (!chats || chats.length === 0) return '';
+    const recentChats = chats.slice(0, 5);
+    return 'ИСТОРИЯ ТВОИХ ЧАТОВ (для контекста):\n' + recentChats.map(c => `- "${c.title || 'Без названия'}" (сообщений: ${(c.messages||[]).length})`).join('\n');
+}
+
 async function sendMessage() {
     const text = document.getElementById('user-input').value.trim();
     const attachment = currentChatId ? chatAttachments[currentChatId] : null;
@@ -285,7 +307,21 @@ async function sendRequest(prompt) {
     const anim = startThinkingAnimation(card);
     scrollToBottom();
 
-    let systemPrompt = (currentChatId && currentChatId.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[currentChatId.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
+    // Динамический системный промпт с памятью и базой знаний
+    let systemPrompt = { ...SYSTEM_PROMPT };
+    const historySummary = getChatHistorySummary();
+    let knowledgeContext = '';
+
+    if (currentChatId && currentChatId.startsWith('tool_')) {
+        systemPrompt = { ...(TOOL_SYSTEM_PROMPTS[currentChatId.replace('tool_','')] || SYSTEM_PROMPT) };
+    } else {
+        knowledgeContext = await searchKnowledgeBase(prompt);
+    }
+
+    let enhancedContent = systemPrompt.content;
+    if (historySummary) enhancedContent += '\n\n' + historySummary;
+    if (knowledgeContext) enhancedContent += '\n\n' + knowledgeContext;
+
     const controller = new AbortController();
     currentAbortController = controller;
 
@@ -295,7 +331,7 @@ async function sendRequest(prompt) {
         const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
-            body: JSON.stringify({ model: AI_MODEL, messages: [systemPrompt, { role: 'user', content: prompt }], temperature: 0.3, max_tokens: 1500 }),
+            body: JSON.stringify({ model: AI_MODEL, messages: [{ role: 'system', content: enhancedContent }, { role: 'user', content: prompt }], temperature: 0.3, max_tokens: 1500 }),
             signal: controller.signal
         });
         if (resp.ok) {
