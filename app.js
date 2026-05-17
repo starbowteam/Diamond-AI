@@ -1409,165 +1409,163 @@
     }
 
     // ========== РЕНДЕР ЧАТА (с редактированием) ==========
-    function renderChat() {
-        const chat = chats.find(c => c.id === currentChatId);
-        const headerEl = document.getElementById('chatHeader');
-        if (headerEl) {
-            headerEl.innerHTML = '';
-            headerEl.style.borderColor = 'var(--border-color)';
-            headerEl.classList.remove('folder-border');
-            if (chat) {
-                const folder = chat.folder_id ? folders.find(f => f.id === chat.folder_id) : null;
-                if (folder) {
-                    headerEl.style.borderColor = folder.color;
-                    headerEl.classList.add('folder-border');
-                }
-                headerEl.innerHTML = `<i class="fas fa-feather-alt"></i> ${escapeHtml(chat.title)}`;
-            } else {
-                headerEl.textContent = '';
+   // ========== РЕНДЕР ЧАТА (исправлена видимость сообщений) ==========
+function renderChat() {
+    const chat = chats.find(c => c.id === currentChatId);
+    const headerEl = document.getElementById('chatHeader');
+    if (headerEl) {
+        headerEl.innerHTML = '';
+        headerEl.style.borderColor = 'var(--border-color)';
+        headerEl.classList.remove('folder-border');
+        if (chat) {
+            const folder = chat.folder_id ? folders.find(f => f.id === chat.folder_id) : null;
+            if (folder) {
+                headerEl.style.borderColor = folder.color;
+                headerEl.classList.add('folder-border');
             }
+            headerEl.innerHTML = `<i class="fas fa-feather-alt"></i> ${escapeHtml(chat.title)}`;
+        } else {
+            headerEl.textContent = '';
         }
-        if (!chat || !chat.messages || chat.messages.length === 0) {
-            renderEmptyState();
-            document.getElementById('inputArea').style.display = 'none';
-            return;
-        }
-        document.getElementById('inputArea').style.display = 'flex';
-        const container = document.getElementById('messages-container');
-        container.innerHTML = '';
-        let lastDate = null;
-        chat.messages.forEach((msg, idx) => {
-            if (msg.isTyping) return;
-            const date = new Date(msg.timestamp || chat.created_at).toDateString();
-            if (date !== lastDate) {
-                container.innerHTML += `<div class="date-divider"><span>${formatDateHeader(msg.timestamp || chat.created_at)}</span></div>`;
-                lastDate = date;
-            }
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${msg.role}`;
-            const avatarHTML = msg.role === 'user' ? getUserAvatarHTML() : getBotAvatarHTML();
-            let contentHtml = msg.role === 'assistant' ? marked.parse(msg.content) : escapeHtml(msg.content);
-            if (searchHighlightTerm) {
-                const regex = new RegExp(`(${searchHighlightTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-                contentHtml = contentHtml.replace(regex, '<span class="search-highlight">$1</span>');
-            }
-            const contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content visible';
-            contentDiv.innerHTML = contentHtml;
-
-            const wrapper = document.createElement('div');
-            wrapper.className = 'message-content-wrapper';
-            wrapper.appendChild(contentDiv);
-
-            // Действия пользователя
-            if (msg.role === 'user') {
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'user-message-actions';
-                actionsDiv.innerHTML = `
-                    <span class="copy-user-action">${t('copyAction')}</span>
-                    <span class="separator">·</span>
-                    <span class="edit-user-action">${t('editAction')}</span>
-                `;
-                // Копировать
-                actionsDiv.querySelector('.copy-user-action').addEventListener('click', () => {
-                    navigator.clipboard.writeText(msg.content);
-                    showToast(t('copy'), '', 'success', 1500);
-                });
-                // Редактировать
-                actionsDiv.querySelector('.edit-user-action').addEventListener('click', () => {
-                    enterEditMode(msg, messageDiv, contentDiv, actionsDiv);
-                });
-                wrapper.appendChild(actionsDiv);
-            }
-
-            // Футер ответа ассистента
-            if (msg.role === 'assistant' && msg.generationTime) {
-                const footerDiv = document.createElement('div');
-                footerDiv.className = 'message-footer';
-                const hasVariants = msg.variants && msg.variants.length > 1;
-                const currentVariant = msg.currentVariant || 0;
-
-                footerDiv.innerHTML = `
-                    <span class="disclaimer">Diamond AI</span>
-                    <span class="separator">·</span>
-                    ${hasVariants ? `
-                        <span class="variant-switcher">
-                            <button class="prev-variant"><i class="fas fa-chevron-left"></i></button>
-                            <span class="variant-counter">${currentVariant + 1}/${msg.variants.length}</span>
-                            <button class="next-variant"><i class="fas fa-chevron-right"></i></button>
-                        </span>
-                        <span class="separator">·</span>
-                    ` : ''}
-                    <span class="generation-time-label">${t('generatedIn')} ${msg.generationTime} ${t('sec')}</span>
-                    <span class="separator">·</span>
-                    <span class="copy-action">${t('copyAction')}</span>
-                    <span class="separator">·</span>
-                    <span class="regen-action">${t('regenAction')}</span>
-                `;
-
-                footerDiv.querySelector('.disclaimer').addEventListener('click', showDisclaimerModal);
-                footerDiv.querySelector('.copy-action').addEventListener('click', () => {
-                    navigator.clipboard.writeText(msg.content);
-                    showToast(t('copy'), '', 'success', 1500);
-                });
-                footerDiv.querySelector('.regen-action').addEventListener('click', () => {
-                    regenerateResponseFromMsg(msg, idx);
-                });
-
-                if (hasVariants) {
-                    let localIdx = currentVariant;
-                    const update = (newIdx) => {
-                        localIdx = newIdx;
-                        contentDiv.innerHTML = marked.parse(msg.variants[newIdx]);
-                        const ctr = footerDiv.querySelector('.variant-counter');
-                        if (ctr) ctr.textContent = `${newIdx + 1}/${msg.variants.length}`;
-                        msg.currentVariant = newIdx;
-                        msg.content = msg.variants[newIdx];
-                        saveChatToSupabase(chat);
-                    };
-                    footerDiv.querySelector('.prev-variant').addEventListener('click', () => {
-                        update((localIdx - 1 + msg.variants.length) % msg.variants.length);
-                    });
-                    footerDiv.querySelector('.next-variant').addEventListener('click', () => {
-                        update((localIdx + 1) % msg.variants.length);
-                    });
-                }
-
-                wrapper.appendChild(footerDiv);
-            }
-
-            if (msg.attachment) {
-                const attachDiv = document.createElement('div');
-                attachDiv.className = 'attachment-card';
-                const ext = msg.attachment.type.split('/').pop();
-                const logoMap = {
-                    'png': 'png.png', 'jpg': 'jpg.png', 'jpeg': 'jpg.png',
-                    'html': 'html.png', 'js': 'js.png', 'css': 'css.png',
-                    'docx': 'docx.png'
-                };
-                const logo = logoMap[ext] || 'png.png';
-                attachDiv.innerHTML = `
-                    <div class="attachment-icon"><img src="${logo}" alt="${ext}"></div>
-                    <div class="attachment-info">
-                        <div class="attachment-name">${escapeHtml(msg.attachment.name)}</div>
-                        <div class="attachment-meta">${formatFileSize(msg.attachment.size)}</div>
-                    </div>
-                `;
-                wrapper.appendChild(attachDiv);
-            }
-
-            messageDiv.innerHTML = `<div class="avatar">${avatarHTML}</div>`;
-            messageDiv.appendChild(wrapper);
-            container.appendChild(messageDiv);
-        });
-        setTimeout(() => {
-            renderMathInElementWithMhchem(container);
-            enhanceCodeBlocks(container);
-            renderMermaidBlocks(container);
-        }, 10);
-        scrollToBottom();
     }
+    if (!chat || !chat.messages || chat.messages.length === 0) {
+        renderEmptyState();
+        document.getElementById('inputArea').style.display = 'none';
+        return;
+    }
+    document.getElementById('inputArea').style.display = 'flex';
+    const container = document.getElementById('messages-container');
+    container.innerHTML = '';
+    let lastDate = null;
+    chat.messages.forEach((msg, idx) => {
+        if (msg.isTyping) return;
+        const date = new Date(msg.timestamp || chat.created_at).toDateString();
+        if (date !== lastDate) {
+            container.innerHTML += `<div class="date-divider"><span>${formatDateHeader(msg.timestamp || chat.created_at)}</span></div>`;
+            lastDate = date;
+        }
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${msg.role}`;
+        const avatarHTML = msg.role === 'user' ? getUserAvatarHTML() : getBotAvatarHTML();
+        let contentHtml = msg.role === 'assistant' ? marked.parse(msg.content) : escapeHtml(msg.content);
+        if (searchHighlightTerm) {
+            const regex = new RegExp(`(${searchHighlightTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            contentHtml = contentHtml.replace(regex, '<span class="search-highlight">$1</span>');
+        }
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content visible';   // ✅ добавлен visible
+        contentDiv.innerHTML = contentHtml;
 
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message-content-wrapper';
+        wrapper.appendChild(contentDiv);
+
+        // Действия пользователя
+        if (msg.role === 'user') {
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'user-message-actions';
+            actionsDiv.innerHTML = `
+                <span class="copy-user-action">${t('copyAction')}</span>
+                <span class="separator">·</span>
+                <span class="edit-user-action">${t('editAction')}</span>
+            `;
+            actionsDiv.querySelector('.copy-user-action').addEventListener('click', () => {
+                navigator.clipboard.writeText(msg.content);
+                showToast(t('copy'), '', 'success', 1500);
+            });
+            actionsDiv.querySelector('.edit-user-action').addEventListener('click', () => {
+                enterEditMode(msg, messageDiv, contentDiv, actionsDiv);
+            });
+            wrapper.appendChild(actionsDiv);
+        }
+
+        // Футер ответа ассистента
+        if (msg.role === 'assistant' && msg.generationTime) {
+            const footerDiv = document.createElement('div');
+            footerDiv.className = 'message-footer';
+            const hasVariants = msg.variants && msg.variants.length > 1;
+            const currentVariant = msg.currentVariant || 0;
+
+            footerDiv.innerHTML = `
+                <span class="disclaimer">Diamond AI</span>
+                <span class="separator">·</span>
+                ${hasVariants ? `
+                    <span class="variant-switcher">
+                        <button class="prev-variant"><i class="fas fa-chevron-left"></i></button>
+                        <span class="variant-counter">${currentVariant + 1}/${msg.variants.length}</span>
+                        <button class="next-variant"><i class="fas fa-chevron-right"></i></button>
+                    </span>
+                    <span class="separator">·</span>
+                ` : ''}
+                <span class="generation-time-label">${t('generatedIn')} ${msg.generationTime} ${t('sec')}</span>
+                <span class="separator">·</span>
+                <span class="copy-action">${t('copyAction')}</span>
+                <span class="separator">·</span>
+                <span class="regen-action">${t('regenAction')}</span>
+            `;
+
+            footerDiv.querySelector('.disclaimer').addEventListener('click', showDisclaimerModal);
+            footerDiv.querySelector('.copy-action').addEventListener('click', () => {
+                navigator.clipboard.writeText(msg.content);
+                showToast(t('copy'), '', 'success', 1500);
+            });
+            footerDiv.querySelector('.regen-action').addEventListener('click', () => {
+                regenerateResponseFromMsg(msg, idx);
+            });
+
+            if (hasVariants) {
+                let localIdx = currentVariant;
+                const update = (newIdx) => {
+                    localIdx = newIdx;
+                    contentDiv.innerHTML = marked.parse(msg.variants[newIdx]);
+                    const ctr = footerDiv.querySelector('.variant-counter');
+                    if (ctr) ctr.textContent = `${newIdx + 1}/${msg.variants.length}`;
+                    msg.currentVariant = newIdx;
+                    msg.content = msg.variants[newIdx];
+                    saveChatToSupabase(chat);
+                };
+                footerDiv.querySelector('.prev-variant').addEventListener('click', () => {
+                    update((localIdx - 1 + msg.variants.length) % msg.variants.length);
+                });
+                footerDiv.querySelector('.next-variant').addEventListener('click', () => {
+                    update((localIdx + 1) % msg.variants.length);
+                });
+            }
+
+            wrapper.appendChild(footerDiv);
+        }
+
+        if (msg.attachment) {
+            const attachDiv = document.createElement('div');
+            attachDiv.className = 'attachment-card';
+            const ext = msg.attachment.type.split('/').pop();
+            const logoMap = {
+                'png': 'png.png', 'jpg': 'jpg.png', 'jpeg': 'jpg.png',
+                'html': 'html.png', 'js': 'js.png', 'css': 'css.png',
+                'docx': 'docx.png'
+            };
+            const logo = logoMap[ext] || 'png.png';
+            attachDiv.innerHTML = `
+                <div class="attachment-icon"><img src="${logo}" alt="${ext}"></div>
+                <div class="attachment-info">
+                    <div class="attachment-name">${escapeHtml(msg.attachment.name)}</div>
+                    <div class="attachment-meta">${formatFileSize(msg.attachment.size)}</div>
+                </div>
+            `;
+            wrapper.appendChild(attachDiv);
+        }
+
+        messageDiv.innerHTML = `<div class="avatar">${avatarHTML}</div>`;
+        messageDiv.appendChild(wrapper);
+        container.appendChild(messageDiv);
+    });
+    setTimeout(() => {
+        renderMathInElementWithMhchem(container);
+        enhanceCodeBlocks(container);
+        renderMermaidBlocks(container);
+    }, 10);
+    scrollToBottom();
+}
     // ========== РЕЖИМ РЕДАКТИРОВАНИЯ СООБЩЕНИЯ ПОЛЬЗОВАТЕЛЯ ==========
     function enterEditMode(msg, messageDiv, contentDiv, actionsDiv) {
         // Скрываем оригинальный контент и действия
