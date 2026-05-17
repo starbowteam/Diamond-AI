@@ -3,21 +3,25 @@
 // ========== ИНСТРУМЕНТЫ МАСТЕРСКОЙ ==========
 
 function getToolInfo(toolId) {
-    const tools = { ai_detect: { icon: 'fa-search', title: t('aiDetect') } };
-    return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент' };
+    const tools = {
+        ai_detect: { icon: 'fa-search', title: t('aiDetect'), color: 'var(--accent)' },
+        knowledge_rag: { icon: 'fa-database', title: 'База знаний', color: '#3498db' }
+    };
+    return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент', color: 'var(--accent)' };
 }
 
 async function createToolChatWithGreeting(toolId) {
     const toolChatId = 'tool_' + toolId;
     if (chats.find(c => c.id === toolChatId)) return;
     const toolInfo = getToolInfo(toolId);
+    const greetingMsg = toolId === 'ai_detect' ? t('aiDetectGreeting') : 'Готов искать по вашим документам! Загрузите документы через интерфейс чата.';
     const toolChat = {
         id: toolChatId,
         title: toolInfo.title,
         messages: [{
             id: Date.now().toString(),
             role: 'assistant',
-            content: t('aiDetectGreeting'),
+            content: greetingMsg,
             timestamp: Date.now(),
             isTyping: false
         }],
@@ -43,15 +47,15 @@ async function removeToolChat(toolId) {
 }
 
 async function toggleWorkshopTool(toolId) {
-    if (toolId !== 'ai_detect') return;
+    if (toolId !== 'ai_detect' && toolId !== 'knowledge_rag') return;
     workshopTools[toolId] = !workshopTools[toolId];
     saveWorkshopToolsState();
     if (workshopTools[toolId]) {
         await createToolChatWithGreeting(toolId);
-        showToast(t('toolActive'), 'Чат «Распознать ИИ» активен', 'success');
+        showToast(t('toolActive'), `Чат «${getToolInfo(toolId).title}» активен`, 'success');
     } else {
         await removeToolChat(toolId);
-        showToast(t('toolInactive'), 'Чат «Распознать ИИ» скрыт', 'info');
+        showToast(t('toolInactive'), `Чат «${getToolInfo(toolId).title}» скрыт`, 'info');
         if (currentChatId === 'tool_' + toolId) renderEmptyState();
     }
     renderWorkshopPage(); renderHistory(); renderChat();
@@ -62,13 +66,14 @@ function renderWorkshopPage() {
     const container = document.getElementById('workshopPage');
     if (!container) return;
     const aiDetectActive = workshopTools.ai_detect || false;
+    const knowledgeRagActive = workshopTools.knowledge_rag || false;
     container.innerHTML = `
         <div class="workshop-banner">
             <div class="workshop-banner-text">
                 <h1>${t('masterFull')}</h1>
                 <p>Специальные инструменты для расширенной работы с искусственным интеллектом. Включайте нужные тумблеры, чтобы активировать тематические чаты со строгими правилами.</p>
             </div>
-            <img src="../assets/master.png" alt="Мастерская" class="workshop-banner-img">
+            <img src="assets/master.png" alt="Мастерская" class="workshop-banner-img">
         </div>
         <div class="workshop-tools-grid">
             <div class="workshop-tool-card ${aiDetectActive ? 'active' : ''}">
@@ -79,6 +84,16 @@ function renderWorkshopPage() {
                 <div class="workshop-tool-toggle">
                     <span>${aiDetectActive ? t('toolActive') : t('toolInactive')}</span>
                     <label class="toggle-switch"><input type="checkbox" id="toggle-ai-detect" ${aiDetectActive ? 'checked' : ''}><span class="toggle-slider"></span></label>
+                </div>
+            </div>
+            <div class="workshop-tool-card ${knowledgeRagActive ? 'active' : ''}" style="${knowledgeRagActive ? 'border-color: #3498db; box-shadow: 0 0 28px rgba(52,152,219,0.15); background: #1a1a2e;' : ''}">
+                <div class="workshop-tool-header">
+                    <div class="workshop-tool-icon" style="color: #3498db;"><i class="fas fa-database"></i></div>
+                    <div class="workshop-tool-info"><h3>База знаний</h3><p>Поиск по вашим загруженным документам. Загружайте файлы и задавайте вопросы — ИИ найдёт ответ в документах.</p></div>
+                </div>
+                <div class="workshop-tool-toggle">
+                    <span>${knowledgeRagActive ? t('toolActive') : t('toolInactive')}</span>
+                    <label class="toggle-switch"><input type="checkbox" id="toggle-knowledge-rag" ${knowledgeRagActive ? 'checked' : ''}><span class="toggle-slider"></span></label>
                 </div>
             </div>
             <div class="workshop-tool-card disabled">
@@ -100,6 +115,7 @@ function renderWorkshopPage() {
         </div>
     `;
     document.getElementById('toggle-ai-detect')?.addEventListener('change', (e) => toggleWorkshopTool('ai_detect'));
+    document.getElementById('toggle-knowledge-rag')?.addEventListener('change', (e) => toggleWorkshopTool('knowledge_rag'));
     document.getElementById('forumSendBtn')?.addEventListener('click', sendForumMessage);
     document.getElementById('forumInput')?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendForumMessage(); }
