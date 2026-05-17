@@ -3,7 +3,7 @@
 function getToolInfo(toolId) {
     const tools = {
         ai_detect: { icon: 'fa-search', title: t('aiDetect'), color: 'var(--accent)' },
-        knowledge_rag: { icon: 'fa-book', title: 'База знаний', color: '#3498db' }
+        knowledge_rag: { icon: 'fa-book', title: t('documents'), color: '#3498db' }
     };
     return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент', color: 'var(--accent)' };
 }
@@ -12,7 +12,7 @@ async function createToolChatWithGreeting(toolId) {
     const toolChatId = 'tool_' + toolId;
     if (chats.find(c => c.id === toolChatId)) return;
     const toolInfo = getToolInfo(toolId);
-    const greetingMsg = toolId === 'ai_detect' ? t('aiDetectGreeting') : 'Готов искать по вашим документам! Загрузите документы через интерфейс чата.';
+    const greetingMsg = toolId === 'ai_detect' ? t('aiDetectGreeting') : t('documentsGreeting');
     const toolChat = {
         id: toolChatId,
         title: toolInfo.title,
@@ -86,7 +86,7 @@ function renderWorkshopPage() {
             <div class="workshop-tool-card ${knowledgeRagActive ? 'active' : ''}">
                 <div class="workshop-tool-header">
                     <div class="workshop-tool-icon"><i class="fas fa-book"></i></div>
-                    <div class="workshop-tool-info"><h3>Документы</h3><p>Поиск по вашим загруженным документам. Загружайте файлы и задавайте вопросы — ИИ найдёт ответ в документах.</p></div>
+                    <div class="workshop-tool-info"><h3>${t('documents')}</h3><p>${t('documentsToolDesc')}</p></div>
                 </div>
                 <div class="workshop-tool-toggle">
                     <span>${knowledgeRagActive ? t('toolActive') : t('toolInactive')}</span>
