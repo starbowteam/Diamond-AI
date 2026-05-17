@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (с обучением) ====================
+// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (с обучением и новостями) ====================
 
 async function loadChatsAndFolders() {
     if (!currentUser) return;
@@ -228,25 +228,40 @@ async function deleteFolder(id) {
     }
 }
 
-// ========== ОТПРАВКА СООБЩЕНИЙ ==========
-
-// НОВОЕ: Поиск по базе знаний перед отправкой
-async function searchKnowledgeBase(query) {
-    if (!currentUser) return '';
-    try {
-        const { data, error } = await supabaseClient.rpc('search_knowledge', {
-            user_query: query,
-            login: currentUser.login
-        });
-        if (error || !data || data.length === 0) return '';
-        return 'ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ ИЗ БАЗЫ ЗНАНИЙ:\n' + data.map(d => `[Источник: ${d.source}] ${d.title}: ${d.content}`).join('\n');
-    } catch(e) {
-        console.warn('Ошибка поиска в базе знаний:', e);
-        return '';
+// ========== ПОИСК НОВОСТЕЙ ==========
+async function fetchNewsFromAPI(query) {
+    if (!newsapiKey && !apifyGoogleNewsKey) return '';
+    let newsText = '';
+    if (newsapiKey) {
+        try {
+            const resp = await fetch(`https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&apiKey=${newsapiKey}&pageSize=3&language=ru`);
+            const data = await resp.json();
+            if (data.status === 'ok' && data.articles.length > 0) {
+                newsText += 'СВЕЖИЕ НОВОСТИ (NewsAPI):\n';
+                data.articles.forEach(a => {
+                    newsText += `- ${a.title} (${a.source.name}): ${a.description || ''}\n`;
+                });
+                newsText += '\n';
+            }
+        } catch(e) { console.warn('NewsAPI error:', e); }
     }
+    return newsText;
 }
 
-// НОВОЕ: Получение краткой истории чатов
+// ========== ПОИСК ПО БАЗЕ ДОКУМЕНТОВ (переименована) ==========
+async function searchKnowledgeDocs(query) {
+    if (!currentUser) return '';
+    try {
+        const { data, error } = await supabaseClient.from('knowledge_docs').select('*')
+            .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+            .eq('user_login', currentUser.login)
+            .limit(3);
+        if (error || !data || data.length === 0) return '';
+        return 'ИНФОРМАЦИЯ ИЗ ВАШИХ ДОКУМЕНТОВ:\n' + data.map(d => `[Источник: ${d.source}] ${d.title}: ${d.content}`).join('\n');
+    } catch(e) { console.warn('Ошибка поиска в документах:', e); return ''; }
+}
+
+// ========== ОТПРАВКА СООБЩЕНИЙ ==========
 function getChatHistorySummary() {
     if (!chats || chats.length === 0) return '';
     const recentChats = chats.slice(0, 5);
@@ -307,20 +322,32 @@ async function sendRequest(prompt) {
     const anim = startThinkingAnimation(card);
     scrollToBottom();
 
-    // Динамический системный промпт с памятью и базой знаний
     let systemPrompt = { ...SYSTEM_PROMPT };
-    const historySummary = getChatHistorySummary();
-    let knowledgeContext = '';
-
     if (currentChatId && currentChatId.startsWith('tool_')) {
         systemPrompt = { ...(TOOL_SYSTEM_PROMPTS[currentChatId.replace('tool_','')] || SYSTEM_PROMPT) };
-    } else {
-        knowledgeContext = await searchKnowledgeBase(prompt);
     }
 
     let enhancedContent = systemPrompt.content;
+    const historySummary = getChatHistorySummary();
     if (historySummary) enhancedContent += '\n\n' + historySummary;
-    if (knowledgeContext) enhancedContent += '\n\n' + knowledgeContext;
+
+    // Добавляем новости, если запрос похож на новостной (простейшая эвристика)
+    if (/новост[ьи]|событи[яй]|последни[е]|что произошло|свежие|актуальн|news|сейчас/i.test(prompt)) {
+        const newsContext = await fetchNewsFromAPI(prompt);
+        if (newsContext) enhancedContent += '\n\n' + newsContext;
+    }
+
+    // Для инструмента "База знаний" не добавляем общие документы, он сам ищет
+    if (currentChatId && currentChatId.startsWith('tool_')) {
+        const toolId = currentChatId.replace('tool_','');
+        if (toolId === 'knowledge_rag') {
+            // RAG-инструмент сам загрузит документы через sendMessage, ничего не добавляем
+        }
+    } else {
+        // Обычный чат: добавляем информацию из документов пользователя
+        const docsContext = await searchKnowledgeDocs(prompt);
+        if (docsContext) enhancedContent += '\n\n' + docsContext;
+    }
 
     const controller = new AbortController();
     currentAbortController = controller;
