@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (с обучением и новостями) ====================
+// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (с новостями и документами) ====================
 
 async function loadChatsAndFolders() {
     if (!currentUser) return;
@@ -228,27 +228,50 @@ async function deleteFolder(id) {
     }
 }
 
-// ========== ПОИСК НОВОСТЕЙ ==========
+// ========== ПОИСК НОВОСТЕЙ (Google RSS + Wikipedia) ==========
 async function fetchNewsFromAPI(query) {
-    if (!newsapiKey && !apifyGoogleNewsKey) return '';
     let newsText = '';
-    if (newsapiKey) {
-        try {
-            const resp = await fetch(`https://newsapi.org/v2/everything?q=${encodeURIComponent(query)}&apiKey=${newsapiKey}&pageSize=3&language=ru`);
-            const data = await resp.json();
-            if (data.status === 'ok' && data.articles.length > 0) {
-                newsText += 'СВЕЖИЕ НОВОСТИ (NewsAPI):\n';
-                data.articles.forEach(a => {
-                    newsText += `- ${a.title} (${a.source.name}): ${a.description || ''}\n`;
-                });
-                newsText += '\n';
-            }
-        } catch(e) { console.warn('NewsAPI error:', e); }
-    }
+    // 1. Google News RSS (бесплатный, без ключа)
+    try {
+        const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ru&gl=RU&ceid=RU:ru`;
+        const resp = await fetch(rssUrl);
+        const text = await resp.text();
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, 'application/xml');
+        const items = xml.querySelectorAll('item');
+        if (items.length > 0) {
+            newsText += 'СВЕЖИЕ НОВОСТИ (Google News):\n';
+            let count = 0;
+            items.forEach(item => {
+                if (count >= 3) return;
+                const title = item.querySelector('title')?.textContent || '';
+                const link = item.querySelector('link')?.textContent || '';
+                const pubDate = item.querySelector('pubDate')?.textContent || '';
+                newsText += `- ${title} (${pubDate})\n  ${link}\n`;
+                count++;
+            });
+            newsText += '\n';
+        }
+    } catch(e) { console.warn('Google News RSS error:', e); }
+
+    // 2. Wikipedia API (бесплатный, без ключа)
+    try {
+        const wikiUrl = `https://ru.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
+        const resp = await fetch(wikiUrl);
+        const data = await resp.json();
+        if (data.query && data.query.search.length > 0) {
+            newsText += 'ИНФОРМАЦИЯ ИЗ WIKIPEDIA:\n';
+            data.query.search.slice(0, 3).forEach(page => {
+                newsText += `- ${page.title}: ${page.snippet.replace(/<\/?[^>]+(>|$)/g, '')}\n  https://ru.wikipedia.org/wiki/${encodeURIComponent(page.title)}\n`;
+            });
+            newsText += '\n';
+        }
+    } catch(e) { console.warn('Wikipedia API error:', e); }
+
     return newsText;
 }
 
-// ========== ПОИСК ПО БАЗЕ ДОКУМЕНТОВ (переименована) ==========
+// ========== ПОИСК ПО ДОКУМЕНТАМ ==========
 async function searchKnowledgeDocs(query) {
     if (!currentUser) return '';
     try {
@@ -331,20 +354,17 @@ async function sendRequest(prompt) {
     const historySummary = getChatHistorySummary();
     if (historySummary) enhancedContent += '\n\n' + historySummary;
 
-    // Добавляем новости, если запрос похож на новостной (простейшая эвристика)
     if (/новост[ьи]|событи[яй]|последни[е]|что произошло|свежие|актуальн|news|сейчас/i.test(prompt)) {
         const newsContext = await fetchNewsFromAPI(prompt);
         if (newsContext) enhancedContent += '\n\n' + newsContext;
     }
 
-    // Для инструмента "База знаний" не добавляем общие документы, он сам ищет
     if (currentChatId && currentChatId.startsWith('tool_')) {
         const toolId = currentChatId.replace('tool_','');
         if (toolId === 'knowledge_rag') {
             // RAG-инструмент сам загрузит документы через sendMessage, ничего не добавляем
         }
     } else {
-        // Обычный чат: добавляем информацию из документов пользователя
         const docsContext = await searchKnowledgeDocs(prompt);
         if (docsContext) enhancedContent += '\n\n' + docsContext;
     }
