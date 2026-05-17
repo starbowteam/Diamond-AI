@@ -86,9 +86,9 @@ function renderWorkshopPage() {
                     <label class="toggle-switch"><input type="checkbox" id="toggle-ai-detect" ${aiDetectActive ? 'checked' : ''}><span class="toggle-slider"></span></label>
                 </div>
             </div>
-            <div class="workshop-tool-card ${knowledgeRagActive ? 'active' : ''}" style="${knowledgeRagActive ? 'border-color: #3498db; box-shadow: 0 0 28px rgba(52,152,219,0.15); background: #1a1a2e;' : ''}">
+            <div class="workshop-tool-card ${knowledgeRagActive ? 'active' : ''}">
                 <div class="workshop-tool-header">
-                    <div class="workshop-tool-icon" style="color: #3498db;"><i class="fas fa-database"></i></div>
+                    <div class="workshop-tool-icon"><i class="fas fa-database"></i></div>
                     <div class="workshop-tool-info"><h3>База знаний</h3><p>Поиск по вашим загруженным документам. Загружайте файлы и задавайте вопросы — ИИ найдёт ответ в документах.</p></div>
                 </div>
                 <div class="workshop-tool-toggle">
@@ -98,10 +98,6 @@ function renderWorkshopPage() {
             </div>
             <div class="workshop-tool-card disabled">
                 <div class="workshop-tool-header"><div class="workshop-tool-icon"><i class="fas fa-code"></i></div><div class="workshop-tool-info"><h3>${t('codeReview')}</h3><p>${t('codeReviewToolDesc')}</p></div></div>
-                <div class="workshop-tool-toggle"><span>${t('soon')}</span><label class="toggle-switch"><input type="checkbox" disabled><span class="toggle-slider"></span></label></div>
-            </div>
-            <div class="workshop-tool-card disabled">
-                <div class="workshop-tool-header"><div class="workshop-tool-icon"><i class="fas fa-language"></i></div><div class="workshop-tool-info"><h3>${t('translator')}</h3><p>${t('translatorToolDesc')}</p></div></div>
                 <div class="workshop-tool-toggle"><span>${t('soon')}</span><label class="toggle-switch"><input type="checkbox" disabled><span class="toggle-slider"></span></label></div>
             </div>
         </div>
