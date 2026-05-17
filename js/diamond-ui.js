@@ -100,9 +100,10 @@ function buildHistoryItem(chat, folder) {
 
 function buildToolHistoryItem(chat, toolInfo) {
     const isActive = chat.id === currentChatId;
+    const color = toolInfo.color || 'var(--accent)';
     return `
-        <div class="history-item tool-chat ${isActive ? 'active' : ''}" data-id="${chat.id}" style="border-left: 3px solid var(--accent); padding-left: 9px;">
-            <i class="fas ${toolInfo.icon}" style="color: var(--accent); margin-right: 8px; font-size: 14px;"></i>
+        <div class="history-item tool-chat ${isActive ? 'active' : ''}" data-id="${chat.id}" style="border-left: 3px solid ${color}; padding-left: 9px;">
+            <i class="fas ${toolInfo.icon}" style="color: ${color}; margin-right: 8px; font-size: 14px;"></i>
             <span class="chat-title" style="z-index:1;">${escapeHtml(chat.title)}</span>
         </div>
     `;
@@ -239,11 +240,11 @@ function renderChat() {
             attachDiv.className = 'attachment-card';
             const ext = msg.attachment.type.split('/').pop();
             const logoMap = {
-                'png': '../assets/png.png', 'jpg': '../assets/jpg.png', 'jpeg': '../assets/jpg.png',
-                'html': '../assets/html.png', 'js': '../assets/js.png', 'css': '../assets/css.png',
-                'docx': '../assets/docx.png'
+                'png': 'assets/png.png', 'jpg': 'assets/jpg.png', 'jpeg': 'assets/jpg.png',
+                'html': 'assets/html.png', 'js': 'assets/js.png', 'css': 'assets/css.png',
+                'docx': 'assets/docx.png'
             };
-            const logo = logoMap[ext] || '../assets/png.png';
+            const logo = logoMap[ext] || 'assets/png.png';
             attachDiv.innerHTML = `
                 <div class="attachment-icon"><img src="${logo}" alt="${ext}"></div>
                 <div class="attachment-info">
@@ -329,7 +330,7 @@ function enterEditMode(msg, idx, messageDiv) {
 // ========== ПУСТОЕ СОСТОЯНИЕ ==========
 function renderEmptyState() {
     const container = document.getElementById('messages-container');
-    container.innerHTML = `<div class="empty-state"><img src="../assets/logo.png" class="empty-logo" alt="Diamond AI"><div class="empty-text">${t('emptyChat')}</div><div class="empty-input-area"><div class="input-wrapper"><textarea id="empty-input" placeholder="${placeholderTexts[0]}" rows="1"></textarea><button class="send-btn" id="empty-send-btn" disabled><i class="fas fa-arrow-up"></i></button></div></div></div>`;
+    container.innerHTML = `<div class="empty-state"><img src="assets/logo.png" class="empty-logo" alt="Diamond AI"><div class="empty-text">${t('emptyChat')}</div><div class="empty-input-area"><div class="input-wrapper"><textarea id="empty-input" placeholder="${placeholderTexts[0]}" rows="1"></textarea><button class="send-btn" id="empty-send-btn" disabled><i class="fas fa-arrow-up"></i></button></div></div></div>`;
     document.getElementById('inputArea').style.display = 'none';
     const headerEl = document.getElementById('chatHeader');
     if (headerEl) headerEl.innerHTML = '';
@@ -563,7 +564,7 @@ function showDisclaimerModal() {
     overlay.className = 'disclaimer-modal-overlay';
     overlay.innerHTML = `
         <div class="disclaimer-modal">
-            <div class="disclaimer-modal-icon"><i class="fas fa-book "></i></div>
+            <div class="disclaimer-modal-icon"><i class="fas fa-book"></i></div>
             <h3>${t('disclaimerTitle')}</h3>
             <p>${t('disclaimerText')}</p>
             <button>${t('disclaimerClose')}</button>
@@ -995,11 +996,11 @@ function showAttachmentPreviewFromData(data) {
     }
     const ext = data.name.split('.').pop().toLowerCase();
     const logoMap = {
-        'png': '../assets/png.png', 'jpg': '../assets/jpg.png', 'jpeg': '../assets/jpg.png',
-        'html': '../assets/html.png', 'js': '../assets/js.png', 'css': '../assets/css.png',
-        'docx': '../assets/docx.png'
+        'png': 'assets/png.png', 'jpg': 'assets/jpg.png', 'jpeg': 'assets/jpg.png',
+        'html': 'assets/html.png', 'js': 'assets/js.png', 'css': 'assets/css.png',
+        'docx': 'assets/docx.png'
     };
-    const logo = logoMap[ext] || '../assets/png.png';
+    const logo = logoMap[ext] || 'assets/png.png';
     preview.innerHTML = `
         <div class="attachment-card">
             <div class="attachment-icon"><img src="${logo}" alt="${ext}"></div>
@@ -1027,11 +1028,11 @@ function showAttachmentPreview(file) {
     }
     const ext = file.name.split('.').pop().toLowerCase();
     const logoMap = {
-        'png': '../assets/png.png', 'jpg': '../assets/jpg.png', 'jpeg': '../assets/jpg.png',
-        'html': '../assets/html.png', 'js': '../assets/js.png', 'css': '../assets/css.png',
-        'docx': '../assets/docx.png'
+        'png': 'assets/png.png', 'jpg': 'assets/jpg.png', 'jpeg': 'assets/jpg.png',
+        'html': 'assets/html.png', 'js': 'assets/js.png', 'css': 'assets/css.png',
+        'docx': 'assets/docx.png'
     };
-    const logo = logoMap[ext] || '../assets/png.png';
+    const logo = logoMap[ext] || 'assets/png.png';
     preview.innerHTML = `
         <div class="attachment-card">
             <div class="attachment-icon"><img src="${logo}" alt="${ext}"></div>
@@ -1102,7 +1103,7 @@ async function showLoadingScreen() {
 // ========== ИНИЦИАЛИЗАЦИЯ ==========
 (async function() {
     log('Загрузка...');
-    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('../sw.js').catch(()=>{}); }  // ← ВОТ ЭТА СТРОКА
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
     const savedLang = localStorage.getItem('diamond_language');
     if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
     loadWorkshopToolsState();
