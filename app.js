@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v46 — ФИНАЛЬНЫЙ БИЛД ====================
+// ==================== DIAMOND AI v46 — ПОЛНЫЙ ФУНКЦИОНАЛ ====================
 (function() {
     const SUPABASE_URL = 'https://pqgwrokpizeelfrjmgoc.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxZ3dyb2twaXplZWxmcmptZ29jIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzcxNTAyMDksImV4cCI6MjA5MjcyNjIwOX0.qtFCGBnpwdQbtmpwSZxI_hH3arq4HBAw62vs5h8WmAk';
@@ -29,7 +29,7 @@
     let fileInputEl = null;
     let tutorialCompleted = true;
 
-    // ========== ЛОКАЛИЗАЦИЯ ==========
+    // ========== ЛОКАЛИЗАЦИЯ (полная) ==========
     const locales = {
         ru: {
             welcome: 'Добро пожаловать в Diamond AI!',
@@ -153,7 +153,10 @@
             sec: 'с',
             copyAction: 'Копировать',
             regenAction: 'Регенерировать',
-            editAction: 'Редактировать'
+            editAction: 'Редактировать',
+            copyUserAction: 'Копировать',
+            saveEdit: 'Сохранить',
+            cancelEdit: 'Отмена'
         },
         en: {
             welcome: 'Welcome to Diamond AI!',
@@ -277,7 +280,10 @@
             sec: 'sec',
             copyAction: 'Copy',
             regenAction: 'Regenerate',
-            editAction: 'Edit'
+            editAction: 'Edit',
+            copyUserAction: 'Copy',
+            saveEdit: 'Save',
+            cancelEdit: 'Cancel'
         }
     };
 
@@ -498,7 +504,7 @@
         });
     }
 
-    // ========== АВАТАРЫ ==========
+    // ========== АВАТАР ПО УМОЛЧАНИЮ ==========
     function getBotAvatarHTML() {
         return `<img src="bot-av.ico" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fas fa-robot\\'></i>'">`;
     }
@@ -1408,7 +1414,7 @@
         return tools[toolId] || { icon: 'fa-wrench', title: 'Инструмент' };
     }
 
-    // ========== РЕНДЕР ЧАТА (с редактированием) ==========
+    // ========== РЕНДЕР ЧАТА ==========
     function renderChat() {
         const chat = chats.find(c => c.id === currentChatId);
         const headerEl = document.getElementById('chatHeader');
@@ -1459,28 +1465,26 @@
             wrapper.className = 'message-content-wrapper';
             wrapper.appendChild(contentDiv);
 
-            // Действия пользователя
+            // Действия для пользователя
             if (msg.role === 'user') {
                 const actionsDiv = document.createElement('div');
                 actionsDiv.className = 'user-message-actions';
                 actionsDiv.innerHTML = `
-                    <span class="copy-user-action">${t('copyAction')}</span>
+                    <span class="copy-user-action">${t('copyUserAction')}</span>
                     <span class="separator">·</span>
                     <span class="edit-user-action">${t('editAction')}</span>
                 `;
-                // Копировать
                 actionsDiv.querySelector('.copy-user-action').addEventListener('click', () => {
                     navigator.clipboard.writeText(msg.content);
                     showToast(t('copy'), '', 'success', 1500);
                 });
-                // Редактировать
                 actionsDiv.querySelector('.edit-user-action').addEventListener('click', () => {
-                    enterEditMode(msg, messageDiv, contentDiv, actionsDiv);
+                    enterEditMode(msg, idx, messageDiv);
                 });
                 wrapper.appendChild(actionsDiv);
             }
 
-            // Футер ответа ассистента
+            // Футер для ассистента
             if (msg.role === 'assistant' && msg.generationTime) {
                 const footerDiv = document.createElement('div');
                 footerDiv.className = 'message-footer';
@@ -1568,22 +1572,30 @@
         scrollToBottom();
     }
 
-    // ========== РЕЖИМ РЕДАКТИРОВАНИЯ СООБЩЕНИЯ ПОЛЬЗОВАТЕЛЯ ==========
-    function enterEditMode(msg, messageDiv, contentDiv, actionsDiv) {
-        // Скрываем оригинальный контент и действия
-        contentDiv.style.display = 'none';
-        actionsDiv.style.display = 'none';
+    // ========== РЕДАКТИРОВАНИЕ СООБЩЕНИЯ (пункт 4) ==========
+    function enterEditMode(msg, idx, messageDiv) {
+        const chat = chats.find(c => c.id === currentChatId);
+        if (!chat) return;
 
+        const wrapper = messageDiv.querySelector('.message-content-wrapper');
+        const contentDiv = wrapper.querySelector('.message-content');
+        const actionsDiv = wrapper.querySelector('.user-message-actions');
+        const oldText = msg.content;
+
+        // Прячем оригинальный контент и действия
+        contentDiv.style.display = 'none';
+        if (actionsDiv) actionsDiv.style.display = 'none';
+
+        // Создаём поле редактирования
         const textarea = document.createElement('textarea');
         textarea.className = 'edit-textarea';
-        textarea.value = msg.content;
+        textarea.value = oldText;
         const editActions = document.createElement('div');
         editActions.className = 'edit-actions';
         editActions.innerHTML = `
-            <button class="btn btn-secondary cancel-edit-btn"><i class="fas fa-times"></i> ${t('cancel')}</button>
-            <button class="btn btn-primary save-edit-btn"><i class="fas fa-check"></i> ${t('save')}</button>
+            <button class="btn btn-secondary cancel-edit-btn"><i class="fas fa-times"></i> ${t('cancelEdit')}</button>
+            <button class="btn btn-primary save-edit-btn"><i class="fas fa-check"></i> ${t('saveEdit')}</button>
         `;
-        const wrapper = contentDiv.parentNode;
         wrapper.appendChild(textarea);
         wrapper.appendChild(editActions);
         textarea.focus();
@@ -1593,37 +1605,43 @@
             textarea.remove();
             editActions.remove();
             contentDiv.style.display = 'block';
-            actionsDiv.style.display = 'flex';
+            if (actionsDiv) actionsDiv.style.display = 'flex';
         });
 
         // Сохранить
-                editActions.querySelector('.save-edit-btn').addEventListener('click', async () => {
+        editActions.querySelector('.save-edit-btn').addEventListener('click', async () => {
             const newText = textarea.value.trim();
             if (!newText) return;
             textarea.remove();
             editActions.remove();
+            contentDiv.style.display = 'block';
+            if (actionsDiv) actionsDiv.style.display = 'flex';
+
+            // Заменяем текст в этом сообщении
             msg.content = newText;
             contentDiv.textContent = newText;
-            contentDiv.style.display = 'block';
-            actionsDiv.style.display = 'flex';
-            const chat = chats.find(c => c.id === currentChatId);
-            if (chat) {
-                const idx = chat.messages.indexOf(msg);
-                if (idx !== -1) {
-                    chat.messages.splice(idx + 1);
-                }
-                await saveChatToSupabase(chat);
-                renderChat();
-                // Вставляем отредактированный текст в поле ввода и отправляем как обычное сообщение
-                const inputField = document.getElementById('user-input');
-                if (inputField) {
-                    inputField.value = newText;
-                    sendMessage();
-                }
-            }
-        });
 
-    // ========== ФОРМАТИРОВАНИЕ ==========
+            // Удаляем все последующие сообщения из массива и из DOM
+            const msgIndex = chat.messages.indexOf(msg);
+            if (msgIndex !== -1) {
+                // Удаляем все сообщения после текущего
+                const removed = chat.messages.splice(msgIndex + 1);
+                // Удаляем соответствующие DOM-элементы
+                let nextElement = messageDiv.nextElementSibling;
+                while (nextElement) {
+                    const toRemove = nextElement;
+                    nextElement = nextElement.nextElementSibling;
+                    toRemove.remove();
+                }
+                // Сохраняем изменения в Supabase
+                await saveChatToSupabase(chat);
+            }
+
+            // Отправляем новый запрос с отредактированным текстом
+            await sendRequest(newText);
+        });
+    }
+
     function formatDateHeader(ts) {
         const d = new Date(ts);
         const today = new Date();
@@ -1901,6 +1919,54 @@
     }
 
     // ========== ОТПРАВКА СООБЩЕНИЯ ==========
+    async function sendRequest(prompt) {
+        if (!mistralApiKey || isWaitingForResponse) return;
+        isWaitingForResponse = true;
+        updateSendButtonState();
+
+        const card = createThinkingCard();
+        const anim = startThinkingAnimation(card);
+        scrollToBottom();
+
+        let systemPrompt = (currentChatId && currentChatId.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[currentChatId.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
+        const controller = new AbortController();
+        currentAbortController = controller;
+
+        let success = false, assistantMessage = '';
+        try {
+            const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
+                body: JSON.stringify({ model: AI_MODEL, messages: [systemPrompt, { role: 'user', content: prompt }], temperature: 0.3, max_tokens: 1500 }),
+                signal: controller.signal
+            });
+            if (resp.ok) {
+                const data = await resp.json();
+                assistantMessage = data.choices[0].message.content;
+                success = true;
+            }
+        } catch (e) {
+            if (e.name === 'AbortError') {
+                console.log('Request aborted');
+            } else {
+                console.warn('Mistral error:', e);
+            }
+        }
+
+        const generationTime = stopThinkingAnimation(card, anim);
+
+        if (success && assistantMessage) {
+            await addMessageToDOM('assistant', assistantMessage, true, null, generationTime);
+        } else if (!success && e?.name !== 'AbortError') {
+            await addMessageToDOM('assistant', '❌ Не удалось получить ответ. Попробуйте позже.', true, null, generationTime);
+        }
+
+        isWaitingForResponse = false;
+        currentAbortController = null;
+        updateSendButtonState();
+        scrollToBottom();
+    }
+
     async function sendMessage() {
         const text = document.getElementById('user-input').value.trim();
         const attachment = currentChatId ? chatAttachments[currentChatId] : null;
@@ -1943,68 +2009,21 @@
         removeAttachmentPreview();
         delete chatAttachments[currentChatId];
 
-        isWaitingForResponse = true;
-        updateSendButtonState();
-
-        const card = createThinkingCard();
-        const anim = startThinkingAnimation(card);
-        scrollToBottom();
-
-        let systemPrompt = (chat.id && chat.id.startsWith('tool_')) ? TOOL_SYSTEM_PROMPTS[chat.id.replace('tool_','')] || SYSTEM_PROMPT : SYSTEM_PROMPT;
-        let userMessageForAI = userText;
-        if (attachment) {
-            const fileContent = attachment.content || '';
-            if (!fileContent) showToast(t('ocrEmpty'), 'Текст не распознан', 'warning');
-            userMessageForAI = `[Файл: ${attachment.name}]\nСодержимое:\n${fileContent}\n\nЗапрос пользователя: ${userText || 'Проанализируй содержимое файла'}`;
-            systemPrompt = {
-                ...systemPrompt,
-                content: systemPrompt.content + '\n\nВАЖНО: Ты получил содержимое файла выше. Анализируй его и ответь.'
-            };
-        }
-
-        const contextMessages = chat.messages.filter(m => !m.isTyping).slice(-15);
-        const messagesForAI = [
-            systemPrompt,
-            ...contextMessages.map(m => ({ role: m.role, content: m.content })),
-            { role: 'user', content: userMessageForAI }
-        ];
-
-        const controller = new AbortController(); currentAbortController = controller;
-        let success = false, assistantMessage = '';
-        try {
-            const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
-                method: 'POST',
-                headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
-                body: JSON.stringify({ model: AI_MODEL, messages: messagesForAI, temperature: 0.3, max_tokens: 1500 }),
-                signal: controller.signal
-            });
-            if (resp.ok) { const data = await resp.json(); assistantMessage = data.choices[0].message.content; success = true; }
-            else console.error('Mistral API error:', resp.status);
-        } catch (e) {
-            if (e.name === 'AbortError') {
-                console.log('Request aborted');
-            } else {
-                console.warn('Mistral error:', e);
-            }
-        }
-
-        const generationTime = stopThinkingAnimation(card, anim);
-
-        if (success && assistantMessage) {
-            await addMessageToDOM('assistant', assistantMessage, true, null, generationTime);
-        } else if (!success && e?.name !== 'AbortError') {
-            await addMessageToDOM('assistant', '❌ Не удалось получить ответ. Попробуйте позже.', true, null, generationTime);
-        }
-        isWaitingForResponse = false; currentAbortController = null; updateSendButtonState(); renderChat(); scrollToBottom();
+        await sendRequest(userText);
     }
 
-    function stopGeneration() { if (currentAbortController) { currentAbortController.abort(); showToast('Генерация остановлена', '', 'info'); } }
+    function stopGeneration() {
+        if (currentAbortController) {
+            currentAbortController.abort();
+        }
+    }
 
-    // ========== РЕГЕНЕРАЦИЯ (без дублирования) ==========
+    // ========== РЕГЕНЕРАЦИЯ (без дублирования, с анимацией) ==========
     async function regenerateResponseFromMsg(msg, idx) {
         const chat = chats.find(c => c.id === currentChatId);
         if (!chat || isWaitingForResponse) return;
 
+        // Скрываем исходное сообщение на время регенерации
         const msgElement = document.querySelector(`.message.assistant:nth-child(${idx + 1})`);
         if (msgElement) {
             msgElement.style.transition = 'opacity 0.3s ease';
@@ -2031,7 +2050,8 @@
             { role: 'user', content: prompt }
         ];
 
-        const controller = new AbortController(); currentAbortController = controller;
+        const controller = new AbortController();
+        currentAbortController = controller;
         let success = false, newAnswer = '';
         try {
             const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
@@ -2040,8 +2060,11 @@
                 body: JSON.stringify({ model: AI_MODEL, messages: messagesForAI, temperature: 0.3, max_tokens: 1500 }),
                 signal: controller.signal
             });
-            if (resp.ok) { const data = await resp.json(); newAnswer = data.choices[0].message.content; success = true; }
-            else console.error('Mistral API error:', resp.status);
+            if (resp.ok) {
+                const data = await resp.json();
+                newAnswer = data.choices[0].message.content;
+                success = true;
+            }
         } catch (e) {
             if (e.name === 'AbortError') console.log('Request aborted');
             else console.warn('Mistral error:', e);
@@ -2049,6 +2072,7 @@
 
         const generationTime = stopThinkingAnimation(card, anim);
 
+        // Возвращаем видимость исходному сообщению
         if (msgElement) {
             msgElement.style.opacity = '1';
         }
@@ -2065,12 +2089,15 @@
             showToast('Ошибка', 'Не удалось регенерировать ответ', 'error');
         }
 
-        isWaitingForResponse = false; currentAbortController = null; updateSendButtonState();
+        isWaitingForResponse = false;
+        currentAbortController = null;
+        updateSendButtonState();
         renderChat();
         scrollToBottom();
     }
 
-    // ========== АВАТАРЫ И ПАНЕЛЬ (уже выше) ==========
+    // ========== АВАТАРЫ И ПАНЕЛЬ ==========
+    // (определены выше)
 
     async function refreshUserProfile() {
         if (!currentUser) return;
@@ -2425,7 +2452,7 @@
         document.getElementById('settings-logout-btn')?.addEventListener('click', () => { closeModal(); logout(); });
     }
 
-    // ========== ОБУЧЕНИЕ (БЕЗ ИНТЕРАКТИВНЫХ КНОПОК) ==========
+    // ========== ОБУЧЕНИЕ (БЕЗ ИНТЕРАКТИВНЫХ КНОПОК, ТОЛЬКО ТЕКСТ, ВЫХОД ПОСЛЕ ЗАВЕРШЕНИЯ) ==========
     const tutorialSteps = [
         { title: 'Добро пожаловать в Diamond AI!', html: `<p>Перед вами <strong style="color:var(--accent)">Diamond AI</strong> — ваш личный интеллектуальный помощник, работающий на передовой нейросети. Он способен отвечать на вопросы, решать задачи по математике, физике, химии, программированию, а также вести непринуждённую беседу. Все ваши чаты сохраняются в облаке и синхронизируются через DiamKey, поэтому вы не потеряете ни строчки даже при смене устройства.</p><p>В этом небольшом обучении я покажу основные элементы интерфейса и научу пользоваться главными функциями. Это займёт меньше минуты. Нажимайте <strong>«Далее»</strong>, чтобы продолжить.</p>`, demo: '', interactive: false },
         { title: 'Главный чат', html: `<p>Центральная часть экрана — это <strong style="color:var(--accent)">область диалога</strong>. Здесь отображаются ваши сообщения и ответы ИИ. Под диалогом находится поле ввода — просто начните печатать вопрос и нажмите кнопку отправки (стрелка вверх). ИИ мгновенно приступит к генерации ответа, а вы увидите индикатор печати.</p><p>Когда чат пуст, в поле ввода отображаются примеры запросов — попробуйте нажать на один из них, чтобы быстро начать разговор.</p>`, demo: `<div class="tutorial-demo-box"><i class="fas fa-comment"></i><div><strong>Пример:</strong><br><span style="color:var(--text-secondary)">«Расскажи про теорему Пифагора»</span></div></div>`, interactive: false },
