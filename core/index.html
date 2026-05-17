@@ -1,1 +1,115 @@
-
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>DIAMOND AI · Веб‑помощник</title>
+    <link rel="manifest" href="../manifest.json">
+    <link rel="icon" type="image/x-icon" href="../assets/fulco.ico">
+    <link rel="apple-touch-icon" href="../assets/logo.png">
+    <link rel="icon" type="image/png" sizes="256x256" href="../assets/logo.png">
+    <meta name="theme-color" content="#1e1e1e">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link rel="stylesheet" href="style.css?v=44">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/mhchem.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/copy-tex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"></script>
+    <!-- OCR + Mermaid загружаются динамически -->
+</head>
+<body>
+    <div class="welcome-screen" id="welcomeScreen">
+        <div class="spinner-container"><i class="fas fa-circle-notch fa-spin"></i></div>
+    </div>
+    <div class="choice-screen" id="choiceScreen" style="display: none;">
+        <div class="choice-container" id="choiceContainer">
+            <div class="logo">
+                <img src="../assets/logo.png" alt="logo" class="logo-img">
+                <h1>DIAMOND AI</h1>
+                <p>Войдите или создайте Diamkey для продолжения</p>
+            </div>
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tabLogin">Вход</button>
+                <button class="auth-tab" id="tabRegister">Регистрация</button>
+            </div>
+            <div id="loginForm" class="auth-form">
+                <div class="input-group"><label>Логин</label><input id="loginIdentity" placeholder="Введите логин"></div>
+                <div class="input-group"><label>Пароль</label><input id="loginPassword" type="password" placeholder="········"></div>
+                <button class="btn btn-diamkey" id="doLoginBtn"><i class="fas fa-gem"></i> Войти</button>
+            </div>
+            <div id="registerForm" class="auth-form" style="display:none;">
+                <div class="input-group"><label>Логин</label><input id="regLogin" placeholder="Придумайте логин"></div>
+                <div class="input-group"><label>Пароль</label><input id="regPassword" type="password" placeholder="Минимум 6 символов"></div>
+                <button class="btn btn-diamkey" id="doRegisterBtn"><i class="fas fa-user-plus"></i> Создать Diamkey</button>
+            </div>
+            <p class="footer-note">Статистика и данные о аккаунте на<br>сайте <a href="https://diamkey.ru" target="_blank">Diamkey.</a></p>
+        </div>
+    </div>
+    <div class="main-ui" id="mainUI" style="display: none;">
+        <header class="title-bar" id="titleBar">
+            <div class="title-bar-left">
+                <button class="sidebar-toggle-btn" id="sidebarToggleBtn"><i class="fas fa-bars"></i></button>
+                <div class="logo-area">
+                    <img src="../assets/logo.png" alt="logo" class="logo-icon-img">
+                    <span class="logo-text">DIAMOND AI</span>
+                </div>
+                <div class="collapsed-actions" id="collapsedActions">
+                    <button class="action-btn-icon" id="collapsedNewChat" title="Новый чат"><i class="fas fa-feather-alt"></i></button>
+                    <button class="action-btn-icon" id="collapsedFolders" title="Папки"><i class="fas fa-folder"></i></button>
+                    <button class="action-btn-icon" id="collapsedWorkshop" title="Мастерская"><i class="fas fa-wrench"></i></button>
+                </div>
+            </div>
+            <div class="window-controls"></div>
+        </header>
+        <div class="app-container">
+            <aside class="sidebar" id="sidebar">
+                <div class="sidebar-header">
+                    <div class="action-buttons-frame">
+                        <button id="new-chat-btn" class="frame-btn" title="Новый чат"><i class="fas fa-feather-alt"></i></button>
+                        <button id="folders-page-btn" class="frame-btn" title="Папки"><i class="fas fa-folder"></i></button>
+                        <button id="workshop-page-btn" class="frame-btn" title="Мастерская"><i class="fas fa-wrench"></i></button>
+                    </div>
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="history-search" placeholder="Поиск в истории...">
+                    </div>
+                </div>
+                <div class="history-list" id="history-list"></div>
+                <div class="user-panel" id="userPanel">
+                    <div class="user-avatar"><img id="userAvatarImg" src="" alt="avatar"></div>
+                    <div class="user-info"><div class="user-name" id="userNameDisplay">Пользователь</div></div>
+                    <button class="settings-btn" id="settingsBtn" title="Настройки"><i class="fas fa-cog"></i></button>
+                </div>
+            </aside>
+            <main class="chat-area">
+                <div class="chat-view" id="chatView">
+                    <div class="chat-header" id="chatHeader"></div>
+                    <div class="messages-container" id="messages-container"></div>
+                    <div class="input-area" id="inputArea" style="display: none;">
+                        <div class="input-wrapper">
+                            <textarea id="user-input" placeholder="Введите свой запрос..." rows="1"></textarea>
+                            <button class="send-btn" id="send-btn" disabled><i class="fas fa-arrow-up"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="folders-page" id="foldersPage" style="display: none;"></div>
+                <div class="workshop-page" id="workshopPage" style="display: none;"></div>
+            </main>
+        </div>
+    </div>
+    <div id="toast-container" class="toast-container"></div>
+    <div class="tutorial-overlay" id="tutorialOverlay" style="display: none;"></div>
+    <!-- Модули JavaScript -->
+    <script src="js/diamond-core.js?v=45"></script>
+    <script src="js/diamond-auth.js?v=45"></script>
+    <script src="js/diamond-chat.js?v=45"></script>
+    <script src="js/diamond-tools.js?v=45"></script>
+    <script src="js/diamond-ui.js?v=45"></script>
+</body>
+</html>
