@@ -235,6 +235,7 @@ body {
 }
 .user-avatar { width: 46px; height: 46px; border-radius: 50%; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; cursor: default; }
 .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.user-avatar .default-avatar { font-size: 24px; color: var(--text-secondary); }
 .user-info { flex: 1; display: flex; align-items: center; gap: 6px; }
 .user-name { font-size: 15px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Кнопка настроек (шестерёнка) */
@@ -573,10 +574,7 @@ textarea::placeholder { color: #6a6a6a; }
     background: rgba(160,160,176,0.05); text-align: center; cursor: pointer; transition: var(--transition);
 }
 .tutorial-demo-interactive:hover { background: rgba(160,160,176,0.1); }
-/* Плавное появление контента вместо печатания */
-.tutorial-fade-text {
-    opacity: 0; transition: opacity 0.3s ease;
-}
+.tutorial-fade-text { opacity: 0; transition: opacity 0.3s ease; }
 .tutorial-fade-text.show { opacity: 1; }
 .tutorial-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .tutorial-btn {
@@ -636,352 +634,161 @@ textarea::placeholder { color: #6a6a6a; }
     width: 100%;
     border-radius: 0;
 }
-.settings-left-panel button i {
-    width: 20px;
-    text-align: center;
-    font-size: 16px;
-}
-.settings-left-panel button:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
-}
+.settings-left-panel button i { width: 20px; text-align: center; font-size: 16px; }
+.settings-left-panel button:hover { background: var(--bg-hover); color: var(--text-primary); }
 .settings-left-panel button.active {
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    border-left: 3px solid var(--accent);
-    padding-left: 21px;
+    background: var(--bg-tertiary); color: var(--text-primary);
+    border-left: 3px solid var(--accent); padding-left: 21px;
 }
-/* Подсветка вкладки обучения, если не пройдено */
 .settings-left-panel button.tutorial-tab-highlight {
     background: rgba(179, 157, 219, 0.2);
     animation: softBlink 2s infinite;
     border-left: 3px solid var(--blink-color);
 }
 .settings-right-content {
-    flex: 1;
-    padding: 30px;
-    overflow-y: auto;
-    color: var(--text-primary);
-    position: relative;
+    flex: 1; padding: 30px; overflow-y: auto;
+    color: var(--text-primary); position: relative;
 }
-.settings-section {
-    display: none;
-}
-.settings-section.active {
-    display: block;
-    animation: fadeSlideUp 0.3s ease;
-}
+.settings-section { display: none; }
+.settings-section.active { display: block; animation: fadeSlideUp 0.3s ease; }
 .settings-section h2 {
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 20px;
-    color: var(--text-primary);
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    font-size: 20px; font-weight: 700; margin-bottom: 20px;
+    color: var(--text-primary); display: flex; align-items: center; gap: 10px;
 }
-.settings-section h2 i {
-    color: var(--accent);
-    font-size: 22px;
-}
+.settings-section h2 i { color: var(--accent); font-size: 22px; }
 .settings-section p {
-    color: var(--text-secondary);
-    line-height: 1.6;
-    margin-bottom: 16px;
-    font-size: 14px;
+    color: var(--text-secondary); line-height: 1.6;
+    margin-bottom: 16px; font-size: 14px;
 }
 .settings-section .settings-link-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 40px;
-    padding: 12px 24px;
-    color: var(--text-primary);
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    transition: var(--transition);
-    text-decoration: none;
-    margin-bottom: 12px;
-    width: fit-content;
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--bg-tertiary); border: 1px solid var(--border-color);
+    border-radius: 40px; padding: 12px 24px; color: var(--text-primary);
+    font-weight: 600; font-size: 14px; cursor: pointer;
+    transition: var(--transition); text-decoration: none;
+    margin-bottom: 12px; width: fit-content;
 }
 .settings-section .settings-link-btn:hover {
-    background: var(--bg-hover);
-    border-color: #5a5a5a;
-    transform: translateY(-1px);
+    background: var(--bg-hover); border-color: #5a5a5a; transform: translateY(-1px);
 }
 .settings-language-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin-top: 16px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px;
 }
 .settings-lang-btn {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 40px;
-    padding: 14px 20px;
-    color: var(--text-primary);
-    font-weight: 600;
-    font-size: 15px;
-    cursor: pointer;
-    transition: var(--transition);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
+    background: var(--bg-tertiary); border: 1px solid var(--border-color);
+    border-radius: 40px; padding: 14px 20px; color: var(--text-primary);
+    font-weight: 600; font-size: 15px; cursor: pointer; transition: var(--transition);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
 }
-.settings-lang-btn:hover {
-    background: var(--bg-hover);
-    border-color: #5a5a5a;
-}
-.settings-lang-btn.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #1a1a1a;
-}
+.settings-lang-btn:hover { background: var(--bg-hover); border-color: #5a5a5a; }
+.settings-lang-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1a1a; }
 .settings-close-btn {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 16px;
-    transition: var(--transition);
-    z-index: 10;
+    position: absolute; top: 16px; right: 16px;
+    background: var(--bg-tertiary); border: 1px solid var(--border-color);
+    border-radius: 50%; width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary); cursor: pointer; font-size: 16px;
+    transition: var(--transition); z-index: 10;
 }
-.settings-close-btn:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
-}
+.settings-close-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
 
 /* ========== ВКЛАДКА DIAMKEY (в настройках) ========== */
 .diamkey-avatar-wrapper {
-    position: relative;
-    width: 100px;
-    height: 100px;
-    margin: 0 auto 24px;
-    border-radius: 50%;
-    overflow: hidden;
-    cursor: pointer;
-    border: 2px solid var(--border-color);
+    position: relative; width: 100px; height: 100px;
+    margin: 0 auto 24px; border-radius: 50%; overflow: hidden;
+    cursor: pointer; border: 2px solid var(--border-color);
 }
-.diamkey-avatar-wrapper img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-.diamkey-avatar-wrapper:hover .diamkey-avatar-overlay {
-    opacity: 1;
-}
+.diamkey-avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+.diamkey-avatar-wrapper:hover .diamkey-avatar-overlay { opacity: 1; }
 .diamkey-avatar-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.6);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    color: white;
-    font-size: 24px;
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.3s ease; color: white; font-size: 24px;
 }
-.diamkey-profile-stats {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-}
+.diamkey-profile-stats { display: flex; gap: 12px; margin-bottom: 20px; }
 .diamkey-stat-box {
-    flex: 1;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 16px;
-    text-align: center;
+    flex: 1; background: var(--bg-tertiary); border: 1px solid var(--border-color);
+    border-radius: 16px; padding: 16px; text-align: center;
 }
-.diamkey-stat-number {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--accent);
-}
-.diamkey-stat-label {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-top: 4px;
-}
-.diamkey-input-group {
-    margin-bottom: 16px;
-}
+.diamkey-stat-number { font-size: 24px; font-weight: 700; color: var(--accent); }
+.diamkey-stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+.diamkey-input-group { margin-bottom: 16px; }
 .diamkey-input-group label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    opacity: 0.8;
+    display: block; margin-bottom: 6px; font-weight: 600;
+    font-size: 0.9rem; opacity: 0.8;
 }
 .diamkey-input-group input {
-    width: 100%;
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 12px 16px;
-    color: var(--text-primary);
-    font-size: 1rem;
-    outline: none;
+    width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border-color);
+    border-radius: 12px; padding: 12px 16px; color: var(--text-primary);
+    font-size: 1rem; outline: none;
 }
-.diamkey-input-group input:focus {
-    border-color: #5a5a5a;
-}
-.diamkey-save-btn {
-    width: 100%;
-    margin-top: 8px;
-}
+.diamkey-input-group input:focus { border-color: #5a5a5a; }
+.diamkey-save-btn { width: 100%; margin-top: 8px; }
 
 /* ========== КАРТОЧКА ПРИКРЕПЛЕННОГО ФАЙЛА (без фона) ========== */
 .attachment-preview-container {
-    padding: 0 24px 12px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    justify-content: flex-end;
+    padding: 0 24px 12px; display: flex; flex-wrap: wrap;
+    gap: 10px; justify-content: flex-end;
 }
 .attachment-card {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    background: transparent;
-    border: 1px solid var(--border-color);
-    border-radius: 24px;
-    padding: 12px 16px;
-    width: fit-content;
-    max-width: 400px;
-    transition: var(--transition);
-    position: relative;
-    margin-top: 6px;
-    align-self: flex-end;
+    display: flex; align-items: center; gap: 14px;
+    background: transparent; border: 1px solid var(--border-color);
+    border-radius: 24px; padding: 12px 16px; width: fit-content;
+    max-width: 400px; transition: var(--transition);
+    position: relative; margin-top: 6px; align-self: flex-end;
 }
-.attachment-card:hover {
-    border-color: #5a5a5a;
-}
+.attachment-card:hover { border-color: #5a5a5a; }
 .attachment-icon {
-    width: 44px;
-    height: 44px;
-    border-radius: 14px;
-    background: var(--bg-tertiary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    flex-shrink: 0;
+    width: 44px; height: 44px; border-radius: 14px;
+    background: var(--bg-tertiary); display: flex; align-items: center;
+    justify-content: center; overflow: hidden; flex-shrink: 0;
 }
-.attachment-icon img {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-}
-.attachment-info {
-    flex: 1;
-    min-width: 0;
-}
+.attachment-icon img { width: 100%; height: 100%; object-fit: contain; }
+.attachment-info { flex: 1; min-width: 0; }
 .attachment-name {
-    font-weight: 600;
-    font-size: 14px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-weight: 600; font-size: 14px; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
 }
-.attachment-meta {
-    font-size: 11px;
-    color: var(--text-secondary);
-    margin-top: 2px;
-}
+.attachment-meta { font-size: 11px; color: var(--text-secondary); margin-top: 2px; }
 .attachment-status {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--text-secondary);
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text-secondary);
 }
 .attachment-remove {
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 16px;
-    padding: 4px;
-    border-radius: 50%;
+    background: transparent; border: none; color: var(--text-secondary);
+    cursor: pointer; font-size: 16px; padding: 4px; border-radius: 50%;
     transition: var(--transition);
 }
-.attachment-remove:hover {
-    background: var(--bg-hover);
-    color: #e74c3c;
-}
+.attachment-remove:hover { background: var(--bg-hover); color: #e74c3c; }
 .attachment-progress {
-    width: 100%;
-    height: 3px;
-    background: var(--bg-tertiary);
-    border-radius: 3px;
-    margin-top: 6px;
-    overflow: hidden;
+    width: 100%; height: 3px; background: var(--bg-tertiary);
+    border-radius: 3px; margin-top: 6px; overflow: hidden;
 }
 .attachment-progress-bar {
-    height: 100%;
-    background: var(--accent);
-    width: 0%;
-    transition: width 0.3s ease;
+    height: 100%; background: var(--accent);
+    width: 0%; transition: width 0.3s ease;
 }
-.message.user .attachment-card {
-    align-self: flex-end;
-    margin-left: auto;
-}
+.message.user .attachment-card { align-self: flex-end; margin-left: auto; }
 
 /* ========== MERMAID ========== */
 .mermaid-container {
-    margin: 12px 0;
-    padding: 16px;
-    background: #1a1a1e;
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    overflow-x: auto;
+    margin: 12px 0; padding: 16px; background: #1a1a1e;
+    border: 1px solid var(--border-color); border-radius: 16px; overflow-x: auto;
 }
-.mermaid-container svg {
-    max-width: 100%;
-    height: auto;
-}
+.mermaid-container svg { max-width: 100%; height: auto; }
 
-/* ========== НОВАЯ ПЛАШКА «ДУМАЮ» ========== */
+/* ========== ПЛАШКА «ДУМАЮ» ========== */
 .thinking-card {
-    background: var(--bg-tertiary);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 16px 24px;
-    width: 100%;
-    margin: 0 auto;
+    background: var(--bg-tertiary); border: 1px solid var(--border-color);
+    border-radius: 16px; padding: 16px 24px; width: 100%; margin: 0 auto;
     transition: opacity 0.3s ease;
 }
 .thinking-card-content {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
+    display: flex; align-items: center; justify-content: center; gap: 14px;
 }
 .thinking-card-icon i {
-    font-size: 22px;
-    color: var(--accent);
+    font-size: 22px; color: var(--accent);
     animation: penWrite 0.8s ease-in-out infinite alternate;
 }
 @keyframes penWrite {
@@ -989,200 +796,177 @@ textarea::placeholder { color: #6a6a6a; }
     100% { transform: translateY(-4px) rotate(10deg); }
 }
 .thinking-card-text {
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--text-primary);
+    font-size: 16px; font-weight: 500; color: var(--text-primary);
     transition: opacity 0.3s ease;
 }
 .thinking-card-timer {
-    font-size: 13px;
-    color: var(--text-secondary);
-    opacity: 0.7;
-    margin-left: auto;
+    font-size: 13px; color: var(--text-secondary); opacity: 0.7; margin-left: auto;
 }
+/* Кнопка отмены в плашке «Думаю» */
+.thinking-card-cancel {
+    background: transparent; border: none; color: var(--text-secondary);
+    cursor: pointer; width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--transition); font-size: 16px; flex-shrink: 0;
+    margin-left: 12px;
+}
+.thinking-card-cancel:hover { background: var(--bg-hover); color: #e74c3c; }
 
-/* ========== ФУТЕР СООБЩЕНИЯ (ОДНА СТРОКА) ========== */
+/* ========== ФУТЕР СООБЩЕНИЯ ========== */
 .message-footer {
-    display: flex;
-    align-items: center;
-    flex-wrap: nowrap;
-    gap: 6px;
-    margin-top: 4px;
-    font-size: 11px;
-    color: var(--text-secondary);
-    opacity: 0.8;
-    padding: 0 6px;
-    white-space: nowrap;
+    display: flex; align-items: center; flex-wrap: nowrap; gap: 6px;
+    margin-top: 4px; font-size: 11px; color: var(--text-secondary);
+    opacity: 0.8; padding: 0 6px; white-space: nowrap;
 }
-.message-footer > span, .message-footer > .variant-switcher {
-    flex-shrink: 0;
-}
-.message-footer span {
-    cursor: pointer;
-    transition: color 0.25s;
-}
-.message-footer span:hover {
-    color: var(--text-primary);
-}
+.message-footer > span, .message-footer > .variant-switcher { flex-shrink: 0; }
+.message-footer span { cursor: pointer; transition: color 0.25s; }
+.message-footer span:hover { color: var(--text-primary); }
 .message-footer .disclaimer {
-    position: relative;
-    opacity: 0.7;
-    cursor: help;
-    border-bottom: 1px dotted var(--text-secondary);
+    opacity: 0.7; cursor: pointer; border-bottom: 1px dotted var(--text-secondary);
 }
-.message-footer .separator {
-    opacity: 0.3;
-    cursor: default;
+.message-footer .separator { opacity: 0.3; cursor: default; }
+.generation-time-label { cursor: default; }
+
+/* Модалка дисклеймера */
+.disclaimer-modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.4); backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 5500; animation: fadeIn 0.2s ease;
 }
-.generation-time-label {
-    cursor: default;
+.disclaimer-modal {
+    background: var(--bg-secondary); border: 1px solid var(--border-color);
+    border-radius: 24px; padding: 24px; max-width: 360px; width: 90%;
+    text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    animation: scaleIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-.disclaimer-tooltip {
-    display: none;
-    position: absolute;
-    top: calc(100% + 8px);
-    left: 50%;
-    transform: translateX(-50%);
-    background: #2a2a2a;
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    padding: 8px 12px;
-    font-size: 11px;
-    color: var(--text-secondary);
-    white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-    z-index: 100;
-    pointer-events: none;
+.disclaimer-modal-icon {
+    font-size: 40px; color: var(--accent); margin-bottom: 16px;
 }
-.disclaimer:hover .disclaimer-tooltip {
-    display: block;
+.disclaimer-modal h3 { font-size: 18px; margin-bottom: 12px; color: var(--text-primary); }
+.disclaimer-modal p {
+    font-size: 13px; color: var(--text-secondary);
+    line-height: 1.6; margin-bottom: 12px;
 }
+.disclaimer-modal button {
+    background: var(--bg-tertiary); border: 1px solid var(--border-color);
+    border-radius: 40px; padding: 8px 24px; color: var(--text-primary);
+    font-weight: 600; font-size: 13px; cursor: pointer; transition: var(--transition);
+}
+.disclaimer-modal button:hover { background: var(--bg-hover); border-color: #5a5a5a; }
 
 /* ========== ПЕРЕКЛЮЧАТЕЛЬ ВАРИАНТОВ ========== */
-.variant-switcher {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-}
+.variant-switcher { display: inline-flex; align-items: center; gap: 2px; }
 .variant-switcher button {
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    cursor: pointer;
-    font-size: 12px;
-    padding: 2px 4px;
-    border-radius: 4px;
+    background: transparent; border: none; color: var(--text-secondary);
+    cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: 4px;
     transition: all 0.25s;
 }
-.variant-switcher button:hover {
-    background: var(--bg-hover);
-    color: var(--text-primary);
-}
-.variant-counter {
-    cursor: default;
-}
+.variant-switcher button:hover { background: var(--bg-hover); color: var(--text-primary); }
+.variant-counter { cursor: default; }
 
-/* ========== МЕТКА ВРЕМЕНИ ГЕНЕРАЦИИ (под сообщением) ========== */
+/* ========== МЕТКА ВРЕМЕНИ ГЕНЕРАЦИИ ========== */
 .generation-time-label {
-    font-size: 10px;
-    color: var(--text-secondary);
-    opacity: 0.5;
-    text-align: right;
-    margin-top: 2px;
-    padding: 0 6px;
+    font-size: 10px; color: var(--text-secondary); opacity: 0.5;
+    text-align: right; margin-top: 2px; padding: 0 6px;
 }
 
-/* ========== АДАПТИВ ========== */
+/* ========== АДАПТИВ (увеличено на 20-30% для мобилок) ========== */
 @media (max-width: 768px) {
-    body { font-size: 16px; }
-    .title-bar { height: 60px; padding: 0 16px; }
-    .sidebar-toggle-btn { width: 48px; height: 48px; font-size: 20px; }
-    .logo-text { font-size: 22px; }
-    .action-btn-icon { width: 36px; height: 36px; font-size: 18px; }
+    body { font-size: 18px; }
+    .title-bar { height: 64px; padding: 0 16px; }
+    .sidebar-toggle-btn { width: 52px; height: 52px; font-size: 22px; }
+    .logo-text { font-size: 26px; }
+    .action-btn-icon { width: 42px; height: 42px; font-size: 20px; }
     .sidebar {
         position: absolute; top: 0; left: 0; z-index: 300; height: 100%;
-        width: 85%; max-width: 320px; background: var(--bg-secondary);
+        width: 85%; max-width: 360px; background: var(--bg-secondary);
         transform: translateX(-100%); transition: transform 0.25s ease;
         box-shadow: none; border-right: none; overflow-y: auto;
     }
     .sidebar.open { transform: translateX(0); box-shadow: 2px 0 20px rgba(0,0,0,0.5); }
     .collapsed-actions { display: none !important; }
-    .frame-btn { padding: 16px 0; font-size: 16px; }
-    .search-box { padding: 12px 18px; }
-    .search-box input { font-size: 16px; }
-    .history-item { padding: 16px 14px; font-size: 16px; }
-    .chat-action-btn { width: 44px; height: 44px; font-size: 18px; }
+    .frame-btn { padding: 18px 0; font-size: 18px; }
+    .search-box { padding: 14px 20px; }
+    .search-box input { font-size: 18px; }
+    .history-item { padding: 18px 16px; font-size: 18px; }
+    .chat-action-btn { width: 48px; height: 48px; font-size: 20px; }
     .messages-container { padding: 20px; gap: 20px; }
-    .message { max-width: 95%; gap: 12px; }
-    .message-content { font-size: 16px; padding: 12px 16px 10px 21px; border-radius: 24px; }
-    .avatar { width: 44px; height: 44px; }
-    .message-time { font-size: 12px; }
-    .input-area { padding: 0 20px 24px; }
-    .input-wrapper { padding: 10px 16px; border-radius: 36px; }
-    textarea { font-size: 16px; }
-    .send-btn { width: 48px; height: 48px; font-size: 22px; }
-    .attach-btn { width: 48px; height: 48px; font-size: 22px; }
-    .folders-page { padding: 20px; }
-    .folder-card { padding: 18px; }
-    .folder-icon { width: 52px; height: 52px; font-size: 24px; }
-    .folder-name { font-size: 18px; }
-    .folder-actions button { width: 44px; height: 44px; }
-    .modal-container { max-width: 95%; border-radius: 24px; }
-    .choice-container { padding: 28px; width: 95%; }
-    .logo h1 { font-size: 30px; }
-    .btn { padding: 14px 24px; font-size: 16px; }
-    .btn-diamkey { padding: 18px; font-size: 18px; }
-    .workshop-banner { flex-direction: column; padding: 28px; }
-    .workshop-banner-text h1 { font-size: 38px; }
-    .workshop-banner-img { width: 180px; height: 180px; }
+    .message { max-width: 95%; gap: 14px; }
+    .message-content { font-size: 18px; padding: 14px 18px 10px 24px; border-radius: 26px; }
+    .avatar { width: 48px; height: 48px; }
+    .message-time { font-size: 13px; }
+    .input-area { padding: 0 20px 28px; }
+    .input-wrapper { padding: 12px 18px; border-radius: 38px; }
+    textarea { font-size: 18px; }
+    .send-btn { width: 52px; height: 52px; font-size: 24px; }
+    .attach-btn { width: 52px; height: 52px; font-size: 24px; }
+    .folders-page { padding: 24px; }
+    .folder-card { padding: 20px; }
+    .folder-icon { width: 56px; height: 56px; font-size: 26px; }
+    .folder-name { font-size: 20px; }
+    .folder-actions button { width: 48px; height: 48px; }
+    .modal-container { max-width: 95%; border-radius: 26px; }
+    .choice-container { padding: 32px; width: 95%; }
+    .logo h1 { font-size: 34px; }
+    .btn { padding: 16px 28px; font-size: 18px; }
+    .btn-diamkey { padding: 20px; font-size: 20px; }
+    .workshop-banner { flex-direction: column; padding: 32px; }
+    .workshop-banner-text h1 { font-size: 42px; }
+    .workshop-banner-img { width: 200px; height: 200px; }
     .workshop-tools-grid { grid-template-columns: 1fr; }
-    .workshop-forum { padding: 20px; }
-    .forum-send-btn { width: 46px; height: 46px; }
-    .tutorial-modal { padding: 24px; }
-    .chat-header { font-size: 12px; padding: 3px 10px; }
+    .workshop-forum { padding: 24px; }
+    .forum-send-btn { width: 52px; height: 52px; }
+    .tutorial-modal { padding: 28px; }
+    .chat-header { font-size: 14px; padding: 4px 14px; }
     .settings-modal {
         flex-direction: column;
         max-width: 95%;
         max-height: 90vh;
-        border-radius: 24px;
+        border-radius: 26px;
     }
     .settings-left-panel {
-        width: 100%;
-        flex-direction: row;
-        flex-wrap: wrap;
-        padding: 12px 8px;
-        border-right: none;
-        border-bottom: 1px solid var(--border-color);
-        overflow-x: auto;
+        width: 100%; flex-direction: row; flex-wrap: wrap;
+        padding: 14px 10px; border-right: none;
+        border-bottom: 1px solid var(--border-color); overflow-x: auto;
     }
     .settings-left-panel button {
-        padding: 10px 14px;
-        font-size: 13px;
-        border-radius: 24px;
-        margin: 4px;
+        padding: 12px 16px; font-size: 15px;
+        border-radius: 26px; margin: 4px;
     }
     .settings-left-panel button.active {
-        border-left: none;
-        background: var(--bg-tertiary);
+        border-left: none; background: var(--bg-tertiary);
     }
-    .settings-right-content { padding: 20px; }
+    .settings-right-content { padding: 24px; }
     .settings-language-grid { grid-template-columns: 1fr; }
     .attachment-card { max-width: 100%; }
+    .thinking-card { padding: 20px 28px; }
+    .thinking-card-content { gap: 16px; }
+    .thinking-card-icon i { font-size: 26px; }
+    .thinking-card-text { font-size: 18px; }
+    .thinking-card-timer { font-size: 14px; }
+    .thinking-card-cancel { width: 36px; height: 36px; font-size: 18px; }
+    .message-footer { font-size: 12px; gap: 8px; }
+    .variant-switcher button { font-size: 14px; padding: 3px 6px; }
+    .disclaimer-modal { max-width: 420px; padding: 28px; }
+    .disclaimer-modal h3 { font-size: 20px; }
+    .disclaimer-modal p { font-size: 14px; }
 }
 
 @media (max-width: 480px) {
-    .title-bar { height: 56px; }
-    .sidebar-toggle-btn { width: 44px; height: 44px; }
-    .logo-text { font-size: 20px; }
-    .action-btn-icon { width: 34px; height: 34px; font-size: 16px; }
-    .message-content { font-size: 15px; padding: 10px 14px 8px 21px; }
+    body { font-size: 17px; }
+    .title-bar { height: 60px; }
+    .sidebar-toggle-btn { width: 48px; height: 48px; }
+    .logo-text { font-size: 24px; }
+    .action-btn-icon { width: 38px; height: 38px; font-size: 18px; }
+    .message-content { font-size: 17px; padding: 12px 16px 8px 22px; }
     .code-block-header { flex-direction: column; align-items: flex-start; }
     .code-block-actions { align-self: flex-end; }
-    .folder-actions button { width: 48px; height: 48px; }
-    .empty-text { font-size: 18px; }
-    .empty-logo { width: 70px; }
-    .workshop-banner-img { width: 140px; height: 140px; }
-    .workshop-tool-card { padding: 24px; }
-    .workshop-tool-info h3 { font-size: 18px; }
-    .workshop-tool-info p { font-size: 14px; }
+    .folder-actions button { width: 52px; height: 52px; }
+    .empty-text { font-size: 20px; }
+    .empty-logo { width: 80px; }
+    .workshop-banner-img { width: 160px; height: 160px; }
+    .workshop-tool-card { padding: 28px; }
+    .workshop-tool-info h3 { font-size: 20px; }
+    .workshop-tool-info p { font-size: 16px; }
 }
