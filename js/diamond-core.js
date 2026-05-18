@@ -355,7 +355,11 @@ const placeholderTexts = [
     "Напиши код на Python"
 ];
 
-const AI_MODEL = 'mistral-small-2506';
+// Основные идентификаторы моделей
+const AI_MODEL_LARGE = 'mistral-large-latest';
+const AI_MODEL_CODE = 'codestral-latest';
+const AI_MODEL_SMALL = 'mistral-small-latest';
+
 const now = new Date();
 const currentDateStr = now.toLocaleDateString('ru-RU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 const SYSTEM_PROMPT = {
@@ -468,9 +472,6 @@ function generateFastSecret() { return Math.random().toString(36).substring(2,15
 function generateToken() { const adj=['golden','silver','mystic','shadow','prime','crystal','onyx','brave','frost'], nouns=['falcon','tiger','phoenix','dragon','wolf','spark','nexus','core','vault','key']; return `diamkey_${adj[Math.floor(Math.random()*adj.length)]}_${nouns[Math.floor(Math.random()*nouns.length)]}_${nouns[Math.floor(Math.random()*nouns.length)]}_${Math.floor(1000+Math.random()*9000)}`; }
 
 let mistralApiKey = '';
-let newsapiKey = '';
-let apifyGoogleNewsKey = '';
-let latestNewsMcpKey = '';
 
 async function fetchApiKeys() {
     try {
@@ -479,9 +480,6 @@ async function fetchApiKeys() {
         const data = await resp.json();
         if (data && data.length > 0) {
             mistralApiKey = data[0].mistral_api_key || '';
-            newsapiKey = data[0].newsapi_key || '';
-            apifyGoogleNewsKey = data[0].apify_google_news_key || '';
-            latestNewsMcpKey = data[0].latest_news_mcp_key || '';
             return true;
         }
         return false;
