@@ -397,7 +397,15 @@ async function sendRequest(prompt) {
         const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
-            body: JSON.stringify({ model: AI_MODEL_LARGE, messages: messagesForAI, temperature: 0.3, max_tokens: 1500 }),
+            body: JSON.stringify({
+                model: modelToUse,
+                messages: [
+                    { role: 'system', content: enhancedContent },
+                    { role: 'user', content: prompt }
+                ],
+                temperature: 0.3,
+                max_tokens: 1500
+            }),
             signal: controller.signal
         });
         if (resp.ok) {
@@ -472,7 +480,12 @@ async function regenerateResponseFromMsg(msg, idx) {
         const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
-            body: JSON.stringify({ model: AI_MODEL_LARGE, messages: messagesForAI, temperature: 0.3, max_tokens: 1500 }),
+            body: JSON.stringify({
+                model: AI_MODEL_LARGE,
+                messages: messagesForAI,
+                temperature: 0.3,
+                max_tokens: 1500
+            }),
             signal: controller.signal
         });
         if (resp.ok) {
