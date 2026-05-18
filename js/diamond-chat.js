@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (с новостями и документами) ====================
+// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (с новостями, вики и выбором модели) ====================
 
 async function loadChatsAndFolders() {
     if (!currentUser) return;
@@ -89,7 +89,7 @@ async function generateChatTitleWithAI(text) {
             method: 'POST',
             headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
             body: JSON.stringify({
-                model: AI_MODEL,
+                model: AI_MODEL_SMALL,
                 messages: [TITLE_GENERATOR_PROMPT, { role: 'user', content: text }],
                 temperature: 0.5,
                 max_tokens: 20
@@ -228,10 +228,10 @@ async function deleteFolder(id) {
     }
 }
 
-// ========== ПОИСК НОВОСТЕЙ (Google RSS + Wikipedia) ==========
+// ========== ПОИСК НОВОСТЕЙ, ВИКИ, DUCKDUCKGO ==========
 async function fetchNewsFromAPI(query) {
     let newsText = '';
-    // 1. Google News RSS (бесплатный, без ключа)
+    // 1. Google News RSS
     try {
         const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ru&gl=RU&ceid=RU:ru`;
         const resp = await fetch(rssUrl);
@@ -254,7 +254,7 @@ async function fetchNewsFromAPI(query) {
         }
     } catch(e) { console.warn('Google News RSS error:', e); }
 
-    // 2. Wikipedia API (бесплатный, без ключа)
+    // 2. Wikipedia API
     try {
         const wikiUrl = `https://ru.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
         const resp = await fetch(wikiUrl);
@@ -267,6 +267,19 @@ async function fetchNewsFromAPI(query) {
             newsText += '\n';
         }
     } catch(e) { console.warn('Wikipedia API error:', e); }
+
+    // 3. DuckDuckGo Instant Answer API
+    try {
+        const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
+        const resp = await fetch(ddgUrl);
+        const data = await resp.json();
+        if (data.Abstract || data.Answer) {
+            newsText += 'БЫСТРЫЙ ОТВЕТ (DuckDuckGo):\n';
+            if (data.Answer) newsText += `Ответ: ${data.Answer}\n`;
+            if (data.Abstract) newsText += `Источник: ${data.AbstractURL}\n`;
+            newsText += '\n';
+        }
+    } catch(e) { console.warn('DuckDuckGo API error:', e); }
 
     return newsText;
 }
@@ -354,7 +367,8 @@ async function sendRequest(prompt) {
     const historySummary = getChatHistorySummary();
     if (historySummary) enhancedContent += '\n\n' + historySummary;
 
-    if (/новост[ьи]|событи[яй]|последни[е]|что произошло|свежие|актуальн|news|сейчас/i.test(prompt)) {
+    // Новости/Вики/Ответы только если запрос явно просит
+    if (/новост[ьи]|событи[яй]|последни[е]|что произошло|свежие|актуальн|news|сейчас|расскажи про|что такое|кто такой/i.test(prompt)) {
         const newsContext = await fetchNewsFromAPI(prompt);
         if (newsContext) enhancedContent += '\n\n' + newsContext;
     }
@@ -369,6 +383,11 @@ async function sendRequest(prompt) {
         if (docsContext) enhancedContent += '\n\n' + docsContext;
     }
 
+    // УМНЫЙ ВЫБОР МОДЕЛИ
+    const isCodeReq = /код|функци[яй]|класс|python|javascript|html|css|script|программ|algorithm|файл|напиши|создай|исправь|ошибка/i.test(prompt);
+    const isSimpleReq = prompt.length < 30;
+    const modelToUse = isCodeReq ? AI_MODEL_CODE : (isSimpleReq ? AI_MODEL_SMALL : AI_MODEL_LARGE);
+
     const controller = new AbortController();
     currentAbortController = controller;
 
@@ -378,7 +397,7 @@ async function sendRequest(prompt) {
         const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
-            body: JSON.stringify({ model: AI_MODEL, messages: [{ role: 'system', content: enhancedContent }, { role: 'user', content: prompt }], temperature: 0.3, max_tokens: 1500 }),
+            body: JSON.stringify({ model: modelToUse, messages: [{ role: 'system', content: enhancedContent }, { role: 'user', content: prompt }], temperature: 0.3, max_tokens: 1500 }),
             signal: controller.signal
         });
         if (resp.ok) {
@@ -453,7 +472,7 @@ async function regenerateResponseFromMsg(msg, idx) {
         const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
-            body: JSON.stringify({ model: AI_MODEL, messages: messagesForAI, temperature: 0.3, max_tokens: 1500 }),
+            body: JSON.stringify({ model: AI_MODEL_LARGE, messages: messagesForAI, temperature: 0.3, max_tokens: 1500 }),
             signal: controller.signal
         });
         if (resp.ok) {
