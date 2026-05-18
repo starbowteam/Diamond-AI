@@ -284,12 +284,15 @@ async function fetchNewsFromAPI(query) {
     return newsText;
 }
 
-// ========== ПОИСК ПО ДОКУМЕНТАМ ==========
+// ========== ПОИСК ПО ДОКУМЕНТАМ (исправлено) ==========
 async function searchKnowledgeDocs(query) {
     if (!currentUser) return '';
+    // Безопасная обрезка запроса, чтобы не сломать URL
+    const safeQuery = query.substring(0, 100).replace(/[^\w\sа-яА-ЯёЁ]/g, ' ').trim();
+    if (!safeQuery) return '';
     try {
         const { data, error } = await supabaseClient.from('knowledge_docs').select('*')
-            .or(`title.ilike.%${query}%,content.ilike.%${query}%`)
+            .or(`title.ilike.%${safeQuery}%,content.ilike.%${safeQuery}%`)
             .eq('user_login', currentUser.login)
             .limit(3);
         if (error || !data || data.length === 0) return '';
