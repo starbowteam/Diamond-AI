@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (с новостями, вики и выбором модели) ====================
+// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (с авто‑повтором при 429) ====================
 
 async function loadChatsAndFolders() {
     if (!currentUser) return;
@@ -287,7 +287,6 @@ async function fetchNewsFromAPI(query) {
 // ========== ПОИСК ПО ДОКУМЕНТАМ (исправлено) ==========
 async function searchKnowledgeDocs(query) {
     if (!currentUser) return '';
-    // Безопасная обрезка запроса, чтобы не сломать URL
     const safeQuery = query.substring(0, 100).replace(/[^\w\sа-яА-ЯёЁ]/g, ' ').trim();
     if (!safeQuery) return '';
     try {
@@ -370,7 +369,6 @@ async function sendRequest(prompt) {
     const historySummary = getChatHistorySummary();
     if (historySummary) enhancedContent += '\n\n' + historySummary;
 
-    // Новости/Вики/Ответы только если запрос явно просит
     if (/новост[ьи]|событи[яй]|последни[е]|что произошло|свежие|актуальн|news|сейчас|расскажи про|что такое|кто такой/i.test(prompt)) {
         const newsContext = await fetchNewsFromAPI(prompt);
         if (newsContext) enhancedContent += '\n\n' + newsContext;
@@ -386,42 +384,60 @@ async function sendRequest(prompt) {
         if (docsContext) enhancedContent += '\n\n' + docsContext;
     }
 
-    // УМНЫЙ ВЫБОР МОДЕЛИ
     const isCodeReq = /код|функци[яй]|класс|python|javascript|html|css|script|программ|algorithm|файл|напиши|создай|исправь|ошибка/i.test(prompt);
     const isSimpleReq = prompt.length < 30;
     const modelToUse = isCodeReq ? AI_MODEL_CODE : (isSimpleReq ? AI_MODEL_SMALL : AI_MODEL_LARGE);
 
-    const controller = new AbortController();
-    currentAbortController = controller;
-
     let success = false, assistantMessage = '';
-    let errorName = null;
-    try {
-        const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
-            body: JSON.stringify({
-                model: modelToUse,
-                messages: [
-                    { role: 'system', content: enhancedContent },
-                    { role: 'user', content: prompt }
-                ],
-                temperature: 0.3,
-                max_tokens: 1500
-            }),
-            signal: controller.signal
-        });
-        if (resp.ok) {
-            const data = await resp.json();
-            assistantMessage = data.choices[0].message.content;
-            success = true;
-        }
-    } catch (e) {
-        errorName = e.name;
-        if (e.name === 'AbortError') {
-            console.log('Request aborted');
-        } else {
-            console.warn('Mistral error:', e);
+    let lastError = null;
+
+    // Пробуем до 2 раз при 429
+    for (let attempt = 1; attempt <= 2; attempt++) {
+        const controller = new AbortController();
+        currentAbortController = controller;
+        try {
+            const resp = await fetch('https://api.mistral.ai/v1/chat/completions', {
+                method: 'POST',
+                headers: { 'Content-Type':'application/json', 'Authorization':`Bearer ${mistralApiKey}` },
+                body: JSON.stringify({
+                    model: modelToUse,
+                    messages: [
+                        { role: 'system', content: enhancedContent },
+                        { role: 'user', content: prompt }
+                    ],
+                    temperature: 0.3,
+                    max_tokens: 1500
+                }),
+                signal: controller.signal
+            });
+
+            if (resp.ok) {
+                const data = await resp.json();
+                assistantMessage = data.choices[0].message.content;
+                success = true;
+                break;
+            } else if (resp.status === 429) {
+                // Слишком много запросов – ждём и пробуем ещё раз
+                if (attempt === 1) {
+                    showToast('Лимит запросов', 'Слишком много запросов, ждём 3 секунды…', 'warning');
+                    await new Promise(resolve => setTimeout(resolve, 3000));
+                }
+                lastError = { status: 429, message: 'Too Many Requests' };
+            } else {
+                const errorData = await resp.json().catch(() => ({}));
+                lastError = { status: resp.status, message: errorData.error?.message || resp.statusText };
+                break;
+            }
+        } catch (e) {
+            if (e.name === 'AbortError') {
+                console.log('Request aborted');
+                lastError = { aborted: true };
+                break;
+            } else {
+                console.warn('Mistral error:', e);
+                lastError = { network: true, message: e.message };
+                break;
+            }
         }
     }
 
@@ -429,8 +445,16 @@ async function sendRequest(prompt) {
 
     if (success && assistantMessage) {
         await addMessageToDOM('assistant', assistantMessage, true, null, generationTime);
-    } else if (!success && errorName !== 'AbortError') {
-        await addMessageToDOM('assistant', '❌ Не удалось получить ответ. Попробуйте позже.', true, null, generationTime);
+    } else if (!success) {
+        let errorMsg = '❌ Не удалось получить ответ. ';
+        if (lastError?.status === 429) {
+            errorMsg += 'Сработал лимит бесплатного тарифа. Подождите немного.';
+        } else if (lastError?.network) {
+            errorMsg += 'Проблема с сетью или Mistral API недоступен.';
+        } else {
+            errorMsg += 'Попробуйте позже.';
+        }
+        await addMessageToDOM('assistant', errorMsg, true, null, generationTime);
     }
 
     isWaitingForResponse = false;
