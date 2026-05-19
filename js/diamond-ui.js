@@ -28,7 +28,7 @@ function renderHistory() {
         } else orphanChats.push(c);
     });
     let html = '';
-      if (toolChats.length > 0) {
+    if (toolChats.length > 0) {
         html += `<div class="history-group"><div class="history-group-title"><i class="fas fa-wrench"></i> ${t('master')}</div>`;
         toolChats.forEach(c => html += buildToolHistoryItem(c, getToolInfo(c.id.replace('tool_',''))));
         html += '</div>';
@@ -910,7 +910,7 @@ function setupEventListeners() {
     document.getElementById('doRegisterBtn')?.addEventListener('click', register);
 }
 
-// ========== ПРИКРЕПЛЕНИЕ ФАЙЛОВ ==========
+// ========== ПРИКРЕПЛЕНИЕ ФАЙЛОВ (ИСПРАВЛЕНО) ==========
 function setupFileAttachment() {
     const inputWrapper = document.querySelector('.input-wrapper');
     if (!inputWrapper || fileInputEl) return;
@@ -1101,14 +1101,14 @@ async function showLoadingScreen() {
     ws.style.display = 'none';
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ ==========
+// ========== ИНИЦИАЛИЗАЦИЯ (ИСПРАВЛЕНО) ==========
 (async function() {
     log('Загрузка...');
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
     const savedLang = localStorage.getItem('diamond_language');
     if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
     loadWorkshopToolsState();
-    await fetchApiKeys(); // ← здесь было fetchMistralKey()
+    await fetchApiKeys();
     const savedUser = localStorage.getItem('diamond_user');
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
@@ -1116,6 +1116,7 @@ async function showLoadingScreen() {
         await refreshUserProfile();
         await loadForumMessages();
         if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
+        if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
     }
     await showLoadingScreen();
     if (currentUser) {
