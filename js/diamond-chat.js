@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (с авто‑повтором при 429) ====================
+// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (с диагностикой ошибок) ====================
 
 async function loadChatsAndFolders() {
     if (!currentUser) return;
@@ -231,7 +231,6 @@ async function deleteFolder(id) {
 // ========== ПОИСК НОВОСТЕЙ, ВИКИ, DUCKDUCKGO ==========
 async function fetchNewsFromAPI(query) {
     let newsText = '';
-    // 1. Google News RSS
     try {
         const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ru&gl=RU&ceid=RU:ru`;
         const resp = await fetch(rssUrl);
@@ -254,7 +253,6 @@ async function fetchNewsFromAPI(query) {
         }
     } catch(e) { console.warn('Google News RSS error:', e); }
 
-    // 2. Wikipedia API
     try {
         const wikiUrl = `https://ru.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
         const resp = await fetch(wikiUrl);
@@ -268,7 +266,6 @@ async function fetchNewsFromAPI(query) {
         }
     } catch(e) { console.warn('Wikipedia API error:', e); }
 
-    // 3. DuckDuckGo Instant Answer API
     try {
         const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
         const resp = await fetch(ddgUrl);
@@ -284,7 +281,7 @@ async function fetchNewsFromAPI(query) {
     return newsText;
 }
 
-// ========== ПОИСК ПО ДОКУМЕНТАМ (исправлено) ==========
+// ========== ПОИСК ПО ДОКУМЕНТАМ ==========
 async function searchKnowledgeDocs(query) {
     if (!currentUser) return '';
     const safeQuery = query.substring(0, 100).replace(/[^\w\sа-яА-ЯёЁ]/g, ' ').trim();
@@ -377,7 +374,6 @@ async function sendRequest(prompt) {
     if (currentChatId && currentChatId.startsWith('tool_')) {
         const toolId = currentChatId.replace('tool_','');
         if (toolId === 'knowledge_rag') {
-            // RAG-инструмент сам загрузит документы через sendMessage, ничего не добавляем
         }
     } else {
         const docsContext = await searchKnowledgeDocs(prompt);
@@ -391,7 +387,6 @@ async function sendRequest(prompt) {
     let success = false, assistantMessage = '';
     let lastError = null;
 
-    // Пробуем до 2 раз при 429
     for (let attempt = 1; attempt <= 2; attempt++) {
         const controller = new AbortController();
         currentAbortController = controller;
@@ -416,17 +411,19 @@ async function sendRequest(prompt) {
                 assistantMessage = data.choices[0].message.content;
                 success = true;
                 break;
-            } else if (resp.status === 429) {
-                // Слишком много запросов – ждём и пробуем ещё раз
-                if (attempt === 1) {
-                    showToast('Лимит запросов', 'Слишком много запросов, ждём 3 секунды…', 'warning');
-                    await new Promise(resolve => setTimeout(resolve, 3000));
-                }
-                lastError = { status: 429, message: 'Too Many Requests' };
             } else {
                 const errorData = await resp.json().catch(() => ({}));
-                lastError = { status: resp.status, message: errorData.error?.message || resp.statusText };
-                break;
+                console.error('Mistral API error', resp.status, errorData);
+                if (resp.status === 429) {
+                    if (attempt === 1) {
+                        showToast('Лимит запросов', 'Слишком много запросов, ждём 3 секунды…', 'warning');
+                        await new Promise(resolve => setTimeout(resolve, 3000));
+                    }
+                    lastError = { status: 429, message: 'Too Many Requests' };
+                } else {
+                    lastError = { status: resp.status, message: errorData.error?.message || errorData.message || resp.statusText };
+                    break;
+                }
             }
         } catch (e) {
             if (e.name === 'AbortError') {
@@ -434,7 +431,7 @@ async function sendRequest(prompt) {
                 lastError = { aborted: true };
                 break;
             } else {
-                console.warn('Mistral error:', e);
+                console.error('Mistral network error:', e);
                 lastError = { network: true, message: e.message };
                 break;
             }
@@ -447,10 +444,16 @@ async function sendRequest(prompt) {
         await addMessageToDOM('assistant', assistantMessage, true, null, generationTime);
     } else if (!success) {
         let errorMsg = '❌ Не удалось получить ответ. ';
-        if (lastError?.status === 429) {
-            errorMsg += 'Сработал лимит бесплатного тарифа. Подождите немного.';
+        if (lastError?.aborted) {
+            errorMsg += 'Запрос прерван.';
         } else if (lastError?.network) {
-            errorMsg += 'Проблема с сетью или Mistral API недоступен.';
+            errorMsg += 'Сетевая ошибка или API недоступен.';
+        } else if (lastError?.status === 429) {
+            errorMsg += 'Исчерпан лимит запросов бесплатного тарифа. Подождите немного.';
+        } else if (lastError?.status === 403) {
+            errorMsg += 'Доступ запрещён (возможны региональные ограничения). Попробуйте OpenRouter или VPN.';
+        } else if (lastError?.status) {
+            errorMsg += `Ошибка ${lastError.status}: ${lastError.message || 'неизвестная ошибка'}.`;
         } else {
             errorMsg += 'Попробуйте позже.';
         }
