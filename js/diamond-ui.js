@@ -1104,6 +1104,22 @@ async function showLoadingScreen() {
 // ========== ИНИЦИАЛИЗАЦИЯ (ИСПРАВЛЕНО) ==========
 (async function() {
     log('Загрузка...');
+    // Проверяем OAuth-тикет
+const oauthSuccess = await processOAuthTicket();
+if (oauthSuccess) {
+    // Уже вошли через DiamKey
+    document.getElementById('choiceScreen').style.display = 'none';
+    document.getElementById('mainUI').style.display = 'flex';
+    setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
+    updateUserPanel();
+    setupFileAttachment();
+    if (chats.length === 0) renderEmptyState(); else renderChat();
+    renderHistory();
+    updateUILanguage();
+    updateSendButtonState();
+    return; // прерываем обычную инициализацию
+}
+
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
     const savedLang = localStorage.getItem('diamond_language');
     if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
