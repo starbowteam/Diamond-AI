@@ -31,34 +31,18 @@
             <div class="logo">
                 <img src="assets/logo.png" alt="logo" class="logo-img">
                 <h1>DIAMOND AI</h1>
-                <p>Войдите или создайте Diamkey для продолжения</p>
+                <p>Войдите через DiamKey для продолжения</p>
             </div>
-            <!-- Табы Вход/Регистрация -->
-            <div class="auth-tabs">
-                <button class="auth-tab active" id="tabLogin">Вход</button>
-                <button class="auth-tab" id="tabRegister">Регистрация</button>
-            </div>
-            <div id="loginForm" class="auth-form">
-                <div class="input-group"><label>Логин</label><input id="loginIdentity" placeholder="Введите логин"></div>
-                <div class="input-group"><label>Пароль</label><input id="loginPassword" type="password" placeholder="········"></div>
-                <button class="btn btn-diamkey" id="doLoginBtn"><i class="fas fa-gem"></i> Войти</button>
-            </div>
-            <div id="registerForm" class="auth-form" style="display:none;">
-                <div class="input-group"><label>Логин</label><input id="regLogin" placeholder="Придумайте логин"></div>
-                <div class="input-group"><label>Пароль</label><input id="regPassword" type="password" placeholder="Минимум 6 символов"></div>
-                <button class="btn btn-diamkey" id="doRegisterBtn"><i class="fas fa-user-plus"></i> Создать Diamkey</button>
-            </div>
-            <!-- Новая кнопка DiamKey OAuth -->
-            <div style="margin-top: 20px; text-align: center;">
-                <button class="btn btn-diamkey" id="diamkeyOAuthBtn" style="background: linear-gradient(135deg, #4a4a5a, #2a2a33); width: auto; padding: 12px 28px;">
-                    <i class="fas fa-key"></i> Войти через DiamKey
-                </button>
-            </div>
-            <p class="footer-note">Статистика и данные о аккаунте на<br>сайте <a href="https://diamkey.ru" target="_blank">Diamkey.</a></p>
+            <button class="btn btn-diamkey" id="diamkeyOAuthBtn" style="width: auto; padding: 16px 40px; font-size: 1.1rem; margin-top: 10px;">
+                <i class="fas fa-key"></i> Войти через DiamKey
+            </button>
+            <p style="margin-top: 18px; font-size: 0.9rem; color: var(--text-secondary);">
+                Нет аккаунта? <a href="https://diamkey.ru" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: 600;">Создать на DiamKey</a>
+            </p>
         </div>
     </div>
+    <!-- Остальная структура main-ui без изменений -->
     <div class="main-ui" id="mainUI" style="display: none;">
-        <!-- ... весь основной интерфейс без изменений ... -->
         <header class="title-bar" id="titleBar">
             <div class="title-bar-left">
                 <button class="sidebar-toggle-btn" id="sidebarToggleBtn"><i class="fas fa-bars"></i></button>
