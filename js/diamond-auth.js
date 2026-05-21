@@ -1,7 +1,7 @@
 // ==================== DIAMOND AI v46 — АВТОРИЗАЦИЯ И ПРОФИЛЬ ====================
 
 function getBotAvatarHTML() {
-    return `<img src="../assets/bot-av.ico" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fas fa-robot\'></i>'">`;
+    return `<img src="assets/bot-av.ico" style="width:100%; height:100%; object-fit:cover; border-radius:50%;" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fas fa-robot\'></i>'">`;
 }
 
 function getUserAvatarHTML() {
@@ -102,6 +102,43 @@ async function register() {
         setupFileAttachment();
     } catch (e) { console.error(e); showToast(t('errorNetwork'), '', 'error'); }
     finally { btn.disabled = false; }
+}
+
+// ========== DIAMKEY OAUTH ==========
+function redirectToDiamKeyOAuth() {
+    const redirect = encodeURIComponent(window.location.origin + window.location.pathname);
+    window.location.href = `https://diamkey.ru/oauth.html?redirect=${redirect}&app=Diamond+AI`;
+}
+
+async function processOAuthTicket() {
+    const params = new URLSearchParams(window.location.search);
+    const ticket = params.get('ticket');
+    if (!ticket) return false;
+    // удаляем ticket из URL, чтобы не мешал
+    window.history.replaceState({}, document.title, window.location.pathname);
+    try {
+        const { data, error } = await supabaseClient.from('oauth_tickets').select('login').eq('ticket', ticket).maybeSingle();
+        if (error || !data) { showToast('Тикет недействителен', '', 'error'); return false; }
+        const login = data.login;
+        // Удаляем использованный тикет
+        await supabaseClient.from('oauth_tickets').delete().eq('ticket', ticket);
+        // Ищем пользователя
+        const { data: user, error: userError } = await supabaseClient.from('users').select('*').eq('login', login).maybeSingle();
+        if (userError || !user) { showToast('Пользователь не найден', '', 'error'); return false; }
+        if (!user.secret_word) {
+            const sw = generateFastSecret();
+            await supabaseClient.from('users').update({ secret_word: sw }).eq('login', user.login);
+            user.secret_word = sw;
+        }
+        currentUser = { login: user.login, email: user.email || (user.login+'@diamkey.local'), secretWord: user.secret_word, name: user.name||'', avatar: user.avatar||'', description: user.description||'', fa_icon: user.fa_icon||'', role: user.role||'user' };
+        localStorage.setItem('diamond_user', JSON.stringify(currentUser));
+        tutorialCompleted = user.obuchenie_check === true;
+        await loadChatsAndFolders(); await refreshUserProfile(); await loadForumMessages();
+        return true;
+    } catch (e) {
+        console.error('OAuth ticket error:', e);
+        return false;
+    }
 }
 
 async function refreshUserProfile() {
