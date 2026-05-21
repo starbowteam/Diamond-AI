@@ -1101,30 +1101,50 @@ async function showLoadingScreen() {
     ws.style.display = 'none';
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ (ИСПРАВЛЕНО) ==========
+/ ========== ИНИЦИАЛИЗАЦИЯ (ОБНОВЛЁННАЯ) ==========
 (async function() {
     log('Загрузка...');
-    // Проверяем OAuth-тикет
-const oauthSuccess = await processOAuthTicket();
-if (oauthSuccess) {
-    // Уже вошли через DiamKey
-    document.getElementById('choiceScreen').style.display = 'none';
-    document.getElementById('mainUI').style.display = 'flex';
-    setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
-    updateUserPanel();
-    setupFileAttachment();
-    if (chats.length === 0) renderEmptyState(); else renderChat();
-    renderHistory();
-    updateUILanguage();
-    updateSendButtonState();
-    return; // прерываем обычную инициализацию
-}
-
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
     const savedLang = localStorage.getItem('diamond_language');
     if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
     loadWorkshopToolsState();
     await fetchApiKeys();
+
+    // Проверка OAuth-тикета
+    const urlParams = new URLSearchParams(window.location.search);
+    const ticket = urlParams.get('ticket');
+    if (ticket) {
+        // Показываем приветственный экран с галочкой
+        const ws = document.getElementById('welcomeScreen');
+        ws.innerHTML = `
+            <div style="text-align:center; color:var(--text-primary); animation: fadeIn 0.5s ease;">
+                <i class="fas fa-check-circle" style="font-size:5rem; color:#5d9b7a; animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);"></i>
+                <h2 style="margin-top:20px; font-weight:600;">Вошли! Успешного пользования!</h2>
+            </div>
+        `;
+        ws.style.display = 'flex';
+        await new Promise(r => setTimeout(r, 2000)); // 2 секунды галочка
+
+        const oauthSuccess = await processOAuthTicket();
+        if (!oauthSuccess) {
+            ws.style.display = 'none';
+            document.getElementById('choiceScreen').style.display = 'flex';
+            return;
+        }
+        ws.style.display = 'none';
+        document.getElementById('choiceScreen').style.display = 'none';
+        document.getElementById('mainUI').style.display = 'flex';
+        setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
+        updateUserPanel();
+        setupFileAttachment();
+        if (chats.length === 0) renderEmptyState(); else renderChat();
+        renderHistory();
+        updateUILanguage();
+        updateSendButtonState();
+        return;
+    }
+
+    // Обычный запуск (если уже сохранён пользователь)
     const savedUser = localStorage.getItem('diamond_user');
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
