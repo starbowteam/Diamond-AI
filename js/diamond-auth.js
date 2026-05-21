@@ -49,98 +49,6 @@ function updateUserPanel() {
     }
 }
 
-async function login() {
-    const identity = document.getElementById('loginIdentity')?.value.trim();
-    const password = document.getElementById('loginPassword')?.value;
-    const btn = document.getElementById('doLoginBtn');
-    if (!identity || !password) return showToast(t('errorLogin'), '', 'warning');
-    btn.disabled = true;
-    try {
-        const { data: user, error } = await supabaseClient.from('users').select('*').eq('login', identity).eq('password', password).maybeSingle();
-        if (error || !user) { showToast(t('errorLogin'), '', 'error'); return; }
-        if (!user.secret_word) { const sw = generateFastSecret(); await supabaseClient.from('users').update({ secret_word: sw }).eq('login', user.login); user.secret_word = sw; }
-        currentUser = { login: user.login, email: user.email || (user.login+'@diamkey.local'), secretWord: user.secret_word, name: user.name||'', avatar: user.avatar||'', description: user.description||'', fa_icon: user.fa_icon||'', role: user.role||'user' };
-        localStorage.setItem('diamond_user', JSON.stringify(currentUser));
-        tutorialCompleted = user.obuchenie_check === true;
-        await loadChatsAndFolders(); await refreshUserProfile(); await loadForumMessages();
-        document.getElementById('choiceScreen').style.display = 'none';
-        document.getElementById('mainUI').style.display = 'flex';
-        setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
-        updateUserPanel();
-        if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
-        if (chats.length === 0) renderEmptyState(); else renderChat();
-        renderHistory();
-        setupFileAttachment();
-    } catch (e) { console.error(e); showToast(t('errorNetwork'), '', 'error'); }
-    finally { btn.disabled = false; }
-}
-
-async function register() {
-    const loginInput = document.getElementById('regLogin')?.value.trim();
-    const password = document.getElementById('regPassword')?.value;
-    const btn = document.getElementById('doRegisterBtn');
-    if (!loginInput || password.length < 6) return showToast(t('errorRegister'), '', 'warning');
-    btn.disabled = true;
-    try {
-        const { data: exist } = await supabaseClient.from('users').select('login').eq('login', loginInput).maybeSingle();
-        if (exist) { showToast('Логин уже занят', '', 'warning'); return; }
-        const secretWord = generateFastSecret();
-        const email = loginInput + '@diamkey.local';
-        const token = generateToken();
-        const { error } = await supabaseClient.from('users').insert([{ login: loginInput, email, password, token, secret_word: secretWord, name:'', avatar:'', description:'', fa_icon:'', role:'user', is_admin:false, obuchenie_check: false }]);
-        if (error) { showToast(t('errorRegister'), error.message, 'error'); return; }
-        currentUser = { login: loginInput, email, secretWord, name:'', avatar:'', description:'', fa_icon:'', role:'user' };
-        localStorage.setItem('diamond_user', JSON.stringify(currentUser));
-        tutorialCompleted = false;
-        await loadChatsAndFolders(); await loadForumMessages();
-        document.getElementById('choiceScreen').style.display = 'none';
-        document.getElementById('mainUI').style.display = 'flex';
-        setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
-        updateUserPanel();
-        renderEmptyState();
-        renderHistory();
-        setupFileAttachment();
-    } catch (e) { console.error(e); showToast(t('errorNetwork'), '', 'error'); }
-    finally { btn.disabled = false; }
-}
-
-// ========== DIAMKEY OAUTH ==========
-function redirectToDiamKeyOAuth() {
-    const redirect = encodeURIComponent(window.location.origin + window.location.pathname);
-    window.location.href = `https://diamkey.ru/oauth.html?redirect=${redirect}&app=Diamond+AI`;
-}
-
-async function processOAuthTicket() {
-    const params = new URLSearchParams(window.location.search);
-    const ticket = params.get('ticket');
-    if (!ticket) return false;
-    // удаляем ticket из URL, чтобы не мешал
-    window.history.replaceState({}, document.title, window.location.pathname);
-    try {
-        const { data, error } = await supabaseClient.from('oauth_tickets').select('login').eq('ticket', ticket).maybeSingle();
-        if (error || !data) { showToast('Тикет недействителен', '', 'error'); return false; }
-        const login = data.login;
-        // Удаляем использованный тикет
-        await supabaseClient.from('oauth_tickets').delete().eq('ticket', ticket);
-        // Ищем пользователя
-        const { data: user, error: userError } = await supabaseClient.from('users').select('*').eq('login', login).maybeSingle();
-        if (userError || !user) { showToast('Пользователь не найден', '', 'error'); return false; }
-        if (!user.secret_word) {
-            const sw = generateFastSecret();
-            await supabaseClient.from('users').update({ secret_word: sw }).eq('login', user.login);
-            user.secret_word = sw;
-        }
-        currentUser = { login: user.login, email: user.email || (user.login+'@diamkey.local'), secretWord: user.secret_word, name: user.name||'', avatar: user.avatar||'', description: user.description||'', fa_icon: user.fa_icon||'', role: user.role||'user' };
-        localStorage.setItem('diamond_user', JSON.stringify(currentUser));
-        tutorialCompleted = user.obuchenie_check === true;
-        await loadChatsAndFolders(); await refreshUserProfile(); await loadForumMessages();
-        return true;
-    } catch (e) {
-        console.error('OAuth ticket error:', e);
-        return false;
-    }
-}
-
 async function refreshUserProfile() {
     if (!currentUser) return;
     try {
@@ -159,7 +67,9 @@ async function refreshUserProfile() {
 }
 
 function logout() {
-    currentUser = null; mistralApiKey = ''; localStorage.removeItem('diamond_user');
+    currentUser = null;
+    mistralApiKey = '';
+    localStorage.removeItem('diamond_user');
     document.getElementById('mainUI').style.display = 'none';
     document.getElementById('choiceScreen').style.display = 'flex';
     chatAttachments = {};
@@ -169,4 +79,49 @@ function logout() {
         settingsModalOpen = false;
     }
     showToast(t('logout'), '', 'info');
+}
+
+// ========== DIAMKEY OAUTH ==========
+function redirectToDiamKeyOAuth() {
+    const redirect = encodeURIComponent(window.location.origin + window.location.pathname);
+    window.location.href = `https://diamkey.ru/oauth.html?redirect=${redirect}&app=Diamond+AI`;
+}
+
+async function processOAuthTicket() {
+    const params = new URLSearchParams(window.location.search);
+    const ticket = params.get('ticket');
+    if (!ticket) return false;
+    window.history.replaceState({}, document.title, window.location.pathname);
+    try {
+        const { data, error } = await supabaseClient.from('oauth_tickets').select('login').eq('ticket', ticket).maybeSingle();
+        if (error || !data) { showToast('Тикет недействителен', '', 'error'); return false; }
+        const login = data.login;
+        await supabaseClient.from('oauth_tickets').delete().eq('ticket', ticket);
+        const { data: user, error: userError } = await supabaseClient.from('users').select('*').eq('login', login).maybeSingle();
+        if (userError || !user) { showToast('Пользователь не найден', '', 'error'); return false; }
+        if (!user.secret_word) {
+            const sw = generateFastSecret();
+            await supabaseClient.from('users').update({ secret_word: sw }).eq('login', user.login);
+            user.secret_word = sw;
+        }
+        currentUser = {
+            login: user.login,
+            email: user.email || (user.login+'@diamkey.local'),
+            secretWord: user.secret_word,
+            name: user.name||'',
+            avatar: user.avatar||'',
+            description: user.description||'',
+            fa_icon: user.fa_icon||'',
+            role: user.role||'user'
+        };
+        localStorage.setItem('diamond_user', JSON.stringify(currentUser));
+        tutorialCompleted = user.obuchenie_check === true;
+        await loadChatsAndFolders();
+        await refreshUserProfile();
+        await loadForumMessages();
+        return true;
+    } catch (e) {
+        console.error('OAuth ticket error:', e);
+        return false;
+    }
 }
