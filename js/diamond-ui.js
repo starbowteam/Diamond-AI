@@ -1101,7 +1101,7 @@ async function showLoadingScreen() {
     ws.style.display = 'none';
 }
 
-/ ========== ИНИЦИАЛИЗАЦИЯ (ОБНОВЛЁННАЯ) ==========
+// ========== ИНИЦИАЛИЗАЦИЯ (обновлённая, без зависаний) ==========
 (async function() {
     log('Загрузка...');
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
@@ -1110,9 +1110,10 @@ async function showLoadingScreen() {
     loadWorkshopToolsState();
     await fetchApiKeys();
 
-    // Проверка OAuth-тикета
+    // 1. Проверяем OAuth-тикет
     const urlParams = new URLSearchParams(window.location.search);
     const ticket = urlParams.get('ticket');
+
     if (ticket) {
         // Показываем приветственный экран с галочкой
         const ws = document.getElementById('welcomeScreen');
@@ -1123,28 +1124,33 @@ async function showLoadingScreen() {
             </div>
         `;
         ws.style.display = 'flex';
-        await new Promise(r => setTimeout(r, 2000)); // 2 секунды галочка
+
+        // Ждём 2 секунды
+        await new Promise(r => setTimeout(r, 2000));
 
         const oauthSuccess = await processOAuthTicket();
-        if (!oauthSuccess) {
-            ws.style.display = 'none';
+        ws.style.display = 'none';
+
+        if (oauthSuccess) {
+            // Успешно – показываем main-ui
+            document.getElementById('choiceScreen').style.display = 'none';
+            document.getElementById('mainUI').style.display = 'flex';
+            setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
+            updateUserPanel();
+            setupFileAttachment();
+            if (chats.length === 0) renderEmptyState(); else renderChat();
+            renderHistory();
+            updateUILanguage();
+            updateSendButtonState();
+            return;
+        } else {
+            // Тикет не сработал – возвращаем на экран входа
             document.getElementById('choiceScreen').style.display = 'flex';
             return;
         }
-        ws.style.display = 'none';
-        document.getElementById('choiceScreen').style.display = 'none';
-        document.getElementById('mainUI').style.display = 'flex';
-        setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
-        updateUserPanel();
-        setupFileAttachment();
-        if (chats.length === 0) renderEmptyState(); else renderChat();
-        renderHistory();
-        updateUILanguage();
-        updateSendButtonState();
-        return;
     }
 
-    // Обычный запуск (если уже сохранён пользователь)
+    // 2. Обычный запуск (если уже сохранён пользователь)
     const savedUser = localStorage.getItem('diamond_user');
     if (savedUser) {
         currentUser = JSON.parse(savedUser);
@@ -1154,6 +1160,8 @@ async function showLoadingScreen() {
         if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
         if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
     }
+
+    // 3. Скрываем загрузочный экран и показываем нужный интерфейс
     await showLoadingScreen();
     if (currentUser) {
         document.getElementById('choiceScreen').style.display = 'none';
@@ -1165,6 +1173,7 @@ async function showLoadingScreen() {
     } else {
         document.getElementById('choiceScreen').style.display = 'flex';
     }
+
     setupEventListeners();
     updateUILanguage();
     updateUserPanel();
