@@ -1101,7 +1101,7 @@ async function showLoadingScreen() {
     ws.style.display = 'none';
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ (обновлённая, без зависаний) ==========
+
 (async function() {
     log('Загрузка...');
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
