@@ -21,6 +21,47 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/copy-tex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"></script>
+    <style>
+        /* Анимированный неоновый фон для кнопки */
+        #diamkeyOAuthBtn {
+            background: linear-gradient(135deg, #6a6a7e, #3a3a44);
+            border: none;
+            color: white;
+            padding: 16px 40px;
+            font-size: 1.1rem;
+            margin-top: 20px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(160,160,176,0.4), 0 0 40px rgba(160,160,176,0.2);
+            animation: pulseNeon 2s infinite;
+        }
+        @keyframes pulseNeon {
+            0%, 100% { box-shadow: 0 0 20px rgba(160,160,176,0.4), 0 0 40px rgba(160,160,176,0.2); }
+            50% { box-shadow: 0 0 30px rgba(200,200,220,0.6), 0 0 60px rgba(200,200,220,0.4); }
+        }
+        #diamkeyOAuthBtn:hover {
+            background: linear-gradient(135deg, #7a7a8e, #4a4a54);
+            transform: translateY(-2px);
+            box-shadow: 0 0 40px rgba(200,200,220,0.7), 0 0 80px rgba(200,200,220,0.5);
+        }
+        .choice-container {
+            animation: fadeInUp 0.6s ease;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .footer-note a {
+            color: var(--accent);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+        .footer-note a:hover { color: #fff; }
+    </style>
 </head>
 <body>
     <div class="welcome-screen" id="welcomeScreen">
@@ -33,15 +74,12 @@
                 <h1>DIAMOND AI</h1>
                 <p>Войдите через DiamKey для продолжения</p>
             </div>
-            <button class="btn btn-diamkey" id="diamkeyOAuthBtn" style="width: auto; padding: 16px 40px; font-size: 1.1rem; margin-top: 10px;">
+            <button class="btn btn-diamkey" id="diamkeyOAuthBtn">
                 <i class="fas fa-key"></i> Войти через DiamKey
             </button>
-            <p style="margin-top: 18px; font-size: 0.9rem; color: var(--text-secondary);">
-                Нет аккаунта? <a href="https://diamkey.ru" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: 600;">Создать на DiamKey</a>
-            </p>
+            <p class="footer-note">Нет аккаунта? <a href="https://diamkey.ru" target="_blank">Зарегистрироваться на DiamKey</a></p>
         </div>
     </div>
-    <!-- Остальная структура main-ui без изменений -->
     <div class="main-ui" id="mainUI" style="display: none;">
         <header class="title-bar" id="titleBar">
             <div class="title-bar-left">
