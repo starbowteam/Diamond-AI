@@ -1275,3 +1275,121 @@ function setupFileAttachment() {
     } catch (e) {
         console.warn('Ошибка setupFileAttachment:', e);
     }
+}
+
+// ========== ИНИЦИАЛИЗАЦИЯ (без пульсации, с фиксом выхода и кнопок) ==========
+(async function() {
+    log('Загрузка...');
+    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
+    const savedLang = localStorage.getItem('diamond_language');
+    if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
+    loadWorkshopToolsState();
+    // fetchApiKeys запускаем асинхронно, не блокируем загрузку
+    fetchApiKeys().then(() => log('API ключи загружены'));
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const ticket = urlParams.get('ticket');
+    const savedUser = localStorage.getItem('diamond_user');
+
+    if (ticket) {
+        // OAuth
+        const loadPromise = processOAuthTicket();
+        const ws = document.getElementById('welcomeScreen');
+        ws.innerHTML = `
+            <div style="text-align:center; color:var(--text-primary); animation: fadeIn 0.5s ease;">
+                <i class="fas fa-check-circle" style="font-size:5rem; color:#5d9b7a; animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);"></i>
+                <h2 style="margin-top:20px; font-weight:600;">Вошли! Успешного пользования!</h2>
+            </div>
+        `;
+        ws.style.display = 'flex';
+        await new Promise(r => setTimeout(r, 1500));
+        const oauthSuccess = await loadPromise;
+        ws.style.display = 'none';
+        if (!oauthSuccess) {
+            document.getElementById('choiceScreen').style.display = 'flex';
+            return;
+        }
+        document.getElementById('choiceScreen').style.display = 'none';
+        document.getElementById('mainUI').style.display = 'flex';
+        setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
+        updateUserPanel();
+        setupFileAttachment();
+        if (chats.length === 0) renderEmptyState(); else renderChat();
+        renderHistory();
+        cacheChats(chats);
+        cacheFolders(folders);
+        cacheProfile(currentUser);
+    } else if (savedUser) {
+        // Быстрый вход через кэш
+        const cachedChats = await getCachedChats();
+        const cachedFolders = await getCachedFolders();
+        const cachedProfile = await getCachedProfile();
+        if (cachedProfile && cachedProfile.login === JSON.parse(savedUser).login) {
+            currentUser = cachedProfile;
+            chats = cachedChats || [];
+            folders = cachedFolders || [];
+            document.getElementById('choiceScreen').style.display = 'none';
+            document.getElementById('mainUI').style.display = 'flex';
+            setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
+            updateUserPanel();
+            setupFileAttachment();
+            if (chats.length === 0) renderEmptyState(); else renderChat();
+            renderHistory();
+            // Фоновое обновление
+            Promise.all([
+                refreshUserProfile(),
+                loadChatsAndFolders(),
+                loadForumMessages()
+            ]).then(() => {
+                renderHistory();
+                renderChat();
+                cacheChats(chats);
+                cacheFolders(folders);
+                cacheProfile(currentUser);
+            });
+        } else {
+            // Полная загрузка с сервера
+            currentUser = JSON.parse(savedUser);
+            await Promise.all([
+                loadChatsAndFolders(),
+                refreshUserProfile(),
+                loadForumMessages()
+            ]);
+            if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
+            if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
+            document.getElementById('choiceScreen').style.display = 'none';
+            document.getElementById('mainUI').style.display = 'flex';
+            setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
+            updateUserPanel();
+            setupFileAttachment();
+            if (chats.length === 0) renderEmptyState(); else renderChat();
+            renderHistory();
+            cacheChats(chats);
+            cacheFolders(folders);
+            cacheProfile(currentUser);
+        }
+    } else {
+        // Экран авторизации
+        document.getElementById('welcomeScreen').style.display = 'none';
+        document.getElementById('choiceScreen').style.display = 'flex';
+        const btn = document.getElementById('diamkeyOAuthBtn');
+        if (btn) {
+            // Сбрасываем и анимируем
+            btn.style.opacity = '0';
+            btn.style.transform = 'translateY(10px)';
+            requestAnimationFrame(() => {
+                btn.style.opacity = '1';
+                btn.style.transform = 'translateY(0)';
+            });
+        }
+    }
+
+    // Всегда навешиваем обработчики, даже если mainUI скрыт
+    setupEventListeners();
+    updateUILanguage();
+    updateUserPanel();
+    updateSendButtonState();
+    if (chats.length) renderHistory();
+    document.documentElement.style.setProperty('--collapsed-left-offset', '85px');
+    log('Готово');
+})();
