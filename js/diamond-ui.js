@@ -1102,22 +1102,14 @@ async function showLoadingScreen() {
     ws.style.display = 'none';
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ (СУПЕРСКОРОСТЬ) ==========
+// ========== ИНИЦИАЛИЗАЦИЯ (без пульсации, с фиксом выхода и кнопок) ==========
 (async function() {
-    // Сразу прячем прелоадер, как только JS отработал
-    const initialLoader = document.getElementById('initial-loader');
-    if (initialLoader) {
-        initialLoader.style.opacity = '0';
-        setTimeout(() => initialLoader.remove(), 300);
-    }
-
     log('Загрузка...');
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
     const savedLang = localStorage.getItem('diamond_language');
     if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
     loadWorkshopToolsState();
-
-    // Запускаем fetchApiKeys, но не ждём его, чтобы не блокировать интерфейс
+    // fetchApiKeys запускаем асинхронно, не блокируем загрузку
     fetchApiKeys().then(() => log('API ключи загружены'));
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -1125,7 +1117,7 @@ async function showLoadingScreen() {
     const savedUser = localStorage.getItem('diamond_user');
 
     if (ticket) {
-        // OAuth: грузим в фоне, показываем галочку
+        // OAuth
         const loadPromise = processOAuthTicket();
         const ws = document.getElementById('welcomeScreen');
         ws.innerHTML = `
@@ -1153,7 +1145,7 @@ async function showLoadingScreen() {
         cacheFolders(folders);
         cacheProfile(currentUser);
     } else if (savedUser) {
-        // Пробуем кэш
+        // Быстрый вход через кэш
         const cachedChats = await getCachedChats();
         const cachedFolders = await getCachedFolders();
         const cachedProfile = await getCachedProfile();
@@ -1181,7 +1173,7 @@ async function showLoadingScreen() {
                 cacheProfile(currentUser);
             });
         } else {
-            // Без кэша – грузим всё параллельно
+            // Полная загрузка с сервера
             currentUser = JSON.parse(savedUser);
             await Promise.all([
                 loadChatsAndFolders(),
@@ -1203,9 +1195,13 @@ async function showLoadingScreen() {
         }
     } else {
         // Экран авторизации
+        document.getElementById('welcomeScreen').style.display = 'none';
         document.getElementById('choiceScreen').style.display = 'flex';
         const btn = document.getElementById('diamkeyOAuthBtn');
         if (btn) {
+            // Сбрасываем и анимируем
+            btn.style.opacity = '0';
+            btn.style.transform = 'translateY(10px)';
             requestAnimationFrame(() => {
                 btn.style.opacity = '1';
                 btn.style.transform = 'translateY(0)';
@@ -1213,6 +1209,7 @@ async function showLoadingScreen() {
         }
     }
 
+    // Всегда навешиваем обработчики, даже если mainUI скрыт
     setupEventListeners();
     updateUILanguage();
     updateUserPanel();
@@ -1220,4 +1217,63 @@ async function showLoadingScreen() {
     if (chats.length) renderHistory();
     document.documentElement.style.setProperty('--collapsed-left-offset', '85px');
     log('Готово');
+})();
+
+// ========== ИСПРАВЛЕННЫЙ LOGOUT (возвращает кнопку) ==========
+function logout() {
+    currentUser = null;
+    mistralApiKey = '';
+    localStorage.removeItem('diamond_user');
+    document.getElementById('mainUI').style.display = 'none';
+    document.getElementById('choiceScreen').style.display = 'flex';
+    chatAttachments = {};
+    if (settingsModalOpen) {
+        const overlay = document.querySelector('.settings-modal-overlay');
+        if (overlay) overlay.remove();
+        settingsModalOpen = false;
+    }
+    // Принудительно показываем кнопку DiamKey с анимацией
+    const btn = document.getElementById('diamkeyOAuthBtn');
+    if (btn) {
+        btn.style.opacity = '0';
+        btn.style.transform = 'translateY(10px)';
+        requestAnimationFrame(() => {
+            btn.style.opacity = '1';
+            btn.style.transform = 'translateY(0)';
+        });
+    }
+    showToast(t('logout'), '', 'info');
+}
+
+// ========== БЕЗОПАСНЫЙ setupFileAttachment (не ломает обработчики) ==========
+function setupFileAttachment() {
+    try {
+        const inputWrapper = document.querySelector('.input-wrapper');
+        if (!inputWrapper || fileInputEl) return;
+
+        fileInputEl = document.createElement('input');
+        fileInputEl.type = 'file';
+        fileInputEl.accept = '.png,.jpg,.jpeg,.html,.js,.css,.docx';
+        fileInputEl.style.display = 'none';
+        document.body.appendChild(fileInputEl);
+
+        const attachBtn = document.createElement('button');
+        attachBtn.className = 'attach-btn';
+        attachBtn.innerHTML = '<i class="fas fa-paperclip"></i>';
+        attachBtn.title = t('attachFile');
+        attachBtn.addEventListener('click', () => fileInputEl.click());
+
+        const sendBtn = document.getElementById('send-btn');
+        if (sendBtn) {
+            inputWrapper.insertBefore(attachBtn, sendBtn);
+        } else {
+            // Если кнопки отправки нет (пустой чат), просто добавляем в конец
+            inputWrapper.appendChild(attachBtn);
+        }
+
+        fileInputEl.addEventListener('change', handleFileSelect);
+    } catch (e) {
+        console.warn('Ошибка setupFileAttachment:', e);
+    }
+}
 })();
