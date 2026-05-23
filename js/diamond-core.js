@@ -426,9 +426,19 @@ function scrollToBottom() {
 // ========== РАБОТА С SUPABASE ==========
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ========== LaTeX РЕНДЕР (исправлен) ==========
+// ========== LaTeX РЕНДЕР (исправлен полностью) ==========
 function renderMathInElementWithMhchem(element) {
     if (!element || typeof renderMathInElement === 'undefined') return;
+
+    // Удаляем старые отрендеренные формулы, чтобы избежать двойного парсинга и конфликтов
+    const existingKatex = element.querySelectorAll('.katex, .katex-display');
+    existingKatex.forEach(el => {
+        // Заменяем старый блок его исходным текстом, чтобы KaTeX мог заново его обработать
+        const original = el.getAttribute('data-original') || el.textContent;
+        const textNode = document.createTextNode(original);
+        el.parentNode.replaceChild(textNode, el);
+    });
+
     try {
         renderMathInElement(element, {
             delimiters: [
@@ -439,9 +449,9 @@ function renderMathInElementWithMhchem(element) {
             ],
             throwOnError: false,
             strict: false,
-            maxExpand: 2000,  // ограничитель бесконечной рекурсии
+            maxExpand: 10000,
             errorCallback: (msg, err) => {
-                console.warn('KaTeX error:', msg, err);
+                console.warn('KaTeX error (игнорирована):', msg, err);
             }
         });
     } catch(e) {
