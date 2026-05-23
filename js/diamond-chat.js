@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (с диагностикой ошибок) ====================
+// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (мгновенное удаление) ====================
 
 async function loadChatsAndFolders() {
     if (!currentUser) return;
@@ -115,13 +115,14 @@ async function createNewChat() {
     clearAttachmentPreview();
 }
 
+// ========== УДАЛЕНИЕ ЧАТА (мгновенное, без подтверждения) ==========
 async function deleteChat(id) {
     if (id && id.startsWith('tool_')) {
         showToast('Нельзя удалить', 'Инструментальные чаты не удаляются', 'warning');
         return;
     }
     const chat = chats.find(c => c.id === id);
-    if (chat && confirm(t('confirmDeleteChat'))) {
+    if (chat) {
         await deleteChatFromSupabase(id);
         chats = chats.filter(c => c.id !== id);
         if (currentChatId === id) currentChatId = chats.length ? chats[0].id : null;
@@ -231,6 +232,7 @@ async function deleteFolder(id) {
 // ========== ПОИСК НОВОСТЕЙ, ВИКИ, DUCKDUCKGO ==========
 async function fetchNewsFromAPI(query) {
     let newsText = '';
+    // 1. Google News RSS
     try {
         const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ru&gl=RU&ceid=RU:ru`;
         const resp = await fetch(rssUrl);
@@ -253,6 +255,7 @@ async function fetchNewsFromAPI(query) {
         }
     } catch(e) { console.warn('Google News RSS error:', e); }
 
+    // 2. Wikipedia API
     try {
         const wikiUrl = `https://ru.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
         const resp = await fetch(wikiUrl);
@@ -266,6 +269,7 @@ async function fetchNewsFromAPI(query) {
         }
     } catch(e) { console.warn('Wikipedia API error:', e); }
 
+    // 3. DuckDuckGo Instant Answer API
     try {
         const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
         const resp = await fetch(ddgUrl);
@@ -282,8 +286,10 @@ async function fetchNewsFromAPI(query) {
 }
 
 // ========== ПОИСК ПО ДОКУМЕНТАМ (защищён от 404) ==========
+let knowledgeDocsAvailable = true;
+
 async function searchKnowledgeDocs(query) {
-    if (!currentUser) return '';
+    if (!currentUser || !knowledgeDocsAvailable) return '';
     const safeQuery = query.substring(0, 100).replace(/[^\w\sа-яА-ЯёЁ]/g, ' ').trim();
     if (!safeQuery) return '';
     try {
@@ -291,8 +297,15 @@ async function searchKnowledgeDocs(query) {
             .or(`title.ilike.%${safeQuery}%,content.ilike.%${safeQuery}%`)
             .eq('user_login', currentUser.login)
             .limit(3);
-        // Игнорируем любые ошибки (404, PGRST и т.д.)
-        if (error || !data || data.length === 0) return '';
+        if (error) {
+            if (error.code === 'PGRST205' || error.message?.includes('does not exist')) {
+                console.warn('Таблица knowledge_docs не найдена, поиск документов отключён до конца сессии.');
+                knowledgeDocsAvailable = false;
+                return '';
+            }
+            return '';
+        }
+        if (!data || data.length === 0) return '';
         return 'ИНФОРМАЦИЯ ИЗ ВАШИХ ДОКУМЕНТОВ:\n' + data.map(d => `[Источник: ${d.source}] ${d.title}: ${d.content}`).join('\n');
     } catch(e) {
         console.warn('Ошибка поиска в документах (проигнорирована):', e);
