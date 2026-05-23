@@ -1275,5 +1275,3 @@ function setupFileAttachment() {
     } catch (e) {
         console.warn('Ошибка setupFileAttachment:', e);
     }
-
-})();
