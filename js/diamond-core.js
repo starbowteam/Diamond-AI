@@ -426,7 +426,7 @@ function scrollToBottom() {
 // ========== РАБОТА С SUPABASE ==========
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ========== LaTeX РЕНДЕР ==========
+// ========== LaTeX РЕНДЕР (исправлен) ==========
 function renderMathInElementWithMhchem(element) {
     if (!element || typeof renderMathInElement === 'undefined') return;
     try {
@@ -438,10 +438,15 @@ function renderMathInElementWithMhchem(element) {
                 {left: '\\[', right: '\\]', display: true}
             ],
             throwOnError: false,
-            macros: { "\\ce": "\\ce" },
-            strict: false
+            strict: false,
+            maxExpand: 2000,  // ограничитель бесконечной рекурсии
+            errorCallback: (msg, err) => {
+                console.warn('KaTeX error:', msg, err);
+            }
         });
-    } catch(e) { console.warn('Math render error:', e); }
+    } catch(e) {
+        console.warn('Math render error:', e);
+    }
 }
 
 function formatDateHeader(ts) {
