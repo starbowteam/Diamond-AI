@@ -26,19 +26,29 @@
     <div class="welcome-screen" id="welcomeScreen">
         <div class="spinner-container"><i class="fas fa-circle-notch fa-spin"></i></div>
     </div>
+    <!-- Новый экран авторизации -->
     <div class="choice-screen" id="choiceScreen" style="display: none;">
-        <div class="choice-container" id="choiceContainer">
-            <div class="logo">
-                <img src="assets/logo.png" alt="logo" class="logo-img">
-                <h1>DIAMOND AI</h1>
-                <p>Войдите через DiamKey для продолжения</p>
+        <div class="choice-split">
+            <!-- Левая панель -->
+            <div class="choice-panel">
+                <div class="choice-container" id="choiceContainer">
+                    <div class="logo">
+                        <img src="assets/logo.png" alt="logo" class="logo-img">
+                        <h1>DIAMOND AI</h1>
+                        <p>Войдите через DiamKey для продолжения</p>
+                    </div>
+                    <button class="btn btn-diamkey" id="diamkeyOAuthBtn" style="width: auto; padding: 16px 40px; font-size: 1.1rem; margin-top: 10px; opacity: 0; transform: translateY(10px); transition: opacity 0.5s ease, transform 0.5s ease;">
+                        <i class="fas fa-key"></i> Войти через DiamKey
+                    </button>
+                    <p style="margin-top: 18px; font-size: 0.9rem; color: var(--text-secondary);">
+                        Нет аккаунта? <a href="https://diamkey.ru" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: 600;">Создать на DiamKey</a>
+                    </p>
+                </div>
             </div>
-            <button class="btn btn-diamkey" id="diamkeyOAuthBtn" style="width: auto; padding: 16px 40px; font-size: 1.1rem; margin-top: 10px; opacity: 0; transform: translateY(10px); transition: opacity 0.5s ease, transform 0.5s ease;">
-                <i class="fas fa-key"></i> Войти через DiamKey
-            </button>
-            <p style="margin-top: 18px; font-size: 0.9rem; color: var(--text-secondary);">
-                Нет аккаунта? <a href="https://diamkey.ru" target="_blank" style="color: var(--accent); text-decoration: none; font-weight: 600;">Создать на DiamKey</a>
-            </p>
+            <!-- Правая панель с картинкой -->
+            <div class="choice-image">
+                <img src="assets/diamond-ai.png" alt="Diamond AI" class="floating-image">
+            </div>
         </div>
     </div>
     <!-- Основной интерфейс без изменений -->
