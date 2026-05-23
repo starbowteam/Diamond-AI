@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v46 — UI И ИНИЦИАЛИЗАЦИЯ ====================
+// ==================== DIAMOND AI v46 — UI И ИНИЦИАЛИЗАЦИЯ (ускоренная) ====================
 
 // ========== РЕНДЕР ИСТОРИИ ==========
 function renderHistory() {
@@ -1102,21 +1102,30 @@ async function showLoadingScreen() {
     ws.style.display = 'none';
 }
 
-
-// ========== ИНИЦИАЛИЗАЦИЯ (с кэшем) ==========
+// ========== ИНИЦИАЛИЗАЦИЯ (СУПЕРСКОРОСТЬ) ==========
 (async function() {
+    // Сразу прячем прелоадер, как только JS отработал
+    const initialLoader = document.getElementById('initial-loader');
+    if (initialLoader) {
+        initialLoader.style.opacity = '0';
+        setTimeout(() => initialLoader.remove(), 300);
+    }
+
     log('Загрузка...');
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
     const savedLang = localStorage.getItem('diamond_language');
     if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
     loadWorkshopToolsState();
-    await fetchApiKeys();
+
+    // Запускаем fetchApiKeys, но не ждём его, чтобы не блокировать интерфейс
+    fetchApiKeys().then(() => log('API ключи загружены'));
+
     const urlParams = new URLSearchParams(window.location.search);
     const ticket = urlParams.get('ticket');
     const savedUser = localStorage.getItem('diamond_user');
 
     if (ticket) {
-        // OAuth-вход (галочка + быстрый вход)
+        // OAuth: грузим в фоне, показываем галочку
         const loadPromise = processOAuthTicket();
         const ws = document.getElementById('welcomeScreen');
         ws.innerHTML = `
@@ -1140,17 +1149,15 @@ async function showLoadingScreen() {
         setupFileAttachment();
         if (chats.length === 0) renderEmptyState(); else renderChat();
         renderHistory();
-        // Кэшируем полученные данные
         cacheChats(chats);
         cacheFolders(folders);
         cacheProfile(currentUser);
     } else if (savedUser) {
-        // Пробуем загрузить из кэша мгновенно
+        // Пробуем кэш
         const cachedChats = await getCachedChats();
         const cachedFolders = await getCachedFolders();
         const cachedProfile = await getCachedProfile();
         if (cachedProfile && cachedProfile.login === JSON.parse(savedUser).login) {
-            // Показываем кэш мгновенно
             currentUser = cachedProfile;
             chats = cachedChats || [];
             folders = cachedFolders || [];
@@ -1161,22 +1168,26 @@ async function showLoadingScreen() {
             setupFileAttachment();
             if (chats.length === 0) renderEmptyState(); else renderChat();
             renderHistory();
-            // Фоновое обновление из Supabase
-            refreshUserProfile();
-            loadChatsAndFolders().then(() => {
+            // Фоновое обновление
+            Promise.all([
+                refreshUserProfile(),
+                loadChatsAndFolders(),
+                loadForumMessages()
+            ]).then(() => {
                 renderHistory();
                 renderChat();
                 cacheChats(chats);
                 cacheFolders(folders);
                 cacheProfile(currentUser);
             });
-            loadForumMessages();
         } else {
-            // Кэша нет – грузим с сервера
+            // Без кэша – грузим всё параллельно
             currentUser = JSON.parse(savedUser);
-            await loadChatsAndFolders();
-            await refreshUserProfile();
-            await loadForumMessages();
+            await Promise.all([
+                loadChatsAndFolders(),
+                refreshUserProfile(),
+                loadForumMessages()
+            ]);
             if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
             if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
             document.getElementById('choiceScreen').style.display = 'none';
@@ -1186,14 +1197,12 @@ async function showLoadingScreen() {
             setupFileAttachment();
             if (chats.length === 0) renderEmptyState(); else renderChat();
             renderHistory();
-            // Кэшируем
             cacheChats(chats);
             cacheFolders(folders);
             cacheProfile(currentUser);
         }
     } else {
         // Экран авторизации
-        document.getElementById('welcomeScreen').style.display = 'none';
         document.getElementById('choiceScreen').style.display = 'flex';
         const btn = document.getElementById('diamkeyOAuthBtn');
         if (btn) {
