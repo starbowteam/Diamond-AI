@@ -1115,9 +1115,8 @@ async function showLoadingScreen() {
     const savedUser = localStorage.getItem('diamond_user');
 
     if (ticket) {
-        // Запускаем загрузку данных в фоне
+        // OAuth-вход
         const loadPromise = processOAuthTicket();
-        // Показываем галочку на 1.5 секунды
         const ws = document.getElementById('welcomeScreen');
         ws.innerHTML = `
             <div style="text-align:center; color:var(--text-primary); animation: fadeIn 0.5s ease;">
@@ -1127,7 +1126,6 @@ async function showLoadingScreen() {
         `;
         ws.style.display = 'flex';
         await new Promise(r => setTimeout(r, 1500));
-        // Дожидаемся завершения загрузки, если она ещё не закончилась
         const oauthSuccess = await loadPromise;
         ws.style.display = 'none';
         if (!oauthSuccess) {
@@ -1142,13 +1140,13 @@ async function showLoadingScreen() {
         if (chats.length === 0) renderEmptyState(); else renderChat();
         renderHistory();
     } else if (savedUser) {
+        // Уже вошёл – показываем интерфейс без спиннера
         currentUser = JSON.parse(savedUser);
         await loadChatsAndFolders();
         await refreshUserProfile();
         await loadForumMessages();
         if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
         if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
-        await showLoadingScreen();
         document.getElementById('choiceScreen').style.display = 'none';
         document.getElementById('mainUI').style.display = 'flex';
         setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
@@ -1157,7 +1155,8 @@ async function showLoadingScreen() {
         if (chats.length === 0) renderEmptyState(); else renderChat();
         renderHistory();
     } else {
-        await showLoadingScreen();
+        // Экран авторизации
+        document.getElementById('welcomeScreen').style.display = 'none';
         document.getElementById('choiceScreen').style.display = 'flex';
         const btn = document.getElementById('diamkeyOAuthBtn');
         if (btn) {
