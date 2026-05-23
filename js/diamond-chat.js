@@ -281,7 +281,7 @@ async function fetchNewsFromAPI(query) {
     return newsText;
 }
 
-// ========== ПОИСК ПО ДОКУМЕНТАМ ==========
+// ========== ПОИСК ПО ДОКУМЕНТАМ (защищён от 404) ==========
 async function searchKnowledgeDocs(query) {
     if (!currentUser) return '';
     const safeQuery = query.substring(0, 100).replace(/[^\w\sа-яА-ЯёЁ]/g, ' ').trim();
@@ -291,9 +291,13 @@ async function searchKnowledgeDocs(query) {
             .or(`title.ilike.%${safeQuery}%,content.ilike.%${safeQuery}%`)
             .eq('user_login', currentUser.login)
             .limit(3);
+        // Игнорируем любые ошибки (404, PGRST и т.д.)
         if (error || !data || data.length === 0) return '';
         return 'ИНФОРМАЦИЯ ИЗ ВАШИХ ДОКУМЕНТОВ:\n' + data.map(d => `[Источник: ${d.source}] ${d.title}: ${d.content}`).join('\n');
-    } catch(e) { console.warn('Ошибка поиска в документах:', e); return ''; }
+    } catch(e) {
+        console.warn('Ошибка поиска в документах (проигнорирована):', e);
+        return '';
+    }
 }
 
 // ========== ОТПРАВКА СООБЩЕНИЙ ==========
