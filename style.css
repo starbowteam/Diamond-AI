@@ -1078,3 +1078,29 @@ textarea::placeholder { color: #6a6a6a; }
     .workshop-tool-info h3 { font-size: 20px; }
     .workshop-tool-info p { font-size: 16px; }
 }
+
+/* ========== УВЕЛИЧЕННАЯ ПАНЕЛЬ ВХОДА ========== */
+.choice-split {
+    max-width: 1400px; /* было 1200 */
+}
+.choice-container {
+    max-width: 640px !important; /* было 540px, стало 640 */
+    padding: 56px 48px !important; /* больше воздуха */
+}
+.choice-container .logo-img {
+    width: 90px !important; /* крупнее логотип */
+    height: 90px !important;
+}
+.choice-container h1 {
+    font-size: 34px !important; /* крупнее заголовок */
+}
+.choice-container p {
+    font-size: 1.1rem !important;
+}
+#diamkeyOAuthBtn {
+    padding: 18px 48px !important;
+    font-size: 1.2rem !important;
+}
+.floating-image {
+    max-width: 600px; /* чуть крупнее картинка */
+}
