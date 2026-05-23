@@ -1102,7 +1102,8 @@ async function showLoadingScreen() {
     ws.style.display = 'none';
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ (ускоренная) ==========
+
+// ========== ИНИЦИАЛИЗАЦИЯ (с кэшем) ==========
 (async function() {
     log('Загрузка...');
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
@@ -1115,7 +1116,7 @@ async function showLoadingScreen() {
     const savedUser = localStorage.getItem('diamond_user');
 
     if (ticket) {
-        // OAuth-вход
+        // OAuth-вход (галочка + быстрый вход)
         const loadPromise = processOAuthTicket();
         const ws = document.getElementById('welcomeScreen');
         ws.innerHTML = `
@@ -1139,21 +1140,57 @@ async function showLoadingScreen() {
         setupFileAttachment();
         if (chats.length === 0) renderEmptyState(); else renderChat();
         renderHistory();
+        // Кэшируем полученные данные
+        cacheChats(chats);
+        cacheFolders(folders);
+        cacheProfile(currentUser);
     } else if (savedUser) {
-        // Уже вошёл – показываем интерфейс без спиннера
-        currentUser = JSON.parse(savedUser);
-        await loadChatsAndFolders();
-        await refreshUserProfile();
-        await loadForumMessages();
-        if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
-        if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
-        document.getElementById('choiceScreen').style.display = 'none';
-        document.getElementById('mainUI').style.display = 'flex';
-        setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
-        updateUserPanel();
-        setupFileAttachment();
-        if (chats.length === 0) renderEmptyState(); else renderChat();
-        renderHistory();
+        // Пробуем загрузить из кэша мгновенно
+        const cachedChats = await getCachedChats();
+        const cachedFolders = await getCachedFolders();
+        const cachedProfile = await getCachedProfile();
+        if (cachedProfile && cachedProfile.login === JSON.parse(savedUser).login) {
+            // Показываем кэш мгновенно
+            currentUser = cachedProfile;
+            chats = cachedChats || [];
+            folders = cachedFolders || [];
+            document.getElementById('choiceScreen').style.display = 'none';
+            document.getElementById('mainUI').style.display = 'flex';
+            setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
+            updateUserPanel();
+            setupFileAttachment();
+            if (chats.length === 0) renderEmptyState(); else renderChat();
+            renderHistory();
+            // Фоновое обновление из Supabase
+            refreshUserProfile();
+            loadChatsAndFolders().then(() => {
+                renderHistory();
+                renderChat();
+                cacheChats(chats);
+                cacheFolders(folders);
+                cacheProfile(currentUser);
+            });
+            loadForumMessages();
+        } else {
+            // Кэша нет – грузим с сервера
+            currentUser = JSON.parse(savedUser);
+            await loadChatsAndFolders();
+            await refreshUserProfile();
+            await loadForumMessages();
+            if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
+            if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
+            document.getElementById('choiceScreen').style.display = 'none';
+            document.getElementById('mainUI').style.display = 'flex';
+            setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
+            updateUserPanel();
+            setupFileAttachment();
+            if (chats.length === 0) renderEmptyState(); else renderChat();
+            renderHistory();
+            // Кэшируем
+            cacheChats(chats);
+            cacheFolders(folders);
+            cacheProfile(currentUser);
+        }
     } else {
         // Экран авторизации
         document.getElementById('welcomeScreen').style.display = 'none';
