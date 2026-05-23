@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (мгновенное удаление) ====================
+// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (мгновенное удаление, без потерь) ====================
 
 async function loadChatsAndFolders() {
     if (!currentUser) return;
@@ -122,15 +122,17 @@ async function deleteChat(id) {
         return;
     }
     const chat = chats.find(c => c.id === id);
-    if (chat) {
-        await deleteChatFromSupabase(id);
-        chats = chats.filter(c => c.id !== id);
-        if (currentChatId === id) currentChatId = chats.length ? chats[0].id : null;
-        renderHistory();
-        renderChat();
-        if (chats.length === 0) renderEmptyState();
-        showToast('Чат удалён', '', 'success');
+    if (!chat) {
+        console.warn('deleteChat: чат с id', id, 'не найден в массиве chats');
+        return;
     }
+    await deleteChatFromSupabase(id);
+    chats = chats.filter(c => c.id !== id);
+    if (currentChatId === id) currentChatId = chats.length ? chats[0].id : null;
+    renderHistory();
+    renderChat();
+    if (chats.length === 0) renderEmptyState();
+    showToast('Чат удалён', '', 'success');
 }
 
 async function switchChat(id) {
@@ -232,7 +234,6 @@ async function deleteFolder(id) {
 // ========== ПОИСК НОВОСТЕЙ, ВИКИ, DUCKDUCKGO ==========
 async function fetchNewsFromAPI(query) {
     let newsText = '';
-    // 1. Google News RSS
     try {
         const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=ru&gl=RU&ceid=RU:ru`;
         const resp = await fetch(rssUrl);
@@ -255,7 +256,6 @@ async function fetchNewsFromAPI(query) {
         }
     } catch(e) { console.warn('Google News RSS error:', e); }
 
-    // 2. Wikipedia API
     try {
         const wikiUrl = `https://ru.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&origin=*`;
         const resp = await fetch(wikiUrl);
@@ -269,7 +269,6 @@ async function fetchNewsFromAPI(query) {
         }
     } catch(e) { console.warn('Wikipedia API error:', e); }
 
-    // 3. DuckDuckGo Instant Answer API
     try {
         const ddgUrl = `https://api.duckduckgo.com/?q=${encodeURIComponent(query)}&format=json&no_html=1&skip_disambig=1`;
         const resp = await fetch(ddgUrl);
