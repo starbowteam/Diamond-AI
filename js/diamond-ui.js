@@ -882,7 +882,7 @@ function showTutorialStep() {
     }
 }
 
-// ========== ОБРАБОТЧИКИ СОБЫТИЙ (добавлен diamkeyOAuthBtn) ==========
+// ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
 function setupEventListeners() {
     document.getElementById('sidebarToggleBtn')?.addEventListener('click', toggleSidebar);
     document.getElementById('new-chat-btn')?.addEventListener('click', createNewChat);
@@ -1102,7 +1102,7 @@ async function showLoadingScreen() {
     ws.style.display = 'none';
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ (с анимацией кнопки) ==========
+// ========== ИНИЦИАЛИЗАЦИЯ (ускоренная) ==========
 (async function() {
     log('Загрузка...');
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
@@ -1114,34 +1114,41 @@ async function showLoadingScreen() {
     const ticket = urlParams.get('ticket');
     const savedUser = localStorage.getItem('diamond_user');
 
-    if (ticket || savedUser) {
-        // Пытаемся войти
-        if (ticket) {
-            const ws = document.getElementById('welcomeScreen');
-            ws.innerHTML = `
-                <div style="text-align:center; color:var(--text-primary); animation: fadeIn 0.5s ease;">
-                    <i class="fas fa-check-circle" style="font-size:5rem; color:#5d9b7a; animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);"></i>
-                    <h2 style="margin-top:20px; font-weight:600;">Вошли! Успешного пользования!</h2>
-                </div>
-            `;
-            ws.style.display = 'flex';
-            await new Promise(r => setTimeout(r, 2000));
-            const oauthSuccess = await processOAuthTicket();
-            ws.style.display = 'none';
-            if (!oauthSuccess) {
-                document.getElementById('choiceScreen').style.display = 'flex';
-                return;
-            }
-        } else {
-            currentUser = JSON.parse(savedUser);
-            await loadChatsAndFolders();
-            await refreshUserProfile();
-            await loadForumMessages();
-            if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
-            if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
+    if (ticket) {
+        // Запускаем загрузку данных в фоне
+        const loadPromise = processOAuthTicket();
+        // Показываем галочку на 1.5 секунды
+        const ws = document.getElementById('welcomeScreen');
+        ws.innerHTML = `
+            <div style="text-align:center; color:var(--text-primary); animation: fadeIn 0.5s ease;">
+                <i class="fas fa-check-circle" style="font-size:5rem; color:#5d9b7a; animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);"></i>
+                <h2 style="margin-top:20px; font-weight:600;">Вошли! Успешного пользования!</h2>
+            </div>
+        `;
+        ws.style.display = 'flex';
+        await new Promise(r => setTimeout(r, 1500));
+        // Дожидаемся завершения загрузки, если она ещё не закончилась
+        const oauthSuccess = await loadPromise;
+        ws.style.display = 'none';
+        if (!oauthSuccess) {
+            document.getElementById('choiceScreen').style.display = 'flex';
+            return;
         }
-
-        // Показываем main-ui
+        document.getElementById('choiceScreen').style.display = 'none';
+        document.getElementById('mainUI').style.display = 'flex';
+        setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
+        updateUserPanel();
+        setupFileAttachment();
+        if (chats.length === 0) renderEmptyState(); else renderChat();
+        renderHistory();
+    } else if (savedUser) {
+        currentUser = JSON.parse(savedUser);
+        await loadChatsAndFolders();
+        await refreshUserProfile();
+        await loadForumMessages();
+        if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
+        if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
+        await showLoadingScreen();
         document.getElementById('choiceScreen').style.display = 'none';
         document.getElementById('mainUI').style.display = 'flex';
         setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
@@ -1152,7 +1159,6 @@ async function showLoadingScreen() {
     } else {
         await showLoadingScreen();
         document.getElementById('choiceScreen').style.display = 'flex';
-        // Анимация появления кнопки DiamKey
         const btn = document.getElementById('diamkeyOAuthBtn');
         if (btn) {
             requestAnimationFrame(() => {
