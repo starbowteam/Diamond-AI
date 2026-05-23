@@ -116,9 +116,7 @@ async function processOAuthTicket() {
         };
         localStorage.setItem('diamond_user', JSON.stringify(currentUser));
         tutorialCompleted = user.obuchenie_check === true;
-        await loadChatsAndFolders();
-        await refreshUserProfile();
-        await loadForumMessages();
+        // НЕ загружаем чаты здесь, это сделает UI
         return true;
     } catch (e) {
         console.error('OAuth ticket error:', e);
