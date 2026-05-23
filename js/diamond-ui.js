@@ -882,7 +882,7 @@ function showTutorialStep() {
     }
 }
 
-// ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
+// ========== ОБРАБОТЧИКИ СОБЫТИЙ (добавлен diamkeyOAuthBtn) ==========
 function setupEventListeners() {
     document.getElementById('sidebarToggleBtn')?.addEventListener('click', toggleSidebar);
     document.getElementById('new-chat-btn')?.addEventListener('click', createNewChat);
@@ -904,13 +904,14 @@ function setupEventListeners() {
     document.getElementById('send-btn')?.addEventListener('click', sendMessage);
     document.getElementById('history-search')?.addEventListener('input', renderHistory);
     document.getElementById('settingsBtn')?.addEventListener('click', showSettingsModal);
+    document.getElementById('diamkeyOAuthBtn')?.addEventListener('click', redirectToDiamKeyOAuth);
     document.getElementById('tabLogin')?.addEventListener('click', ()=>{ document.getElementById('tabLogin').classList.add('active'); document.getElementById('tabRegister').classList.remove('active'); document.getElementById('loginForm').style.display='block'; document.getElementById('registerForm').style.display='none'; });
     document.getElementById('tabRegister')?.addEventListener('click', ()=>{ document.getElementById('tabRegister').classList.add('active'); document.getElementById('tabLogin').classList.remove('active'); document.getElementById('registerForm').style.display='block'; document.getElementById('loginForm').style.display='none'; });
     document.getElementById('doLoginBtn')?.addEventListener('click', login);
     document.getElementById('doRegisterBtn')?.addEventListener('click', register);
 }
 
-// ========== ПРИКРЕПЛЕНИЕ ФАЙЛОВ (ИСПРАВЛЕНО) ==========
+// ========== ПРИКРЕПЛЕНИЕ ФАЙЛОВ ==========
 function setupFileAttachment() {
     const inputWrapper = document.querySelector('.input-wrapper');
     if (!inputWrapper || fileInputEl) return;
@@ -1101,7 +1102,7 @@ async function showLoadingScreen() {
     ws.style.display = 'none';
 }
 
-
+// ========== ИНИЦИАЛИЗАЦИЯ (с анимацией кнопки) ==========
 (async function() {
     log('Загрузка...');
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
@@ -1109,69 +1110,56 @@ async function showLoadingScreen() {
     if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
     loadWorkshopToolsState();
     await fetchApiKeys();
-
-    // 1. Проверяем OAuth-тикет
     const urlParams = new URLSearchParams(window.location.search);
     const ticket = urlParams.get('ticket');
-
-    if (ticket) {
-        // Показываем приветственный экран с галочкой
-        const ws = document.getElementById('welcomeScreen');
-        ws.innerHTML = `
-            <div style="text-align:center; color:var(--text-primary); animation: fadeIn 0.5s ease;">
-                <i class="fas fa-check-circle" style="font-size:5rem; color:#5d9b7a; animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);"></i>
-                <h2 style="margin-top:20px; font-weight:600;">Вошли! Успешного пользования!</h2>
-            </div>
-        `;
-        ws.style.display = 'flex';
-
-        // Ждём 2 секунды
-        await new Promise(r => setTimeout(r, 2000));
-
-        const oauthSuccess = await processOAuthTicket();
-        ws.style.display = 'none';
-
-        if (oauthSuccess) {
-            // Успешно – показываем main-ui
-            document.getElementById('choiceScreen').style.display = 'none';
-            document.getElementById('mainUI').style.display = 'flex';
-            setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
-            updateUserPanel();
-            setupFileAttachment();
-            if (chats.length === 0) renderEmptyState(); else renderChat();
-            renderHistory();
-            updateUILanguage();
-            updateSendButtonState();
-            return;
-        } else {
-            // Тикет не сработал – возвращаем на экран входа
-            document.getElementById('choiceScreen').style.display = 'flex';
-            return;
-        }
-    }
-
-    // 2. Обычный запуск (если уже сохранён пользователь)
     const savedUser = localStorage.getItem('diamond_user');
-    if (savedUser) {
-        currentUser = JSON.parse(savedUser);
-        await loadChatsAndFolders();
-        await refreshUserProfile();
-        await loadForumMessages();
-        if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
-        if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
-    }
 
-    // 3. Скрываем загрузочный экран и показываем нужный интерфейс
-    await showLoadingScreen();
-    if (currentUser) {
+    if (ticket || savedUser) {
+        // Пытаемся войти
+        if (ticket) {
+            const ws = document.getElementById('welcomeScreen');
+            ws.innerHTML = `
+                <div style="text-align:center; color:var(--text-primary); animation: fadeIn 0.5s ease;">
+                    <i class="fas fa-check-circle" style="font-size:5rem; color:#5d9b7a; animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);"></i>
+                    <h2 style="margin-top:20px; font-weight:600;">Вошли! Успешного пользования!</h2>
+                </div>
+            `;
+            ws.style.display = 'flex';
+            await new Promise(r => setTimeout(r, 2000));
+            const oauthSuccess = await processOAuthTicket();
+            ws.style.display = 'none';
+            if (!oauthSuccess) {
+                document.getElementById('choiceScreen').style.display = 'flex';
+                return;
+            }
+        } else {
+            currentUser = JSON.parse(savedUser);
+            await loadChatsAndFolders();
+            await refreshUserProfile();
+            await loadForumMessages();
+            if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
+            if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
+        }
+
+        // Показываем main-ui
         document.getElementById('choiceScreen').style.display = 'none';
         document.getElementById('mainUI').style.display = 'flex';
         setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
         updateUserPanel();
         setupFileAttachment();
         if (chats.length === 0) renderEmptyState(); else renderChat();
+        renderHistory();
     } else {
+        await showLoadingScreen();
         document.getElementById('choiceScreen').style.display = 'flex';
+        // Анимация появления кнопки DiamKey
+        const btn = document.getElementById('diamkeyOAuthBtn');
+        if (btn) {
+            requestAnimationFrame(() => {
+                btn.style.opacity = '1';
+                btn.style.transform = 'translateY(0)';
+            });
+        }
     }
 
     setupEventListeners();
