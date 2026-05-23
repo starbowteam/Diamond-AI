@@ -45,8 +45,7 @@ body {
 .welcome-screen.fade-out { opacity: 0; pointer-events: none; }
 .spinner-container i { font-size: 3rem; color: #fff; }
 
-/* ========== ЭКРАН ВХОДА ========== */
-/* ========== НОВЫЙ ЭКРАН АВТОРИЗАЦИИ ========== */
+/* ========== НОВЫЙ ЭКРАН АВТОРИЗАЦИИ (увеличенный) ========== */
 .choice-screen {
     position: fixed;
     top: 0;
@@ -64,11 +63,11 @@ body {
 .choice-split {
     display: flex;
     width: 100%;
-    max-width: 1100px;
+    max-width: 1200px; /* чуть шире */
     height: 100vh;
     align-items: center;
     padding: 20px;
-    gap: 20px;
+    gap: 30px;
 }
 
 .choice-panel {
@@ -80,10 +79,10 @@ body {
 
 .choice-container {
     background: var(--bg-secondary);
-    border-radius: var(--radius-xl);
-    padding: 32px;
+    border-radius: 32px; /* более крупное скругление */
+    padding: 48px 40px; /* увеличенные отступы */
     width: 90%;
-    max-width: 440px;
+    max-width: 540px; /* было 440px, стало шире */
     border: 1px solid var(--border-color);
     box-shadow: 0 20px 40px rgba(0,0,0,0.5);
     text-align: center;
@@ -98,8 +97,8 @@ body {
 }
 
 .floating-image {
-    width: 80%;
-    max-width: 500px;
+    width: 85%;
+    max-width: 550px;
     height: auto;
     object-fit: contain;
     animation: float 4s ease-in-out infinite;
