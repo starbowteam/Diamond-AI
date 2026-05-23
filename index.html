@@ -12,6 +12,22 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="style.css?v=44">
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+    <style>
+        /* Мгновенный прелоадер, пока JS не загрузился */
+        #initial-loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #1e1e1e; display: flex; align-items: center; justify-content: center;
+            z-index: 9999; transition: opacity 0.3s ease;
+        }
+        #initial-loader img {
+            width: 72px; height: 72px; border-radius: 50%;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.1); opacity: 1; }
+        }
+    </style>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -23,13 +39,17 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"></script>
 </head>
 <body>
-    <div class="welcome-screen" id="welcomeScreen">
+    <!-- Мгновенный прелоадер (удалится после старта JS) -->
+    <div id="initial-loader">
+        <img src="assets/logo.png" alt="Diamond AI">
+    </div>
+
+    <div class="welcome-screen" id="welcomeScreen" style="display: none;">
         <div class="spinner-container"><i class="fas fa-circle-notch fa-spin"></i></div>
     </div>
-    <!-- Новый экран авторизации -->
+    <!-- Экран авторизации (скрыт до инициализации) -->
     <div class="choice-screen" id="choiceScreen" style="display: none;">
         <div class="choice-split">
-            <!-- Левая панель -->
             <div class="choice-panel">
                 <div class="choice-container" id="choiceContainer">
                     <div class="logo">
@@ -45,13 +65,12 @@
                     </p>
                 </div>
             </div>
-            <!-- Правая панель с картинкой -->
             <div class="choice-image">
                 <img src="assets/diamond-ai.png" alt="Diamond AI" class="floating-image">
             </div>
         </div>
     </div>
-    <!-- Основной интерфейс без изменений -->
+    <!-- Основной интерфейс -->
     <div class="main-ui" id="mainUI" style="display: none;">
         <header class="title-bar" id="titleBar">
             <div class="title-bar-left">
@@ -107,12 +126,11 @@
     <div id="toast-container" class="toast-container"></div>
     <div class="tutorial-overlay" id="tutorialOverlay" style="display: none;"></div>
     <!-- Модули JavaScript -->
-   <script src="js/diamond-core.js?v=45"></script>
-<script src="js/diamond-auth.js?v=45"></script>
-<script src="js/diamond-chat.js?v=45"></script>
-<script src="js/diamond-tools.js?v=45"></script>
-<script src="js/diamond-cache.js?v=45"></script>   <!-- вот новый -->
-<script src="js/diamond-ui.js?v=46"></script>
-    
+    <script src="js/diamond-core.js?v=45"></script>
+    <script src="js/diamond-auth.js?v=45"></script>
+    <script src="js/diamond-chat.js?v=45"></script>
+    <script src="js/diamond-tools.js?v=45"></script>
+    <script src="js/diamond-cache.js?v=45"></script>
+    <script src="js/diamond-ui.js?v=46"></script>
 </body>
 </html>
