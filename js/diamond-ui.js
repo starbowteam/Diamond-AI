@@ -1,6 +1,6 @@
-// ==================== DIAMOND AI v46 — UI И ИНИЦИАЛИЗАЦИЯ (исправлено) ====================
+// ==================== DIAMOND AI v46 — UI И ИНИЦИАЛИЗАЦИЯ ====================
 
-// ========== РЕНДЕР ИСТОРИИ ==========
+// ========== РЕНДЕР ИСТОРИИ (с исправленными обработчиками) ==========
 function renderHistory() {
     const list = document.getElementById('history-list');
     if (!list) return;
@@ -68,15 +68,45 @@ function renderHistory() {
     }
     if (!html) html = `<div style="text-align:center; padding:20px;">${searchTerm ? t('searchNotFound') : t('noChats')}</div>`;
     list.innerHTML = html;
+
+    // Навешиваем обработчики через addEventListener для надёжности
     document.querySelectorAll('.history-item').forEach(el => {
         el.addEventListener('click', (e) => {
             if (!e.target.closest('.chat-actions-hover')) switchChat(el.dataset.id);
         });
     });
-    document.querySelectorAll('.rename-chat-hover').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); showRenameModal(btn.dataset.id); }; });
-    document.querySelectorAll('.pin-chat-hover').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); togglePin(btn.dataset.id); }; });
-    document.querySelectorAll('.delete-chat-hover').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); deleteChat(btn.dataset.id); }; });
-    document.querySelectorAll('.move-to-folder-hover').forEach(btn => { btn.onclick = (e) => { e.stopPropagation(); showFolderSelectModal(btn.dataset.id); }; });
+
+    document.querySelectorAll('.rename-chat-hover').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showRenameModal(btn.dataset.id);
+        });
+    });
+
+    document.querySelectorAll('.pin-chat-hover').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            togglePin(btn.dataset.id);
+        });
+    });
+
+    document.querySelectorAll('.delete-chat-hover').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            const id = btn.dataset.id;
+            if (id) {
+                deleteChat(id);
+            }
+        });
+    });
+
+    document.querySelectorAll('.move-to-folder-hover').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showFolderSelectModal(btn.dataset.id);
+        });
+    });
 }
 
 function buildHistoryItem(chat, folder) {
@@ -1098,7 +1128,6 @@ function updateSendButtonState() {
     if (btn) btn.disabled = (!input.value.trim() && !hasAttachment) || isWaitingForResponse;
 }
 
-
 // ========== ИСПРАВЛЕННЫЙ LOGOUT ==========
 function logout() {
     currentUser = null;
@@ -1124,7 +1153,7 @@ function logout() {
     showToast(t('logout'), '', 'info');
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ (полная защита от потери чатов) ==========
+// ========== ИНИЦИАЛИЗАЦИЯ (окончательная) ==========
 (async function() {
     log('Загрузка...');
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
@@ -1162,7 +1191,6 @@ function logout() {
         ]);
         if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
         if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
-        // Обеспечиваем минимум 1.5 секунды показа галочки
         const elapsed = Date.now() - startTime;
         if (elapsed < 1500) await new Promise(r => setTimeout(r, 1500 - elapsed));
         ws.style.display = 'none';
@@ -1173,7 +1201,6 @@ function logout() {
         setupFileAttachment();
         if (chats.length === 0) renderEmptyState(); else renderChat();
         renderHistory();
-        // Обновляем кэш
         cacheChats(chats);
         cacheFolders(folders);
         cacheProfile(currentUser);
@@ -1184,7 +1211,6 @@ function logout() {
         if (isSameUser) {
             const cachedChats = await getCachedChats();
             const cachedFolders = await getCachedFolders();
-            // Показываем кэш только если он не пустой
             if (cachedChats && cachedChats.length > 0) {
                 currentUser = cachedProfile;
                 chats = cachedChats;
@@ -1196,14 +1222,12 @@ function logout() {
                 setupFileAttachment();
                 if (chats.length === 0) renderEmptyState(); else renderChat();
                 renderHistory();
-                // Сразу в фоне обновляем реальные данные, и они гарантированно перезапишут кэш
                 (async () => {
                     await loadChatsAndFolders();
                     await refreshUserProfile();
                     await loadForumMessages();
                     if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
                     if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
-                    // Перерисовываем интерфейс актуальными данными
                     renderHistory();
                     renderChat();
                     cacheChats(chats);
@@ -1211,7 +1235,6 @@ function logout() {
                     cacheProfile(currentUser);
                 })();
             } else {
-                // Кэш пуст — загружаем с сервера
                 currentUser = JSON.parse(savedUser);
                 await Promise.all([
                     loadChatsAndFolders(),
@@ -1232,7 +1255,6 @@ function logout() {
                 cacheProfile(currentUser);
             }
         } else {
-            // Пользователь сменился или кэш отсутствует
             currentUser = JSON.parse(savedUser);
             await Promise.all([
                 loadChatsAndFolders(),
@@ -1253,7 +1275,6 @@ function logout() {
             cacheProfile(currentUser);
         }
     } else {
-        // Экран авторизации
         document.getElementById('welcomeScreen').style.display = 'none';
         document.getElementById('choiceScreen').style.display = 'flex';
         const btn = document.getElementById('diamkeyOAuthBtn');
