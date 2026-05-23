@@ -1,4 +1,4 @@
-// ==================== DIAMOND AI v46 — UI И ИНИЦИАЛИЗАЦИЯ (ускоренная) ====================
+// ==================== DIAMOND AI v46 — UI И ИНИЦИАЛИЗАЦИЯ (исправлено) ====================
 
 // ========== РЕНДЕР ИСТОРИИ ==========
 function renderHistory() {
@@ -913,27 +913,33 @@ function setupEventListeners() {
 
 // ========== ПРИКРЕПЛЕНИЕ ФАЙЛОВ ==========
 function setupFileAttachment() {
-    const inputWrapper = document.querySelector('.input-wrapper');
-    if (!inputWrapper || fileInputEl) return;
+    try {
+        const inputWrapper = document.querySelector('.input-wrapper');
+        if (!inputWrapper || fileInputEl) return;
 
-    fileInputEl = document.createElement('input');
-    fileInputEl.type = 'file';
-    fileInputEl.accept = '.png,.jpg,.jpeg,.html,.js,.css,.docx';
-    fileInputEl.style.display = 'none';
-    document.body.appendChild(fileInputEl);
+        fileInputEl = document.createElement('input');
+        fileInputEl.type = 'file';
+        fileInputEl.accept = '.png,.jpg,.jpeg,.html,.js,.css,.docx';
+        fileInputEl.style.display = 'none';
+        document.body.appendChild(fileInputEl);
 
-    const attachBtn = document.createElement('button');
-    attachBtn.className = 'attach-btn';
-    attachBtn.innerHTML = '<i class="fas fa-paperclip"></i>';
-    attachBtn.title = t('attachFile');
-    attachBtn.addEventListener('click', () => fileInputEl.click());
+        const attachBtn = document.createElement('button');
+        attachBtn.className = 'attach-btn';
+        attachBtn.innerHTML = '<i class="fas fa-paperclip"></i>';
+        attachBtn.title = t('attachFile');
+        attachBtn.addEventListener('click', () => fileInputEl.click());
 
-    const sendBtn = document.getElementById('send-btn');
-    if (sendBtn) {
-        inputWrapper.insertBefore(attachBtn, sendBtn);
+        const sendBtn = document.getElementById('send-btn');
+        if (sendBtn) {
+            inputWrapper.insertBefore(attachBtn, sendBtn);
+        } else {
+            inputWrapper.appendChild(attachBtn);
+        }
+
+        fileInputEl.addEventListener('change', handleFileSelect);
+    } catch (e) {
+        console.warn('Ошибка setupFileAttachment:', e);
     }
-
-    fileInputEl.addEventListener('change', handleFileSelect);
 }
 
 async function handleFileSelect(e) {
@@ -1092,134 +1098,7 @@ function updateSendButtonState() {
     if (btn) btn.disabled = (!input.value.trim() && !hasAttachment) || isWaitingForResponse;
 }
 
-// ========== ЗАГРУЗОЧНЫЙ ЭКРАН ==========
-async function showLoadingScreen() {
-    const ws = document.getElementById('welcomeScreen');
-    ws.style.display = 'flex';
-    await new Promise(r => setTimeout(r, 400));
-    ws.classList.add('fade-out');
-    await new Promise(r => setTimeout(r, 300));
-    ws.style.display = 'none';
-}
-
-// ========== ИНИЦИАЛИЗАЦИЯ (без пульсации, с фиксом выхода и кнопок) ==========
-(async function() {
-    log('Загрузка...');
-    if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
-    const savedLang = localStorage.getItem('diamond_language');
-    if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
-    loadWorkshopToolsState();
-    // fetchApiKeys запускаем асинхронно, не блокируем загрузку
-    fetchApiKeys().then(() => log('API ключи загружены'));
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const ticket = urlParams.get('ticket');
-    const savedUser = localStorage.getItem('diamond_user');
-
-    if (ticket) {
-        // OAuth
-        const loadPromise = processOAuthTicket();
-        const ws = document.getElementById('welcomeScreen');
-        ws.innerHTML = `
-            <div style="text-align:center; color:var(--text-primary); animation: fadeIn 0.5s ease;">
-                <i class="fas fa-check-circle" style="font-size:5rem; color:#5d9b7a; animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);"></i>
-                <h2 style="margin-top:20px; font-weight:600;">Вошли! Успешного пользования!</h2>
-            </div>
-        `;
-        ws.style.display = 'flex';
-        await new Promise(r => setTimeout(r, 1500));
-        const oauthSuccess = await loadPromise;
-        ws.style.display = 'none';
-        if (!oauthSuccess) {
-            document.getElementById('choiceScreen').style.display = 'flex';
-            return;
-        }
-        document.getElementById('choiceScreen').style.display = 'none';
-        document.getElementById('mainUI').style.display = 'flex';
-        setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
-        updateUserPanel();
-        setupFileAttachment();
-        if (chats.length === 0) renderEmptyState(); else renderChat();
-        renderHistory();
-        cacheChats(chats);
-        cacheFolders(folders);
-        cacheProfile(currentUser);
-    } else if (savedUser) {
-        // Быстрый вход через кэш
-        const cachedChats = await getCachedChats();
-        const cachedFolders = await getCachedFolders();
-        const cachedProfile = await getCachedProfile();
-        if (cachedProfile && cachedProfile.login === JSON.parse(savedUser).login) {
-            currentUser = cachedProfile;
-            chats = cachedChats || [];
-            folders = cachedFolders || [];
-            document.getElementById('choiceScreen').style.display = 'none';
-            document.getElementById('mainUI').style.display = 'flex';
-            setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
-            updateUserPanel();
-            setupFileAttachment();
-            if (chats.length === 0) renderEmptyState(); else renderChat();
-            renderHistory();
-            // Фоновое обновление
-            Promise.all([
-                refreshUserProfile(),
-                loadChatsAndFolders(),
-                loadForumMessages()
-            ]).then(() => {
-                renderHistory();
-                renderChat();
-                cacheChats(chats);
-                cacheFolders(folders);
-                cacheProfile(currentUser);
-            });
-        } else {
-            // Полная загрузка с сервера
-            currentUser = JSON.parse(savedUser);
-            await Promise.all([
-                loadChatsAndFolders(),
-                refreshUserProfile(),
-                loadForumMessages()
-            ]);
-            if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
-            if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
-            document.getElementById('choiceScreen').style.display = 'none';
-            document.getElementById('mainUI').style.display = 'flex';
-            setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
-            updateUserPanel();
-            setupFileAttachment();
-            if (chats.length === 0) renderEmptyState(); else renderChat();
-            renderHistory();
-            cacheChats(chats);
-            cacheFolders(folders);
-            cacheProfile(currentUser);
-        }
-    } else {
-        // Экран авторизации
-        document.getElementById('welcomeScreen').style.display = 'none';
-        document.getElementById('choiceScreen').style.display = 'flex';
-        const btn = document.getElementById('diamkeyOAuthBtn');
-        if (btn) {
-            // Сбрасываем и анимируем
-            btn.style.opacity = '0';
-            btn.style.transform = 'translateY(10px)';
-            requestAnimationFrame(() => {
-                btn.style.opacity = '1';
-                btn.style.transform = 'translateY(0)';
-            });
-        }
-    }
-
-    // Всегда навешиваем обработчики, даже если mainUI скрыт
-    setupEventListeners();
-    updateUILanguage();
-    updateUserPanel();
-    updateSendButtonState();
-    if (chats.length) renderHistory();
-    document.documentElement.style.setProperty('--collapsed-left-offset', '85px');
-    log('Готово');
-})();
-
-// ========== ИСПРАВЛЕННЫЙ LOGOUT (возвращает кнопку) ==========
+// ========== ИСПРАВЛЕННЫЙ LOGOUT ==========
 function logout() {
     currentUser = null;
     mistralApiKey = '';
@@ -1232,7 +1111,6 @@ function logout() {
         if (overlay) overlay.remove();
         settingsModalOpen = false;
     }
-    // Принудительно показываем кнопку DiamKey с анимацией
     const btn = document.getElementById('diamkeyOAuthBtn');
     if (btn) {
         btn.style.opacity = '0';
@@ -1245,46 +1123,14 @@ function logout() {
     showToast(t('logout'), '', 'info');
 }
 
-// ========== БЕЗОПАСНЫЙ setupFileAttachment (не ломает обработчики) ==========
-function setupFileAttachment() {
-    try {
-        const inputWrapper = document.querySelector('.input-wrapper');
-        if (!inputWrapper || fileInputEl) return;
-
-        fileInputEl = document.createElement('input');
-        fileInputEl.type = 'file';
-        fileInputEl.accept = '.png,.jpg,.jpeg,.html,.js,.css,.docx';
-        fileInputEl.style.display = 'none';
-        document.body.appendChild(fileInputEl);
-
-        const attachBtn = document.createElement('button');
-        attachBtn.className = 'attach-btn';
-        attachBtn.innerHTML = '<i class="fas fa-paperclip"></i>';
-        attachBtn.title = t('attachFile');
-        attachBtn.addEventListener('click', () => fileInputEl.click());
-
-        const sendBtn = document.getElementById('send-btn');
-        if (sendBtn) {
-            inputWrapper.insertBefore(attachBtn, sendBtn);
-        } else {
-            // Если кнопки отправки нет (пустой чат), просто добавляем в конец
-            inputWrapper.appendChild(attachBtn);
-        }
-
-        fileInputEl.addEventListener('change', handleFileSelect);
-    } catch (e) {
-        console.warn('Ошибка setupFileAttachment:', e);
-    }
-}
-
-// ========== ИНИЦИАЛИЗАЦИЯ (без пульсации, с фиксом выхода и кнопок) ==========
+// ========== ИНИЦИАЛИЗАЦИЯ (окончательная) ==========
 (async function() {
     log('Загрузка...');
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
     const savedLang = localStorage.getItem('diamond_language');
     if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
     loadWorkshopToolsState();
-    // fetchApiKeys запускаем асинхронно, не блокируем загрузку
+    // fetchApiKeys асинхронно
     fetchApiKeys().then(() => log('API ключи загружены'));
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -1292,8 +1138,7 @@ function setupFileAttachment() {
     const savedUser = localStorage.getItem('diamond_user');
 
     if (ticket) {
-        // OAuth
-        const loadPromise = processOAuthTicket();
+        // OAuth-вход: показываем красивую галочку и грузим в фоне
         const ws = document.getElementById('welcomeScreen');
         ws.innerHTML = `
             <div style="text-align:center; color:var(--text-primary); animation: fadeIn 0.5s ease;">
@@ -1302,13 +1147,21 @@ function setupFileAttachment() {
             </div>
         `;
         ws.style.display = 'flex';
-        await new Promise(r => setTimeout(r, 1500));
-        const oauthSuccess = await loadPromise;
+
+        // Загружаем данные и ждём минимум 1.5 секунды
+        const startTime = Date.now();
+        const oauthSuccess = await processOAuthTicket();
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 1500) {
+            await new Promise(r => setTimeout(r, 1500 - elapsed));
+        }
+
         ws.style.display = 'none';
         if (!oauthSuccess) {
             document.getElementById('choiceScreen').style.display = 'flex';
             return;
         }
+        // Показываем main-ui
         document.getElementById('choiceScreen').style.display = 'none';
         document.getElementById('mainUI').style.display = 'flex';
         setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
@@ -1320,7 +1173,7 @@ function setupFileAttachment() {
         cacheFolders(folders);
         cacheProfile(currentUser);
     } else if (savedUser) {
-        // Быстрый вход через кэш
+        // Быстрый вход (кэш или сервер)
         const cachedChats = await getCachedChats();
         const cachedFolders = await getCachedFolders();
         const cachedProfile = await getCachedProfile();
@@ -1348,7 +1201,6 @@ function setupFileAttachment() {
                 cacheProfile(currentUser);
             });
         } else {
-            // Полная загрузка с сервера
             currentUser = JSON.parse(savedUser);
             await Promise.all([
                 loadChatsAndFolders(),
@@ -1374,7 +1226,6 @@ function setupFileAttachment() {
         document.getElementById('choiceScreen').style.display = 'flex';
         const btn = document.getElementById('diamkeyOAuthBtn');
         if (btn) {
-            // Сбрасываем и анимируем
             btn.style.opacity = '0';
             btn.style.transform = 'translateY(10px)';
             requestAnimationFrame(() => {
@@ -1384,7 +1235,6 @@ function setupFileAttachment() {
         }
     }
 
-    // Всегда навешиваем обработчики, даже если mainUI скрыт
     setupEventListeners();
     updateUILanguage();
     updateUserPanel();
