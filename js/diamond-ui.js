@@ -1098,6 +1098,7 @@ function updateSendButtonState() {
     if (btn) btn.disabled = (!input.value.trim() && !hasAttachment) || isWaitingForResponse;
 }
 
+
 // ========== ИСПРАВЛЕННЫЙ LOGOUT ==========
 function logout() {
     currentUser = null;
@@ -1123,14 +1124,13 @@ function logout() {
     showToast(t('logout'), '', 'info');
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ (окончательная) ==========
+// ========== ИНИЦИАЛИЗАЦИЯ (полная защита от потери чатов) ==========
 (async function() {
     log('Загрузка...');
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
     const savedLang = localStorage.getItem('diamond_language');
     if (savedLang && ['ru','en'].includes(savedLang)) currentLanguage = savedLang;
     loadWorkshopToolsState();
-    // fetchApiKeys асинхронно
     fetchApiKeys().then(() => log('API ключи загружены'));
 
     const urlParams = new URLSearchParams(window.location.search);
@@ -1138,7 +1138,7 @@ function logout() {
     const savedUser = localStorage.getItem('diamond_user');
 
     if (ticket) {
-        // OAuth-вход: показываем красивую галочку и грузим в фоне
+        // OAuth-вход: показываем галочку и загружаем всё с нуля
         const ws = document.getElementById('welcomeScreen');
         ws.innerHTML = `
             <div style="text-align:center; color:var(--text-primary); animation: fadeIn 0.5s ease;">
@@ -1147,21 +1147,25 @@ function logout() {
             </div>
         `;
         ws.style.display = 'flex';
-
-        // Загружаем данные и ждём минимум 1.5 секунды
         const startTime = Date.now();
         const oauthSuccess = await processOAuthTicket();
-        const elapsed = Date.now() - startTime;
-        if (elapsed < 1500) {
-            await new Promise(r => setTimeout(r, 1500 - elapsed));
-        }
-
-        ws.style.display = 'none';
         if (!oauthSuccess) {
+            ws.style.display = 'none';
             document.getElementById('choiceScreen').style.display = 'flex';
             return;
         }
-        // Показываем main-ui
+        // Гарантированно загружаем актуальные данные с сервера
+        await Promise.all([
+            loadChatsAndFolders(),
+            refreshUserProfile(),
+            loadForumMessages()
+        ]);
+        if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
+        if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
+        // Обеспечиваем минимум 1.5 секунды показа галочки
+        const elapsed = Date.now() - startTime;
+        if (elapsed < 1500) await new Promise(r => setTimeout(r, 1500 - elapsed));
+        ws.style.display = 'none';
         document.getElementById('choiceScreen').style.display = 'none';
         document.getElementById('mainUI').style.display = 'flex';
         setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
@@ -1169,38 +1173,66 @@ function logout() {
         setupFileAttachment();
         if (chats.length === 0) renderEmptyState(); else renderChat();
         renderHistory();
+        // Обновляем кэш
         cacheChats(chats);
         cacheFolders(folders);
         cacheProfile(currentUser);
     } else if (savedUser) {
-        // Быстрый вход (кэш или сервер)
-        const cachedChats = await getCachedChats();
-        const cachedFolders = await getCachedFolders();
+        // Попытка быстро показать интерфейс из кэша, но не заменять актуальные данные
         const cachedProfile = await getCachedProfile();
-        if (cachedProfile && cachedProfile.login === JSON.parse(savedUser).login) {
-            currentUser = cachedProfile;
-            chats = cachedChats || [];
-            folders = cachedFolders || [];
-            document.getElementById('choiceScreen').style.display = 'none';
-            document.getElementById('mainUI').style.display = 'flex';
-            setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
-            updateUserPanel();
-            setupFileAttachment();
-            if (chats.length === 0) renderEmptyState(); else renderChat();
-            renderHistory();
-            // Фоновое обновление
-            Promise.all([
-                refreshUserProfile(),
-                loadChatsAndFolders(),
-                loadForumMessages()
-            ]).then(() => {
+        const isSameUser = cachedProfile && cachedProfile.login === JSON.parse(savedUser).login;
+        if (isSameUser) {
+            const cachedChats = await getCachedChats();
+            const cachedFolders = await getCachedFolders();
+            // Показываем кэш только если он не пустой
+            if (cachedChats && cachedChats.length > 0) {
+                currentUser = cachedProfile;
+                chats = cachedChats;
+                folders = cachedFolders || [];
+                document.getElementById('choiceScreen').style.display = 'none';
+                document.getElementById('mainUI').style.display = 'flex';
+                setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
+                updateUserPanel();
+                setupFileAttachment();
+                if (chats.length === 0) renderEmptyState(); else renderChat();
                 renderHistory();
-                renderChat();
+                // Сразу в фоне обновляем реальные данные, и они гарантированно перезапишут кэш
+                (async () => {
+                    await loadChatsAndFolders();
+                    await refreshUserProfile();
+                    await loadForumMessages();
+                    if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
+                    if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
+                    // Перерисовываем интерфейс актуальными данными
+                    renderHistory();
+                    renderChat();
+                    cacheChats(chats);
+                    cacheFolders(folders);
+                    cacheProfile(currentUser);
+                })();
+            } else {
+                // Кэш пуст — загружаем с сервера
+                currentUser = JSON.parse(savedUser);
+                await Promise.all([
+                    loadChatsAndFolders(),
+                    refreshUserProfile(),
+                    loadForumMessages()
+                ]);
+                if (workshopTools.ai_detect) await createToolChatWithGreeting('ai_detect');
+                if (workshopTools.knowledge_rag) await createToolChatWithGreeting('knowledge_rag');
+                document.getElementById('choiceScreen').style.display = 'none';
+                document.getElementById('mainUI').style.display = 'flex';
+                setTimeout(() => document.getElementById('mainUI').classList.add('visible'), 50);
+                updateUserPanel();
+                setupFileAttachment();
+                if (chats.length === 0) renderEmptyState(); else renderChat();
+                renderHistory();
                 cacheChats(chats);
                 cacheFolders(folders);
                 cacheProfile(currentUser);
-            });
+            }
         } else {
+            // Пользователь сменился или кэш отсутствует
             currentUser = JSON.parse(savedUser);
             await Promise.all([
                 loadChatsAndFolders(),
