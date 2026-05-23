@@ -12,22 +12,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="style.css?v=44">
     <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
-    <style>
-        /* Мгновенный прелоадер, пока JS не загрузился */
-        #initial-loader {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #1e1e1e; display: flex; align-items: center; justify-content: center;
-            z-index: 9999; transition: opacity 0.3s ease;
-        }
-        #initial-loader img {
-            width: 72px; height: 72px; border-radius: 50%;
-            animation: pulse 1.5s ease-in-out infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 0.7; }
-            50% { transform: scale(1.1); opacity: 1; }
-        }
-    </style>
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
@@ -39,15 +23,11 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"></script>
 </head>
 <body>
-    <!-- Мгновенный прелоадер (удалится после старта JS) -->
-    <div id="initial-loader">
-        <img src="assets/logo.png" alt="Diamond AI">
-    </div>
-
+    <!-- Только спиннер -->
     <div class="welcome-screen" id="welcomeScreen" style="display: none;">
         <div class="spinner-container"><i class="fas fa-circle-notch fa-spin"></i></div>
     </div>
-    <!-- Экран авторизации (скрыт до инициализации) -->
+    <!-- Экран авторизации -->
     <div class="choice-screen" id="choiceScreen" style="display: none;">
         <div class="choice-split">
             <div class="choice-panel">
@@ -57,7 +37,7 @@
                         <h1>DIAMOND AI</h1>
                         <p>Войдите через DiamKey для продолжения</p>
                     </div>
-                    <button class="btn btn-diamkey" id="diamkeyOAuthBtn" style="width: auto; padding: 16px 40px; font-size: 1.1rem; margin-top: 10px; opacity: 0; transform: translateY(10px); transition: opacity 0.5s ease, transform 0.5s ease;">
+                    <button class="btn btn-diamkey" id="diamkeyOAuthBtn" style="width: auto; padding: 16px 40px; font-size: 1.1rem; margin-top: 10px;">
                         <i class="fas fa-key"></i> Войти через DiamKey
                     </button>
                     <p style="margin-top: 18px; font-size: 0.9rem; color: var(--text-secondary);">
