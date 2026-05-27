@@ -1109,16 +1109,68 @@ function clearAttachmentPreview() {
     removeAttachmentPreview();
 }
 
-// ========== САЙДБАР ==========
+// ========== САЙДБАР (исправлен) ==========
 function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar'), titleBar = document.getElementById('titleBar'), collapsedActions = document.getElementById('collapsedActions');
+    const sidebar = document.getElementById('sidebar');
+    const titleBar = document.getElementById('titleBar');
+    const collapsedActions = document.getElementById('collapsedActions');
     const isMobile = window.innerWidth <= 768;
-    if (isMobile) { sidebar.classList.toggle('open'); document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : ''; }
-    else { sidebarCollapsed = !sidebarCollapsed; sidebar.classList.toggle('collapsed', sidebarCollapsed); if(titleBar) titleBar.classList.toggle('collapsed', sidebarCollapsed); if(collapsedActions) collapsedActions.classList.toggle('show', sidebarCollapsed); }
+
+    if (isMobile) {
+        sidebar.classList.toggle('open');
+        document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : '';
+    } else {
+        sidebarCollapsed = !sidebarCollapsed;
+        sidebar.classList.toggle('collapsed', sidebarCollapsed);
+        if (titleBar) titleBar.classList.toggle('collapsed', sidebarCollapsed);
+        if (collapsedActions) collapsedActions.classList.toggle('show', sidebarCollapsed);
+    }
+
+    // Фикс: гарантируем, что сайдабар не уедет за левый край
+    if (!sidebar.classList.contains('collapsed') && !sidebar.classList.contains('open')) {
+        sidebar.style.transform = '';
+        sidebar.style.left = '';
+    }
 }
 
-document.addEventListener('click', (e) => { if(window.innerWidth<=768){ const sidebar=document.getElementById('sidebar'), toggleBtn=document.getElementById('sidebarToggleBtn'); if(sidebar&&sidebar.classList.contains('open')&&!sidebar.contains(e.target)&&!toggleBtn.contains(e.target)){sidebar.classList.remove('open');document.body.style.overflow='';} } });
-window.addEventListener('resize', () => { const sidebar=document.getElementById('sidebar'), titleBar=document.getElementById('titleBar'), collapsedActions=document.getElementById('collapsedActions'); if(window.innerWidth>768){sidebar.classList.remove('open');document.body.style.overflow=''; if(sidebarCollapsed){sidebar.classList.add('collapsed');if(titleBar)titleBar.classList.add('collapsed');if(collapsedActions)collapsedActions.classList.add('show');}else{sidebar.classList.remove('collapsed');if(titleBar)titleBar.classList.remove('collapsed');if(collapsedActions)collapsedActions.classList.remove('show');}}else{sidebar.classList.remove('collapsed');if(titleBar)titleBar.classList.remove('collapsed');if(collapsedActions)collapsedActions.classList.remove('show');} });
+// Гарантированно возвращаем сайдабар на место при ресайзе
+window.addEventListener('resize', () => {
+    const sidebar = document.getElementById('sidebar');
+    const titleBar = document.getElementById('titleBar');
+    const collapsedActions = document.getElementById('collapsedActions');
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+        sidebar.classList.remove('collapsed');
+        sidebar.style.transform = '';
+        sidebar.style.left = '';
+        if (titleBar) titleBar.classList.remove('collapsed');
+        if (collapsedActions) collapsedActions.classList.remove('show');
+    } else {
+        if (sidebarCollapsed) {
+            sidebar.classList.add('collapsed');
+            if (titleBar) titleBar.classList.add('collapsed');
+            if (collapsedActions) collapsedActions.classList.add('show');
+        } else {
+            sidebar.classList.remove('collapsed');
+            sidebar.style.transform = '';
+            sidebar.style.left = '';
+            if (titleBar) titleBar.classList.remove('collapsed');
+            if (collapsedActions) collapsedActions.classList.remove('show');
+        }
+    }
+});
+
+document.addEventListener('click', (e) => {
+    if (window.innerWidth <= 768) {
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('sidebarToggleBtn');
+        if (sidebar && sidebar.classList.contains('open') && !sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
+            sidebar.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+    }
+});
 
 // ========== ОБНОВЛЕНИЕ КНОПКИ ОТПРАВКИ ==========
 function updateSendButtonState() {
@@ -1153,7 +1205,7 @@ function logout() {
     showToast(t('logout'), '', 'info');
 }
 
-// ========== ИНИЦИАЛИЗАЦИЯ (окончательная) ==========
+// ========== ИНИЦИАЛИЗАЦИЯ ==========
 (async function() {
     log('Загрузка...');
     if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
@@ -1167,7 +1219,6 @@ function logout() {
     const savedUser = localStorage.getItem('diamond_user');
 
     if (ticket) {
-        // OAuth-вход: показываем галочку и загружаем всё с нуля
         const ws = document.getElementById('welcomeScreen');
         ws.innerHTML = `
             <div style="text-align:center; color:var(--text-primary); animation: fadeIn 0.5s ease;">
@@ -1183,7 +1234,6 @@ function logout() {
             document.getElementById('choiceScreen').style.display = 'flex';
             return;
         }
-        // Гарантированно загружаем актуальные данные с сервера
         await Promise.all([
             loadChatsAndFolders(),
             refreshUserProfile(),
@@ -1205,7 +1255,6 @@ function logout() {
         cacheFolders(folders);
         cacheProfile(currentUser);
     } else if (savedUser) {
-        // Попытка быстро показать интерфейс из кэша, но не заменять актуальные данные
         const cachedProfile = await getCachedProfile();
         const isSameUser = cachedProfile && cachedProfile.login === JSON.parse(savedUser).login;
         if (isSameUser) {
