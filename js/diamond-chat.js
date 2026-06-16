@@ -38,12 +38,15 @@ async function saveChatToSupabase(chat) {
         const toolInfo = getToolInfo(toolId);
         if (toolInfo) finalTitle = toolInfo.title;
     }
+    // Преобразуем даты в ISO строку, если они не строка
+    const created = typeof created_at === 'string' ? created_at : new Date(created_at).toISOString();
+    const last = typeof last_activity === 'string' ? last_activity : new Date(last_activity).toISOString();
     const { error } = await supabaseClient.from('diamond_chats').upsert({
         id,
         user_login: currentUser.login,
         title: finalTitle,
-        created_at,
-        last_activity,
+        created_at: created,
+        last_activity: last,
         pinned,
         folder_id,
         messages
@@ -53,6 +56,8 @@ async function saveChatToSupabase(chat) {
 
 async function saveFolderToSupabase(folder) {
     if (!currentUser) return;
+    const createdAt = folder.createdAt || folder.created_at || Date.now();
+    const createdStr = typeof createdAt === 'string' ? createdAt : new Date(createdAt).toISOString();
     const { error } = await supabaseClient.from('diamond_folders').upsert({
         id: folder.id,
         user_login: currentUser.login,
@@ -60,7 +65,7 @@ async function saveFolderToSupabase(folder) {
         description: folder.description,
         icon: folder.icon,
         color: folder.color,
-        created_at: folder.createdAt || folder.created_at || Date.now()
+        created_at: createdStr
     });
     if (error) { console.error('Ошибка сохранения папки:', error); }
 }
@@ -326,14 +331,14 @@ async function sendMessage() {
     if (!mistralApiKey) { showToast(t('errorApiKey'), '', 'error'); return; }
     let chat = chats.find(c => c.id === currentChatId);
     if (!chat || chat.messages.length === 0) {
-        const now = Date.now();
+        const now = new Date().toISOString();
         const isTool = currentChatId && currentChatId.startsWith('tool_');
         if (isTool) {
             chat = chats.find(c => c.id === currentChatId);
             if (!chat) { showToast('Ошибка', 'Инструментальный чат не найден', 'error'); return; }
         } else {
             chat = {
-                id: now.toString(),
+                id: Date.now().toString(),
                 title: generateChatTitle(text || (attachment ? attachment.name : '')),
                 messages: [],
                 created_at: now,
@@ -652,7 +657,7 @@ async function addMessageToDOM(role, content, save = true, attachment = null, ge
             const msg = { id: messageId, role, content, timestamp, isTyping: false, attachment };
             if (generationTime) msg.generationTime = generationTime;
             chat.messages.push(msg);
-            chat.last_activity = timestamp;
+            chat.last_activity = new Date().toISOString();
             if (role === 'user' && !chat.id.startsWith('tool_') && chat.messages.filter(m => m.role === 'user').length === 1) {
                 generateChatTitleWithAI(content).then(title => {
                     chat.title = title;
