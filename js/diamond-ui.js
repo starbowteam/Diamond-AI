@@ -961,7 +961,7 @@ function setupFileAttachment() {
 
         const sendBtn = document.getElementById('send-btn');
         if (sendBtn) {
-            inputWrapper.insertBefore(attachBtn, sendBtn);
+            inputWrapper.appendChild(attachBtn); // просто добавляем в конец, а не вставляем перед sendBtn
         } else {
             inputWrapper.appendChild(attachBtn);
         }
