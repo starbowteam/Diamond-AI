@@ -1,4 +1,12 @@
-// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (мгновенное удаление, без потерь) ====================
+// ==================== DIAMOND AI v46 — ЧАТЫ И ПАПКИ (исправлены даты) ====================
+
+// Преобразование любого значения в ISO-строку без миллисекунд (совместимо с Supabase TIMESTAMPTZ)
+function toTimeStr(ts) {
+    if (!ts) return new Date().toISOString().split('.')[0] + 'Z';
+    const d = typeof ts === 'string' ? new Date(ts) : new Date(ts);
+    if (isNaN(d.getTime())) return new Date().toISOString().split('.')[0] + 'Z';
+    return d.toISOString().split('.')[0] + 'Z';
+}
 
 async function loadChatsAndFolders() {
     if (!currentUser) return;
@@ -38,15 +46,12 @@ async function saveChatToSupabase(chat) {
         const toolInfo = getToolInfo(toolId);
         if (toolInfo) finalTitle = toolInfo.title;
     }
-    // Преобразуем даты в ISO строку, если они не строка
-    const created = typeof created_at === 'string' ? created_at : new Date(created_at).toISOString();
-    const last = typeof last_activity === 'string' ? last_activity : new Date(last_activity).toISOString();
     const { error } = await supabaseClient.from('diamond_chats').upsert({
         id,
         user_login: currentUser.login,
         title: finalTitle,
-        created_at: created,
-        last_activity: last,
+        created_at: toTimeStr(created_at),
+        last_activity: toTimeStr(last_activity),
         pinned,
         folder_id,
         messages
@@ -57,7 +62,6 @@ async function saveChatToSupabase(chat) {
 async function saveFolderToSupabase(folder) {
     if (!currentUser) return;
     const createdAt = folder.createdAt || folder.created_at || Date.now();
-    const createdStr = typeof createdAt === 'string' ? createdAt : new Date(createdAt).toISOString();
     const { error } = await supabaseClient.from('diamond_folders').upsert({
         id: folder.id,
         user_login: currentUser.login,
@@ -65,7 +69,7 @@ async function saveFolderToSupabase(folder) {
         description: folder.description,
         icon: folder.icon,
         color: folder.color,
-        created_at: createdStr
+        created_at: toTimeStr(createdAt)
     });
     if (error) { console.error('Ошибка сохранения папки:', error); }
 }
@@ -120,7 +124,7 @@ async function createNewChat() {
     clearAttachmentPreview();
 }
 
-// ========== УДАЛЕНИЕ ЧАТА (мгновенное, без подтверждения) ==========
+// ========== УДАЛЕНИЕ ЧАТА ==========
 async function deleteChat(id) {
     if (id && id.startsWith('tool_')) {
         showToast('Нельзя удалить', 'Инструментальные чаты не удаляются', 'warning');
@@ -289,7 +293,7 @@ async function fetchNewsFromAPI(query) {
     return newsText;
 }
 
-// ========== ПОИСК ПО ДОКУМЕНТАМ (защищён от 404) ==========
+// ========== ПОИСК ПО ДОКУМЕНТАМ ==========
 let knowledgeDocsAvailable = true;
 
 async function searchKnowledgeDocs(query) {
@@ -331,7 +335,7 @@ async function sendMessage() {
     if (!mistralApiKey) { showToast(t('errorApiKey'), '', 'error'); return; }
     let chat = chats.find(c => c.id === currentChatId);
     if (!chat || chat.messages.length === 0) {
-        const now = new Date().toISOString();
+        const now = toTimeStr(Date.now());
         const isTool = currentChatId && currentChatId.startsWith('tool_');
         if (isTool) {
             chat = chats.find(c => c.id === currentChatId);
@@ -657,7 +661,7 @@ async function addMessageToDOM(role, content, save = true, attachment = null, ge
             const msg = { id: messageId, role, content, timestamp, isTyping: false, attachment };
             if (generationTime) msg.generationTime = generationTime;
             chat.messages.push(msg);
-            chat.last_activity = new Date().toISOString();
+            chat.last_activity = toTimeStr(Date.now());
             if (role === 'user' && !chat.id.startsWith('tool_') && chat.messages.filter(m => m.role === 'user').length === 1) {
                 generateChatTitleWithAI(content).then(title => {
                     chat.title = title;
